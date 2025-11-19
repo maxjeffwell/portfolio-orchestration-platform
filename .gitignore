@@ -1,0 +1,138 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Production builds
+dist/
+build/
+.next/
+out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Kubernetes secrets
+k8s/secrets/*.yaml
+k8s/secrets/*.yml
+*-secret.yaml
+*-secret.yml
+
+# Kubeconfig files (should not be committed)
+kubeconfig
+*.kubeconfig
+.kube/
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+*.coverage
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Helm
+helm/*/charts/
+*.tgz
+
+# Monitoring data
+monitoring/prometheus/data/
+monitoring/grafana/data/
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Cache
+.cache/
+.parcel-cache/
+.npm/
+.eslintcache
+.node_repl_history
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# dotenv environment variable files
+.env
+.env.development
+.env.test
+.env.production
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
