@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-codetalk-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql-codetalk-secrets
+  namespace: default
+type: Opaque
+stringData:
+  postgres-password: "codetalk_postgres123"
+  codetalk-db-password: "codetalk123"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql-codetalk
+  namespace: default
+  labels:
+    app: postgresql-codetalk
+    tier: database
+spec:
+  serviceName: postgresql-codetalk
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql-codetalk
+  template:
+    metadata:
+      labels:
+        app: postgresql-codetalk
+        tier: database
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:14
+        ports:
+        - containerPort: 5432
+          name: postgresql
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-codetalk-secrets
+              key: postgres-password
+        - name: POSTGRES_DB
+          value: "codetalk"
+        - name: POSTGRES_USER
+          value: "codetalk_user"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgresql-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgresql-storage
+        persistentVolumeClaim:
+          claimName: postgresql-codetalk-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-codetalk
+  namespace: default
+  labels:
+    app: postgresql-codetalk
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgresql
+  selector:
+    app: postgresql-codetalk

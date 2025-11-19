@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-bookmarked-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql-bookmarked-secrets
+  namespace: default
+type: Opaque
+stringData:
+  postgres-password: "bookmarked_postgres123"
+  bookmarked-db-password: "bookmarked123"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql-bookmarked
+  namespace: default
+  labels:
+    app: postgresql-bookmarked
+    tier: database
+spec:
+  serviceName: postgresql-bookmarked
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql-bookmarked
+  template:
+    metadata:
+      labels:
+        app: postgresql-bookmarked
+        tier: database
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:14
+        ports:
+        - containerPort: 5432
+          name: postgresql
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-bookmarked-secrets
+              key: postgres-password
+        - name: POSTGRES_DB
+          value: "bookmarked"
+        - name: POSTGRES_USER
+          value: "bookmarked_user"
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgresql-storage
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: postgresql-storage
+        persistentVolumeClaim:
+          claimName: postgresql-bookmarked-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-bookmarked
+  namespace: default
+  labels:
+    app: postgresql-bookmarked
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgresql
+  selector:
+    app: postgresql-bookmarked

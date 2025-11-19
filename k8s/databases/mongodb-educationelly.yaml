@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-educationelly-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-educationelly-secrets
+  namespace: default
+type: Opaque
+stringData:
+  mongodb-root-password: "educationelly_mongo123"
+  educationelly-db-password: "educationelly123"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-educationelly
+  namespace: default
+  labels:
+    app: mongodb-educationelly
+    tier: database
+spec:
+  serviceName: mongodb-educationelly
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-educationelly
+  template:
+    metadata:
+      labels:
+        app: mongodb-educationelly
+        tier: database
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:6
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "root"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-educationelly-secrets
+              key: mongodb-root-password
+        - name: MONGO_INITDB_DATABASE
+          value: "educationelly"
+        volumeMounts:
+        - name: mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: mongodb-storage
+        persistentVolumeClaim:
+          claimName: mongodb-educationelly-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-educationelly
+  namespace: default
+  labels:
+    app: mongodb-educationelly
+spec:
+  type: ClusterIP
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+    name: mongodb
+  selector:
+    app: mongodb-educationelly

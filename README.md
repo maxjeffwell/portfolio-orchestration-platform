@@ -31,11 +31,19 @@ A Kubernetes-based orchestration platform that manages and monitors portfolio ap
                      │ Kubernetes API
                      ▼
 ┌─────────────────────────────────────────────────────┐
-│              Kubernetes Cluster                      │
+│              Kubernetes Cluster (k3d)                │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
 │  │Bookmarked│  │ FireBook │  │Education-│  ...     │
-│  │   Pod    │  │   Pod    │  │ ELLy Pod │          │
-│  └──────────┘  └──────────┘  └──────────┘          │
+│  │   Pods   │  │   Pod    │  │ ELLy Pods│          │
+│  └─────┬────┘  └──────────┘  └────┬─────┘          │
+│        │                           │                 │
+│        │    ┌──────────────────────┘                │
+│        │    │                                        │
+│        ▼    ▼                                        │
+│  ┌──────────────┐  ┌──────────┐  ┌──────────┐      │
+│  │  PostgreSQL  │  │  Redis   │  │ MongoDB  │      │
+│  │   (StatefulSet)│ │(StatefulSet)│(StatefulSet)   │
+│  └──────────────┘  └──────────┘  └──────────┘      │
 └─────────────────────────────────────────────────────┘
                      │
                      │ Metrics
@@ -63,10 +71,11 @@ portfolio-orchestration-platform/
 │   │   └── routes/       # API routes
 │   └── package.json
 ├── k8s/                   # Kubernetes manifests
-│   ├── deployments/      # Deployment configurations
+│   ├── databases/        # Database StatefulSets (PostgreSQL, Redis, MongoDB)
+│   ├── deployments/      # Application deployment configurations
 │   ├── services/         # Service definitions
 │   ├── configmaps/       # Configuration data
-│   └── secrets/          # Sensitive data
+│   └── secrets/          # Sensitive data (database credentials, etc.)
 ├── helm/                  # Helm charts
 │   └── portfolio-platform/
 │       ├── Chart.yaml

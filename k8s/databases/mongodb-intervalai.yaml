@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-intervalai-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-intervalai-secrets
+  namespace: default
+type: Opaque
+stringData:
+  mongodb-root-password: "intervalai_mongo123"
+  intervalai-db-password: "intervalai123"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-intervalai
+  namespace: default
+  labels:
+    app: mongodb-intervalai
+    tier: database
+spec:
+  serviceName: mongodb-intervalai
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb-intervalai
+  template:
+    metadata:
+      labels:
+        app: mongodb-intervalai
+        tier: database
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:6
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "root"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-intervalai-secrets
+              key: mongodb-root-password
+        - name: MONGO_INITDB_DATABASE
+          value: "intervalai"
+        volumeMounts:
+        - name: mongodb-storage
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: mongodb-storage
+        persistentVolumeClaim:
+          claimName: mongodb-intervalai-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-intervalai
+  namespace: default
+  labels:
+    app: mongodb-intervalai
+spec:
+  type: ClusterIP
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+    name: mongodb
+  selector:
+    app: mongodb-intervalai

@@ -92,6 +92,11 @@ spec:
           value: "production"
         - name: PORT
           value: "8000"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: educationelly-graphql-secrets
+              key: database-url
         resources:
           requests:
             memory: "256Mi"
