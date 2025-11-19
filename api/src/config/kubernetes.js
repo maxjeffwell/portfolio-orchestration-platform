@@ -9,11 +9,17 @@ class KubernetesClient {
 
   initialize() {
     try {
-      // Load kubeconfig from default location or environment variable
-      if (process.env.KUBECONFIG_PATH) {
+      // Load kubeconfig based on environment
+      if (process.env.KUBERNETES_SERVICE_HOST) {
+        // Running inside a Kubernetes cluster - use in-cluster config
+        logger.info('Loading in-cluster kubeconfig');
+        this.kc.loadFromCluster();
+      } else if (process.env.KUBECONFIG_PATH) {
+        // Custom kubeconfig path specified
         logger.info(`Loading kubeconfig from ${process.env.KUBECONFIG_PATH}`);
         this.kc.loadFromFile(process.env.KUBECONFIG_PATH);
       } else {
+        // Use default kubeconfig location (for local development)
         logger.info('Loading kubeconfig from default location');
         this.kc.loadFromDefault();
       }

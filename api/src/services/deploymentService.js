@@ -8,18 +8,26 @@ class DeploymentService {
       const response = await appsV1Api.listNamespacedDeployment(namespace);
 
       return response.body.items.map(deployment => ({
-        name: deployment.metadata.name,
-        namespace: deployment.metadata.namespace,
-        replicas: {
-          desired: deployment.spec.replicas,
-          ready: deployment.status.readyReplicas || 0,
-          available: deployment.status.availableReplicas || 0,
-          unavailable: deployment.status.unavailableReplicas || 0,
+        metadata: {
+          name: deployment.metadata.name,
+          namespace: deployment.metadata.namespace,
+          uid: deployment.metadata.uid,
+          creationTimestamp: deployment.metadata.creationTimestamp,
+          labels: deployment.metadata.labels,
         },
-        labels: deployment.metadata.labels,
-        selector: deployment.spec.selector.matchLabels,
-        strategy: deployment.spec.strategy.type,
-        creationTimestamp: deployment.metadata.creationTimestamp,
+        spec: {
+          replicas: deployment.spec.replicas,
+          selector: deployment.spec.selector,
+          strategy: deployment.spec.strategy,
+        },
+        status: {
+          replicas: deployment.status.replicas || 0,
+          readyReplicas: deployment.status.readyReplicas || 0,
+          availableReplicas: deployment.status.availableReplicas || 0,
+          unavailableReplicas: deployment.status.unavailableReplicas || 0,
+          updatedReplicas: deployment.status.updatedReplicas || 0,
+          conditions: deployment.status.conditions || [],
+        },
       }));
     } catch (error) {
       logger.error(`Error getting deployments in namespace ${namespace}:`, error);
@@ -33,22 +41,26 @@ class DeploymentService {
       const response = await appsV1Api.listNamespacedDeployment('default', undefined, undefined, undefined, undefined, 'portfolio=true');
 
       return response.body.items.map(deployment => ({
-        name: deployment.metadata.name,
-        namespace: deployment.metadata.namespace,
-        app: deployment.metadata.labels?.app || 'unknown',
-        component: deployment.metadata.labels?.component || null,
-        tier: deployment.metadata.labels?.tier || 'unknown',
-        replicas: {
-          desired: deployment.spec.replicas,
-          ready: deployment.status.readyReplicas || 0,
-          available: deployment.status.availableReplicas || 0,
-          unavailable: deployment.status.unavailableReplicas || 0,
+        metadata: {
+          name: deployment.metadata.name,
+          namespace: deployment.metadata.namespace,
+          uid: deployment.metadata.uid,
+          creationTimestamp: deployment.metadata.creationTimestamp,
+          labels: deployment.metadata.labels,
         },
-        labels: deployment.metadata.labels,
-        selector: deployment.spec.selector.matchLabels,
-        strategy: deployment.spec.strategy.type,
-        creationTimestamp: deployment.metadata.creationTimestamp,
-        conditions: deployment.status.conditions || [],
+        spec: {
+          replicas: deployment.spec.replicas,
+          selector: deployment.spec.selector,
+          strategy: deployment.spec.strategy,
+        },
+        status: {
+          replicas: deployment.status.replicas || 0,
+          readyReplicas: deployment.status.readyReplicas || 0,
+          availableReplicas: deployment.status.availableReplicas || 0,
+          unavailableReplicas: deployment.status.unavailableReplicas || 0,
+          updatedReplicas: deployment.status.updatedReplicas || 0,
+          conditions: deployment.status.conditions || [],
+        },
       }));
     } catch (error) {
       logger.error('Error getting portfolio deployments:', error);
@@ -63,31 +75,38 @@ class DeploymentService {
 
       const deployment = response.body;
       return {
-        name: deployment.metadata.name,
-        namespace: deployment.metadata.namespace,
-        replicas: {
-          desired: deployment.spec.replicas,
-          ready: deployment.status.readyReplicas || 0,
-          available: deployment.status.availableReplicas || 0,
-          unavailable: deployment.status.unavailableReplicas || 0,
-          updated: deployment.status.updatedReplicas || 0,
+        metadata: {
+          name: deployment.metadata.name,
+          namespace: deployment.metadata.namespace,
+          uid: deployment.metadata.uid,
+          creationTimestamp: deployment.metadata.creationTimestamp,
+          labels: deployment.metadata.labels,
+          annotations: deployment.metadata.annotations,
         },
-        labels: deployment.metadata.labels,
-        annotations: deployment.metadata.annotations,
-        selector: deployment.spec.selector.matchLabels,
-        strategy: {
-          type: deployment.spec.strategy.type,
-          ...deployment.spec.strategy.rollingUpdate,
+        spec: {
+          replicas: deployment.spec.replicas,
+          selector: deployment.spec.selector,
+          strategy: deployment.spec.strategy,
+          template: {
+            spec: {
+              containers: deployment.spec.template.spec.containers.map(container => ({
+                name: container.name,
+                image: container.image,
+                ports: container.ports || [],
+                env: container.env || [],
+                resources: container.resources || {},
+              })),
+            },
+          },
         },
-        containers: deployment.spec.template.spec.containers.map(container => ({
-          name: container.name,
-          image: container.image,
-          ports: container.ports || [],
-          env: container.env || [],
-          resources: container.resources || {},
-        })),
-        conditions: deployment.status.conditions || [],
-        creationTimestamp: deployment.metadata.creationTimestamp,
+        status: {
+          replicas: deployment.status.replicas || 0,
+          readyReplicas: deployment.status.readyReplicas || 0,
+          availableReplicas: deployment.status.availableReplicas || 0,
+          unavailableReplicas: deployment.status.unavailableReplicas || 0,
+          updatedReplicas: deployment.status.updatedReplicas || 0,
+          conditions: deployment.status.conditions || [],
+        },
       };
     } catch (error) {
       logger.error(`Error getting deployment ${name} in namespace ${namespace}:`, error);

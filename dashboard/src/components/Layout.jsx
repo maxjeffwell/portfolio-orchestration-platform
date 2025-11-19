@@ -16,7 +16,7 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   ViewList as ViewListIcon,
-  Deploy as DeployIcon,
+  CloudUpload as DeployIcon,
   Assessment as AssessmentIcon,
   Description as LogsIcon,
 } from '@mui/icons-material';

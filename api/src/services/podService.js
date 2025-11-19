@@ -8,24 +8,32 @@ class PodService {
       const response = await coreV1Api.listNamespacedPod(namespace);
 
       return response.body.items.map(pod => ({
-        name: pod.metadata.name,
-        namespace: pod.metadata.namespace,
-        status: pod.status.phase,
-        podIP: pod.status.podIP,
-        hostIP: pod.status.hostIP,
-        startTime: pod.status.startTime,
-        labels: pod.metadata.labels,
-        containers: pod.spec.containers.map(container => ({
-          name: container.name,
-          image: container.image,
-          ports: container.ports || [],
-        })),
-        containerStatuses: pod.status.containerStatuses?.map(status => ({
-          name: status.name,
-          ready: status.ready,
-          restartCount: status.restartCount,
-          state: status.state,
-        })) || [],
+        metadata: {
+          name: pod.metadata.name,
+          namespace: pod.metadata.namespace,
+          uid: pod.metadata.uid,
+          creationTimestamp: pod.metadata.creationTimestamp,
+          labels: pod.metadata.labels,
+        },
+        status: {
+          phase: pod.status.phase,
+          podIP: pod.status.podIP,
+          hostIP: pod.status.hostIP,
+          startTime: pod.status.startTime,
+          containerStatuses: pod.status.containerStatuses?.map(status => ({
+            name: status.name,
+            ready: status.ready,
+            restartCount: status.restartCount,
+            state: status.state,
+          })) || [],
+        },
+        spec: {
+          containers: pod.spec.containers.map(container => ({
+            name: container.name,
+            image: container.image,
+            ports: container.ports || [],
+          })),
+        },
       }));
     } catch (error) {
       logger.error(`Error getting pods in namespace ${namespace}:`, error);
@@ -39,26 +47,32 @@ class PodService {
       const response = await coreV1Api.listNamespacedPod('default', undefined, undefined, undefined, undefined, 'portfolio=true');
 
       return response.body.items.map(pod => ({
-        name: pod.metadata.name,
-        namespace: pod.metadata.namespace,
-        status: pod.status.phase,
-        podIP: pod.status.podIP,
-        startTime: pod.status.startTime,
-        labels: pod.metadata.labels,
-        app: pod.metadata.labels?.app || 'unknown',
-        component: pod.metadata.labels?.component || null,
-        tier: pod.metadata.labels?.tier || 'unknown',
-        containers: pod.spec.containers.map(container => ({
-          name: container.name,
-          image: container.image,
-          ports: container.ports || [],
-        })),
-        containerStatuses: pod.status.containerStatuses?.map(status => ({
-          name: status.name,
-          ready: status.ready,
-          restartCount: status.restartCount,
-          state: status.state,
-        })) || [],
+        metadata: {
+          name: pod.metadata.name,
+          namespace: pod.metadata.namespace,
+          uid: pod.metadata.uid,
+          creationTimestamp: pod.metadata.creationTimestamp,
+          labels: pod.metadata.labels,
+        },
+        status: {
+          phase: pod.status.phase,
+          podIP: pod.status.podIP,
+          hostIP: pod.status.hostIP,
+          startTime: pod.status.startTime,
+          containerStatuses: pod.status.containerStatuses?.map(status => ({
+            name: status.name,
+            ready: status.ready,
+            restartCount: status.restartCount,
+            state: status.state,
+          })) || [],
+        },
+        spec: {
+          containers: pod.spec.containers.map(container => ({
+            name: container.name,
+            image: container.image,
+            ports: container.ports || [],
+          })),
+        },
       }));
     } catch (error) {
       logger.error('Error getting portfolio pods:', error);
@@ -73,30 +87,38 @@ class PodService {
 
       const pod = response.body;
       return {
-        name: pod.metadata.name,
-        namespace: pod.metadata.namespace,
-        status: pod.status.phase,
-        podIP: pod.status.podIP,
-        hostIP: pod.status.hostIP,
-        startTime: pod.status.startTime,
-        labels: pod.metadata.labels,
-        annotations: pod.metadata.annotations,
-        containers: pod.spec.containers.map(container => ({
-          name: container.name,
-          image: container.image,
-          ports: container.ports || [],
-          env: container.env || [],
-          resources: container.resources || {},
-        })),
-        containerStatuses: pod.status.containerStatuses?.map(status => ({
-          name: status.name,
-          ready: status.ready,
-          restartCount: status.restartCount,
-          state: status.state,
-          image: status.image,
-          imageID: status.imageID,
-        })) || [],
-        conditions: pod.status.conditions || [],
+        metadata: {
+          name: pod.metadata.name,
+          namespace: pod.metadata.namespace,
+          uid: pod.metadata.uid,
+          creationTimestamp: pod.metadata.creationTimestamp,
+          labels: pod.metadata.labels,
+          annotations: pod.metadata.annotations,
+        },
+        status: {
+          phase: pod.status.phase,
+          podIP: pod.status.podIP,
+          hostIP: pod.status.hostIP,
+          startTime: pod.status.startTime,
+          conditions: pod.status.conditions || [],
+          containerStatuses: pod.status.containerStatuses?.map(status => ({
+            name: status.name,
+            ready: status.ready,
+            restartCount: status.restartCount,
+            state: status.state,
+            image: status.image,
+            imageID: status.imageID,
+          })) || [],
+        },
+        spec: {
+          containers: pod.spec.containers.map(container => ({
+            name: container.name,
+            image: container.image,
+            ports: container.ports || [],
+            env: container.env || [],
+            resources: container.resources || {},
+          })),
+        },
       };
     } catch (error) {
       logger.error(`Error getting pod ${name} in namespace ${namespace}:`, error);

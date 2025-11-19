@@ -26,6 +26,11 @@ spec:
       - name: intervalai-client
         image: maxjeffwell/spaced-repetition-capstone-client:latest
         imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+              - NET_BIND_SERVICE
         ports:
         - containerPort: 80
           name: http
@@ -92,11 +97,16 @@ spec:
           value: "production"
         - name: PORT
           value: "8080"
-        - name: DATABASE_URL
+        - name: MONGODB_URI
           valueFrom:
             secretKeyRef:
               name: intervalai-secrets
-              key: database-url
+              key: mongodb-uri
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: intervalai-secrets
+              key: jwt-secret
         resources:
           requests:
             memory: "256Mi"
@@ -105,16 +115,14 @@ spec:
             memory: "512Mi"
             cpu: "500m"
         livenessProbe:
-          httpGet:
-            path: /
+          tcpSocket:
             port: 8080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
-          httpGet:
-            path: /
+          tcpSocket:
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 5

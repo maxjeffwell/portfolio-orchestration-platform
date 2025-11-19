@@ -26,6 +26,11 @@ spec:
       - name: bookmarked-client
         image: maxjeffwell/bookmarks-react-hooks-client:latest
         imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+              - NET_BIND_SERVICE
         ports:
         - containerPort: 80
           name: http
@@ -105,16 +110,14 @@ spec:
             memory: "512Mi"
             cpu: "500m"
         livenessProbe:
-          httpGet:
-            path: /
+          tcpSocket:
             port: 3001
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
-          httpGet:
-            path: /
+          tcpSocket:
             port: 3001
           initialDelaySeconds: 10
           periodSeconds: 5

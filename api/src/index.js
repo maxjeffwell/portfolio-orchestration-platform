@@ -7,6 +7,7 @@ import logger from './utils/logger.js';
 import k8sClient from './config/kubernetes.js';
 import podRoutes from './routes/podRoutes.js';
 import deploymentRoutes from './routes/deploymentRoutes.js';
+import metricsRoutes from './routes/metricsRoutes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -48,6 +49,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/pods', podRoutes);
 app.use('/api/deployments', deploymentRoutes);
+app.use('/api/metrics', metricsRoutes);
 
 // 404 handler
 app.use((req, res) => {

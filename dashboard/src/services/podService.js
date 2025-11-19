@@ -3,12 +3,12 @@ import api from './api';
 export const podService = {
   async getAllPods() {
     const response = await api.get('/pods');
-    return response.data;
+    return response.data.data;
   },
 
   async getPodDetails(name) {
     const response = await api.get(`/pods/${name}`);
-    return response.data;
+    return response.data.data;
   },
 
   async getPodLogs(name, options = {}) {
@@ -20,17 +20,17 @@ export const podService = {
     params.append('follow', follow.toString());
 
     const response = await api.get(`/pods/${name}/logs?${params.toString()}`);
-    return response.data;
+    return response.data.data;
   },
 
   async restartPod(name) {
     const response = await api.post(`/pods/${name}/restart`);
-    return response.data;
+    return response.data.data;
   },
 
   async deletePod(name) {
     const response = await api.delete(`/pods/${name}`);
-    return response.data;
+    return response.data.data;
   },
 };
 
