@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookmarked-client
+  namespace: default
+  labels:
+    app: bookmarked
+    component: client
+    tier: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: bookmarked
+    component: client
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookmarked-server
+  namespace: default
+  labels:
+    app: bookmarked
+    component: server
+    tier: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: bookmarked
+    component: server
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP

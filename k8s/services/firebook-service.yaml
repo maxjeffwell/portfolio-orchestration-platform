@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: firebook
+  namespace: default
+  labels:
+    app: firebook
+    tier: fullstack
+spec:
+  type: ClusterIP
+  selector:
+    app: firebook
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP

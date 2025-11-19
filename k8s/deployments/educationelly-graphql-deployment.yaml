@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: educationelly-graphql-client
+  namespace: default
+  labels:
+    app: educationelly-graphql
+    component: client
+    tier: frontend
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: educationelly-graphql
+      component: client
+  template:
+    metadata:
+      labels:
+        app: educationelly-graphql
+        component: client
+        tier: frontend
+        portfolio: "true"
+    spec:
+      containers:
+      - name: educationelly-graphql-client
+        image: maxjeffwell/educationelly-graphql-client:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: educationelly-graphql-server
+  namespace: default
+  labels:
+    app: educationelly-graphql
+    component: server
+    tier: backend
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: educationelly-graphql
+      component: server
+  template:
+    metadata:
+      labels:
+        app: educationelly-graphql
+        component: server
+        tier: backend
+        portfolio: "true"
+    spec:
+      containers:
+      - name: educationelly-graphql-server
+        image: maxjeffwell/educationelly-graphql-server:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "8000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-talk-client
+  namespace: default
+  labels:
+    app: code-talk
+    component: client
+    tier: frontend
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-talk
+      component: client
+  template:
+    metadata:
+      labels:
+        app: code-talk
+        component: client
+        tier: frontend
+        portfolio: "true"
+    spec:
+      containers:
+      - name: code-talk-client
+        image: maxjeffwell/code-talk-graphql-client:nas-local
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-talk-server
+  namespace: default
+  labels:
+    app: code-talk
+    component: server
+    tier: backend
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-talk
+      component: server
+  template:
+    metadata:
+      labels:
+        app: code-talk
+        component: server
+        tier: backend
+        portfolio: "true"
+    spec:
+      containers:
+      - name: code-talk-server
+        image: maxjeffwell/code-talk-graphql-server:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "8000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always

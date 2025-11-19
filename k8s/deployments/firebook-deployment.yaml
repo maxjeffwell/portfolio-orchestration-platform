@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firebook
+  namespace: default
+  labels:
+    app: firebook
+    tier: fullstack
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firebook
+  template:
+    metadata:
+      labels:
+        app: firebook
+        tier: fullstack
+        portfolio: "true"
+    spec:
+      containers:
+      - name: firebook
+        image: maxjeffwell/firebook:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
