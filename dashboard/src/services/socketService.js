@@ -11,9 +11,9 @@ class SocketService {
       return this.socket;
     }
 
-    // Always use window.location.origin for WebSocket connections
-    // Nginx will proxy /socket.io to the API service
-    const SOCKET_URL = window.location.origin;
+    // Use API server URL for WebSocket connections (remove /api suffix)
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const SOCKET_URL = API_URL.replace(/\/api$/, '');
     const token = localStorage.getItem('auth_token');
 
     this.socket = io(SOCKET_URL, {

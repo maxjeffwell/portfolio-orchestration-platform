@@ -135,32 +135,32 @@ export default function Pods() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Pods</Typography>
-        <Button startIcon={<RefreshIcon />} onClick={fetchPods} variant="outlined">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
+        <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>Pods</Typography>
+        <Button startIcon={<RefreshIcon />} onClick={fetchPods} variant="outlined" size="small">
           Refresh
         </Button>
       </Box>
 
       <Card>
-        <CardContent>
-          <TableContainer>
-            <Table>
+        <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
-                  <TableCell>Namespace</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Namespace</TableCell>
                   <TableCell>Status</TableCell>
-                  <TableCell>Restarts</TableCell>
-                  <TableCell>Age</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Restarts</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Age</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {pods.map((pod) => (
                   <TableRow key={pod.metadata?.uid}>
-                    <TableCell>{pod.metadata?.name}</TableCell>
-                    <TableCell>{pod.metadata?.namespace}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{pod.metadata?.name}</TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{pod.metadata?.namespace}</TableCell>
                     <TableCell>
                       <Chip
                         label={pod.status?.phase || 'Unknown'}
@@ -168,10 +168,10 @@ export default function Pods() {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       {pod.status?.containerStatuses?.[0]?.restartCount || 0}
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       {new Date(pod.metadata?.creationTimestamp).toLocaleDateString()}
                     </TableCell>
                     <TableCell align="right">

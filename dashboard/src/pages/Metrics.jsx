@@ -93,9 +93,9 @@ export default function Metrics() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Metrics</Typography>
-        <Button startIcon={<RefreshIcon />} onClick={fetchMetrics} variant="outlined">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
+        <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>Metrics</Typography>
+        <Button startIcon={<RefreshIcon />} onClick={fetchMetrics} variant="outlined" size="small">
           Refresh
         </Button>
       </Box>
@@ -210,13 +210,13 @@ export default function Metrics() {
                       <Grid item xs={12} sm={6} md={3}>
                         <Typography color="textSecondary">Temperature</Typography>
                         <Typography variant="h4" color={gpu.temperature > 80 ? 'error' : gpu.temperature > 70 ? 'warning.main' : 'success.main'}>
-                          {gpu.temperature.toFixed(0)}°C
+                          {gpu.temperature?.toFixed(0) || 'N/A'}°C
                         </Typography>
                       </Grid>
                       <Grid item xs={12} sm={6} md={3}>
                         <Typography color="textSecondary">Power Draw</Typography>
                         <Typography variant="h4">
-                          {gpu.power.draw.toFixed(1)} / {gpu.power.limit.toFixed(0)} W
+                          {gpu.power?.draw?.toFixed(1) || 'N/A'} / {gpu.power?.limit?.toFixed(0) || 'N/A'} W
                         </Typography>
                       </Grid>
                     </Grid>

@@ -2,7 +2,7 @@ import api from './api';
 
 export const podService = {
   async getAllPods() {
-    const response = await api.get('/pods');
+    const response = await api.get('/pods/portfolio');
     return response.data.data;
   },
 

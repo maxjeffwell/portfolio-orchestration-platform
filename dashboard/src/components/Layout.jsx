@@ -101,17 +101,23 @@ export default function Layout({ children }) {
             Portfolio Orchestration Platform
           </Typography>
           {user && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
               <ConnectionStatus />
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
                 {user.username}
               </Typography>
               <Button
                 color="inherit"
                 onClick={handleLogout}
                 startIcon={<LogoutIcon />}
+                sx={{
+                  minWidth: { xs: 'auto', sm: '64px' },
+                  px: { xs: 1, sm: 2 }
+                }}
               >
-                Logout
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Logout
+                </Box>
               </Button>
             </Box>
           )}
@@ -150,7 +156,7 @@ export default function Layout({ children }) {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, sm: 3 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
         }}
       >

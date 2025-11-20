@@ -2,7 +2,7 @@ import api from './api';
 
 export const deploymentService = {
   async getAllDeployments() {
-    const response = await api.get('/deployments');
+    const response = await api.get('/deployments/portfolio');
     return response.data.data;
   },
 

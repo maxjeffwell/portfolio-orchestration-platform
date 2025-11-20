@@ -28,9 +28,11 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchStats = async () => {
+  const fetchStats = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const [pods, deployments] = await Promise.all([
         podService.getAllPods(),
         deploymentService.getAllDeployments(),
@@ -50,7 +52,9 @@ export default function Dashboard() {
       setError(err.message);
       console.error('Error fetching stats:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -63,7 +67,7 @@ export default function Dashboard() {
 
     const handleUpdate = (data) => {
       console.log('Received WebSocket update', data);
-      fetchStats();
+      fetchStats(false); // Don't show loading spinner on WebSocket updates
     };
 
     socketService.on('pods:update', handleUpdate);
