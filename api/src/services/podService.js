@@ -167,6 +167,20 @@ class PodService {
       throw error;
     }
   }
+
+  async restartPod(name, namespace = 'default') {
+    try {
+      // Restarting a pod is the same as deleting it (if part of deployment/statefulset, it will be recreated)
+      const coreV1Api = k8sClient.getCoreV1Api();
+      await coreV1Api.deleteNamespacedPod(name, namespace);
+
+      logger.info(`Pod ${name} restarted (deleted) in namespace ${namespace}`);
+      return { success: true, message: `Pod ${name} restarted successfully` };
+    } catch (error) {
+      logger.error(`Error restarting pod ${name}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default new PodService();

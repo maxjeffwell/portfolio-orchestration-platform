@@ -17,6 +17,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import podService from '../services/podService';
+import socketService from '../services/socketService';
 
 export default function Logs() {
   const [pods, setPods] = useState([]);
@@ -24,6 +25,7 @@ export default function Logs() {
   const [logs, setLogs] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [streaming, setStreaming] = useState(false);
 
   const fetchPods = async () => {
     try {
@@ -43,7 +45,7 @@ export default function Logs() {
 
     try {
       setLoading(true);
-      const logData = await podService.getPodLogs(selectedPod, { tailLines: 500 });
+      const logData = await podService.getPodLogs(selectedPod, { tailLines: 100 });
       setLogs(logData.logs || 'No logs available');
       setError(null);
     } catch (err) {
@@ -61,15 +63,60 @@ export default function Logs() {
 
   useEffect(() => {
     if (selectedPod) {
+      // Fetch initial logs
       fetchLogs();
+
+      // Subscribe to log streaming
+      socketService.connect();
+      socketService.emit('subscribe:logs', selectedPod);
+      setStreaming(true);
+
+      const handleLogsUpdate = (data) => {
+        if (data.podName === selectedPod && data.lines && data.lines.length > 0) {
+          console.log(`Received ${data.lines.length} new log lines for ${selectedPod}`);
+          setLogs((prevLogs) => {
+            const newLogs = data.lines.join('\n');
+            return prevLogs ? `${prevLogs}\n${newLogs}` : newLogs;
+          });
+        }
+      };
+
+      socketService.on('logs:update', handleLogsUpdate);
+
+      return () => {
+        // Unsubscribe from logs when changing pods or unmounting
+        socketService.emit('unsubscribe:logs');
+        socketService.off('logs:update', handleLogsUpdate);
+        setStreaming(false);
+      };
     }
   }, [selectedPod]);
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Logs
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4">
+          Logs
+        </Typography>
+        {streaming && (
+          <Typography variant="body2" color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: 'success.main',
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
+                  '0%, 100%': { opacity: 1 },
+                  '50%': { opacity: 0.5 },
+                },
+              }}
+            />
+            Live streaming
+          </Typography>
+        )}
+      </Box>
 
       <Box mb={3} display="flex" gap={2} alignItems="center">
         <FormControl sx={{ minWidth: 300 }}>

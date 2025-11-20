@@ -11,7 +11,10 @@ class SocketService {
       return this.socket;
     }
 
-    const SOCKET_URL = import.meta.env.VITE_API_URL || window.location.origin;
+    // Always use window.location.origin for WebSocket connections
+    // Nginx will proxy /socket.io to the API service
+    const SOCKET_URL = window.location.origin;
+    const token = localStorage.getItem('auth_token');
 
     this.socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
@@ -19,6 +22,9 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: Infinity,
+      auth: {
+        token: token
+      }
     });
 
     this.socket.on('connect', () => {
@@ -27,6 +33,10 @@ class SocketService {
 
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
     });
 
     this.socket.on('error', (error) => {
@@ -78,6 +88,28 @@ class SocketService {
     if (this.socket) {
       this.socket.emit(event, data);
     }
+  }
+
+  isConnected() {
+    return this.socket?.connected || false;
+  }
+
+  getConnectionState() {
+    if (!this.socket) {
+      return 'disconnected';
+    }
+    if (this.socket.connected) {
+      return 'connected';
+    }
+    return 'connecting';
+  }
+
+  reconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.connect();
   }
 }
 

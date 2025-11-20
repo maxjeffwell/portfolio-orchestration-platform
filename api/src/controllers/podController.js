@@ -100,6 +100,26 @@ class PodController {
       });
     }
   }
+
+  async restartPod(req, res) {
+    try {
+      const { name } = req.params;
+      const namespace = req.query.namespace || 'default';
+
+      const result = await podService.restartPod(name, namespace);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Error in restartPod controller:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to restart pod',
+      });
+    }
+  }
 }
 
 export default new PodController();

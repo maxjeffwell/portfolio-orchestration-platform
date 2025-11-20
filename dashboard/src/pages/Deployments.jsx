@@ -84,10 +84,18 @@ export default function Deployments() {
     fetchDeployments();
 
     socketService.connect();
-    socketService.on('deployment-update', fetchDeployments);
+    socketService.emit('subscribe:deployments');
+
+    const handleDeploymentUpdate = (deploymentData) => {
+      console.log('Received deployments:update', deploymentData);
+      // WebSocket sends simplified deployment data, so we refetch for full details
+      fetchDeployments();
+    };
+
+    socketService.on('deployments:update', handleDeploymentUpdate);
 
     return () => {
-      socketService.off('deployment-update', fetchDeployments);
+      socketService.off('deployments:update', handleDeploymentUpdate);
     };
   }, []);
 

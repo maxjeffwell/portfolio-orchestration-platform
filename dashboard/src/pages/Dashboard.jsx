@@ -58,12 +58,20 @@ export default function Dashboard() {
     fetchStats();
 
     socketService.connect();
-    socketService.on('pod-update', fetchStats);
-    socketService.on('deployment-update', fetchStats);
+    socketService.emit('subscribe:pods');
+    socketService.emit('subscribe:deployments');
+
+    const handleUpdate = (data) => {
+      console.log('Received WebSocket update', data);
+      fetchStats();
+    };
+
+    socketService.on('pods:update', handleUpdate);
+    socketService.on('deployments:update', handleUpdate);
 
     return () => {
-      socketService.off('pod-update', fetchStats);
-      socketService.off('deployment-update', fetchStats);
+      socketService.off('pods:update', handleUpdate);
+      socketService.off('deployments:update', handleUpdate);
     };
   }, []);
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   AppBar,
   Box,
+  Button,
   Drawer,
   IconButton,
   List,
@@ -19,8 +20,11 @@ import {
   CloudUpload as DeployIcon,
   Assessment as AssessmentIcon,
   Description as LogsIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import ConnectionStatus from './ConnectionStatus';
 
 const drawerWidth = 240;
 
@@ -35,9 +39,16 @@ const menuItems = [
 export default function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   const drawer = (
@@ -86,9 +97,24 @@ export default function Layout({ children }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Portfolio Orchestration Platform
           </Typography>
+          {user && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <ConnectionStatus />
+              <Typography variant="body2">
+                {user.username}
+              </Typography>
+              <Button
+                color="inherit"
+                onClick={handleLogout}
+                startIcon={<LogoutIcon />}
+              >
+                Logout
+              </Button>
+            </Box>
+          )}
         </Toolbar>
       </AppBar>
       <Box

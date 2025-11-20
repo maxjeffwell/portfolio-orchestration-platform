@@ -91,10 +91,18 @@ export default function Pods() {
     fetchPods();
 
     socketService.connect();
-    socketService.on('pod-update', fetchPods);
+    socketService.emit('subscribe:pods');
+
+    const handlePodUpdate = (podData) => {
+      console.log('Received pods:update', podData);
+      // WebSocket sends simplified pod data, so we refetch for full details
+      fetchPods();
+    };
+
+    socketService.on('pods:update', handlePodUpdate);
 
     return () => {
-      socketService.off('pod-update', fetchPods);
+      socketService.off('pods:update', handlePodUpdate);
     };
   }, []);
 

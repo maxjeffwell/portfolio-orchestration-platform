@@ -25,6 +25,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import metricsService from '../services/metricsService';
+import socketService from '../services/socketService';
 
 export default function Metrics() {
   const [metrics, setMetrics] = useState(null);
@@ -54,8 +55,22 @@ export default function Metrics() {
 
   useEffect(() => {
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 30000);
-    return () => clearInterval(interval);
+
+    socketService.connect();
+    socketService.emit('subscribe:metrics');
+
+    const handleMetricsUpdate = (metricsData) => {
+      console.log('Received metrics:update', metricsData);
+      setMetrics(metricsData);
+      setLoading(false);
+      setError(null);
+    };
+
+    socketService.on('metrics:update', handleMetricsUpdate);
+
+    return () => {
+      socketService.off('metrics:update', handleMetricsUpdate);
+    };
   }, []);
 
   if (loading) {
@@ -147,21 +162,69 @@ export default function Metrics() {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Typography color="textSecondary">CPU Usage</Typography>
+                    <Typography color="textSecondary">Running Pods</Typography>
                     <Typography variant="h4">
-                      {metrics.cluster.cpuUsage || 0}%
+                      {metrics.cluster.runningPods || 0}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Typography color="textSecondary">Memory Usage</Typography>
+                    <Typography color="textSecondary">Namespaces</Typography>
                     <Typography variant="h4">
-                      {metrics.cluster.memoryUsage || 0}%
+                      {metrics.cluster.namespaces || 0}
                     </Typography>
                   </Grid>
                 </Grid>
               </CardContent>
             </Card>
           </Grid>
+        )}
+
+        {metrics?.gpu && metrics.gpu.length > 0 && (
+          <>
+            {metrics.gpu.map((gpu) => (
+              <Grid item xs={12} key={gpu.index}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      GPU {gpu.index}: {gpu.name}
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography color="textSecondary">GPU Utilization</Typography>
+                        <Typography variant="h4" color={gpu.utilization.gpu > 80 ? 'error' : 'primary'}>
+                          {gpu.utilization.gpu.toFixed(1)}%
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography color="textSecondary">Memory Utilization</Typography>
+                        <Typography variant="h4" color={gpu.utilization.memory > 80 ? 'error' : 'primary'}>
+                          {gpu.utilization.memory.toFixed(1)}%
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography color="textSecondary">Memory Used</Typography>
+                        <Typography variant="h4">
+                          {gpu.memory.used.toFixed(0)} / {gpu.memory.total.toFixed(0)} MB
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography color="textSecondary">Temperature</Typography>
+                        <Typography variant="h4" color={gpu.temperature > 80 ? 'error' : gpu.temperature > 70 ? 'warning.main' : 'success.main'}>
+                          {gpu.temperature.toFixed(0)}°C
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography color="textSecondary">Power Draw</Typography>
+                        <Typography variant="h4">
+                          {gpu.power.draw.toFixed(1)} / {gpu.power.limit.toFixed(0)} W
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </>
         )}
       </Grid>
     </Box>

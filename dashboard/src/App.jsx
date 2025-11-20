@@ -2,7 +2,10 @@ import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import theme from './theme';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Pods from './pages/Pods';
 import Deployments from './pages/Deployments';
@@ -13,15 +16,27 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Layout>
+      <AuthProvider>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/pods" element={<Pods />} />
-          <Route path="/deployments" element={<Deployments />} />
-          <Route path="/metrics" element={<Metrics />} />
-          <Route path="/logs" element={<Logs />} />
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/pods" element={<Pods />} />
+                    <Route path="/deployments" element={<Deployments />} />
+                    <Route path="/metrics" element={<Metrics />} />
+                    <Route path="/logs" element={<Logs />} />
+                  </Routes>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
-      </Layout>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

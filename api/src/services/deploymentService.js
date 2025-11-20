@@ -143,17 +143,34 @@ class DeploymentService {
     try {
       const appsV1Api = k8sClient.getAppsV1Api();
 
-      // Get current deployment
-      const deployment = await appsV1Api.readNamespacedDeployment(name, namespace);
+      // Use patch instead of replace to avoid conflicts
+      const patch = {
+        spec: {
+          template: {
+            metadata: {
+              annotations: {
+                'kubectl.kubernetes.io/restartedAt': new Date().toISOString()
+              }
+            }
+          }
+        }
+      };
 
-      // Add/update restart annotation to trigger rolling restart
-      if (!deployment.body.spec.template.metadata.annotations) {
-        deployment.body.spec.template.metadata.annotations = {};
-      }
-      deployment.body.spec.template.metadata.annotations['kubectl.kubernetes.io/restartedAt'] = new Date().toISOString();
+      const options = {
+        headers: { 'Content-Type': 'application/strategic-merge-patch+json' }
+      };
 
-      // Apply the update
-      await appsV1Api.replaceNamespacedDeployment(name, namespace, deployment.body);
+      await appsV1Api.patchNamespacedDeployment(
+        name,
+        namespace,
+        patch,
+        undefined, // pretty
+        undefined, // dryRun
+        undefined, // fieldManager
+        undefined, // fieldValidation
+        undefined, // force
+        options
+      );
 
       logger.info(`Deployment ${name} restarted`);
       return {

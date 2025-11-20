@@ -34,7 +34,27 @@ spec:
         - name: CORS_ORIGIN
           value: "*"
         - name: LOG_LEVEL
-          value: "info"
+          value: "debug"
+        - name: AUTH_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: auth-database-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: jwt-secret
+        - name: ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: admin-username
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: admin-password
         resources:
           requests:
             memory: "128Mi"

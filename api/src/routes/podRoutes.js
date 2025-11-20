@@ -15,6 +15,9 @@ router.get('/:name', podController.getPodByName.bind(podController));
 // Get logs for a specific pod
 router.get('/:name/logs', podController.getPodLogs.bind(podController));
 
+// Restart a pod (deletes it, will be recreated if part of deployment/statefulset)
+router.post('/:name/restart', podController.restartPod.bind(podController));
+
 // Delete a pod (will trigger restart if part of deployment)
 router.delete('/:name', podController.deletePod.bind(podController));
 
