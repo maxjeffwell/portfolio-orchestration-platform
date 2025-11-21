@@ -14,6 +14,7 @@ import podRoutes from './routes/podRoutes.js';
 import deploymentRoutes from './routes/deploymentRoutes.js';
 import metricsRoutes from './routes/metricsRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import metabaseRoutes from './routes/metabase.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const execAsync = promisify(exec);
@@ -57,6 +58,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/metabase', metabaseRoutes);
 
 // Protected routes (require authentication)
 app.use('/api/pods', authMiddleware, podRoutes);
