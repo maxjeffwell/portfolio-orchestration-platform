@@ -11,6 +11,7 @@ import Pods from './pages/Pods';
 import Deployments from './pages/Deployments';
 import Metrics from './pages/Metrics';
 import Logs from './pages/Logs';
+import Analytics from './pages/Analytics';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                     <Route path="/deployments" element={<Deployments />} />
                     <Route path="/metrics" element={<Metrics />} />
                     <Route path="/logs" element={<Logs />} />
+                    <Route path="/analytics" element={<Analytics />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

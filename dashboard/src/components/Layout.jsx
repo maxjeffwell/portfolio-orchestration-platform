@@ -20,6 +20,7 @@ import {
   CloudUpload as DeployIcon,
   Assessment as AssessmentIcon,
   Description as LogsIcon,
+  BarChart as AnalyticsIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -34,6 +35,7 @@ const menuItems = [
   { text: 'Deployments', icon: <DeployIcon />, path: '/deployments' },
   { text: 'Metrics', icon: <AssessmentIcon />, path: '/metrics' },
   { text: 'Logs', icon: <LogsIcon />, path: '/logs' },
+  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
 ];
 
 export default function Layout({ children }) {
