@@ -105,8 +105,8 @@ function Analytics() {
         ))}
       </Grid>
 
-      {/* Main Dashboard */}
-      <Box sx={{ mb: 3 }}>
+      {/* Main Dashboard - Uncomment when you create a dashboard in Metabase */}
+      {/* <Box sx={{ mb: 3 }}>
         <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', p: 2 }}>
           <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
             Infrastructure Overview
@@ -119,58 +119,41 @@ function Analytics() {
             />
           </Box>
         </Paper>
-      </Box>
+      </Box> */}
 
       {/* Charts Grid */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', p: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Pod Resource Usage
+        <Grid item xs={12}>
+          <Paper
+            elevation={3}
+            sx={{
+              borderRadius: 2,
+              overflow: 'auto',
+              p: 3,
+              backgroundColor: '#fff'
+            }}
+          >
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+              Users Data
             </Typography>
-            <Box sx={{ height: 400, width: '100%' }}>
+            <Box
+              sx={{
+                height: 800,
+                width: '100%',
+                minHeight: 800,
+                '& table': {
+                  fontSize: '16px !important',
+                  '& th, & td': {
+                    padding: '12px !important',
+                    fontSize: '16px !important'
+                  }
+                }
+              }}
+            >
               <StaticQuestion
                 questionId={1}
-                withTitle
-              />
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', p: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Deployment Frequency
-            </Typography>
-            <Box sx={{ height: 400, width: '100%' }}>
-              <StaticQuestion
-                questionId={2}
-                withTitle
-              />
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', p: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Namespace Distribution
-            </Typography>
-            <Box sx={{ height: 400, width: '100%' }}>
-              <StaticQuestion
-                questionId={3}
-                withTitle
-              />
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', p: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Error Rate Trends
-            </Typography>
-            <Box sx={{ height: 400, width: '100%' }}>
-              <StaticQuestion
-                questionId={4}
-                withTitle
+                withTitle={false}
+                withDownloads
               />
             </Box>
           </Paper>

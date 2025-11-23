@@ -91,6 +91,30 @@ router.post('/embed-token/question/:questionId', (req, res) => {
 });
 
 /**
+ * GET /api/metabase/embed-token/sdk
+ * Generate an embed token for the Metabase SDK (full SDK embedding)
+ * Metabase SDK calls this endpoint via GET to fetch JWT tokens
+ */
+router.get('/embed-token/sdk', (req, res) => {
+  try {
+    const payload = {
+      email: 'viewer@portfolio.local',
+      first_name: 'Portfolio',
+      last_name: 'Viewer',
+      groups: ['Viewers'],
+      exp: Math.round(Date.now() / 1000) + (60 * 60) // Token expires in 1 hour
+    };
+
+    const token = generateMetabaseToken(payload);
+
+    res.json({ jwt: token });
+  } catch (error) {
+    console.error('Error generating SDK embed token:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * POST /api/metabase/embed-token/sdk
  * Generate an embed token for the Metabase SDK (full SDK embedding)
  * Body: { user: { ... }, permissions: [ ... ] } - User context and permissions
