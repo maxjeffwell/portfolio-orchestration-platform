@@ -30,6 +30,8 @@ import axios from 'axios';
 function Analytics() {
   const [metrics, setMetrics] = useState(null);
   const [historicalData, setHistoricalData] = useState([]);
+  const [namespaceData, setNamespaceData] = useState([]);
+  const [podResourceData, setPodResourceData] = useState([]);
 
   useEffect(() => {
     // Fetch real-time metrics from your API
@@ -123,6 +125,102 @@ function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch namespace distribution from Prometheus
+  useEffect(() => {
+    const fetchNamespaceData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const baseUrl = 'http://localhost:5000/api/prometheus';
+
+        // Query for pod count by namespace
+        const response = await axios.get(
+          `${baseUrl}/query?query=count(kube_pod_info{phase="Running"}) by (namespace)`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.success && response.data.data?.data?.result) {
+          const colors = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#f44336', '#ff9800'];
+          const namespaces = response.data.data.data.result.map((item, idx) => ({
+            name: item.metric.namespace,
+            value: parseInt(item.value[1]),
+            color: colors[idx % colors.length],
+          }));
+          setNamespaceData(namespaces);
+        }
+      } catch (error) {
+        console.error('Error fetching namespace data:', error);
+      }
+    };
+
+    fetchNamespaceData();
+    const interval = setInterval(fetchNamespaceData, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch pod resource usage from Prometheus
+  useEffect(() => {
+    const fetchPodResourceData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const baseUrl = 'http://localhost:5000/api/prometheus';
+
+        // Query for top pods by CPU and Memory
+        const [cpuResponse, memResponse] = await Promise.all([
+          axios.get(
+            `${baseUrl}/query?query=topk(10, sum(rate(container_cpu_usage_seconds_total{pod!="",container!=""}[5m])) by (pod))`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+          axios.get(
+            `${baseUrl}/query?query=topk(10, sum(container_memory_working_set_bytes{pod!="",container!=""}) by (pod))`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+        ]);
+
+        if (cpuResponse.data.success && memResponse.data.success) {
+          const cpuData = cpuResponse.data.data?.data?.result || [];
+          const memData = memResponse.data.data?.data?.result || [];
+
+          // Create a map of pod names to their metrics
+          const podMap = new Map();
+
+          cpuData.forEach(item => {
+            const podName = item.metric.pod;
+            const cpuValue = parseFloat(item.value[1]) * 1000; // Convert to millicores
+            podMap.set(podName, { name: podName, cpu: Math.round(cpuValue), memory: 0 });
+          });
+
+          memData.forEach(item => {
+            const podName = item.metric.pod;
+            const memValue = parseFloat(item.value[1]) / (1024 * 1024); // Convert to MiB
+            if (podMap.has(podName)) {
+              podMap.get(podName).memory = Math.round(memValue);
+            } else {
+              podMap.set(podName, { name: podName, cpu: 0, memory: Math.round(memValue) });
+            }
+          });
+
+          // Convert to array and take top 10 by combined score
+          const pods = Array.from(podMap.values())
+            .map(pod => ({
+              ...pod,
+              name: pod.name.substring(0, 20), // Truncate long names
+            }))
+            .slice(0, 10);
+
+          setPodResourceData(pods);
+        }
+      } catch (error) {
+        console.error('Error fetching pod resource data:', error);
+      }
+    };
+
+    fetchPodResourceData();
+    const interval = setInterval(fetchPodResourceData, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Calculate KPIs from metrics
   const kpis = metrics ? [
     {
@@ -158,21 +256,6 @@ function Analytics() {
       color: '#d32f2f',
     },
   ] : [];
-
-  // Prepare namespace distribution data
-  const namespaceData = metrics ? [
-    { name: 'default', value: metrics.cluster.runningPods, color: '#1976d2' },
-    { name: 'kube-system', value: Math.floor(metrics.cluster.totalPods * 0.3), color: '#2e7d32' },
-    { name: 'monitoring', value: Math.floor(metrics.cluster.totalPods * 0.2), color: '#ed6c02' },
-    { name: 'other', value: metrics.cluster.totalPods - metrics.cluster.runningPods - Math.floor(metrics.cluster.totalPods * 0.5), color: '#9c27b0' },
-  ] : [];
-
-  // Pod resource usage data
-  const podResourceData = metrics?.pods.slice(0, 10).map(pod => ({
-    name: pod.metadata.name.substring(0, 20),
-    cpu: Math.round(pod.usage.cpu),
-    memory: Math.round(pod.usage.memory),
-  })) || [];
 
   // GPU metrics if available
   const gpuData = metrics?.gpu || [];
