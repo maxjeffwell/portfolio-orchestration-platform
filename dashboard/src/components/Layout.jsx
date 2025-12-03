@@ -57,7 +57,7 @@ export default function Layout({ children }) {
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          K8s Dashboard
+          Pop!_Portfolio
         </Typography>
       </Toolbar>
       <List>
@@ -99,7 +99,7 @@ export default function Layout({ children }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, textAlign: 'center' }}>
             Portfolio Orchestration Platform
           </Typography>
           {user && (
