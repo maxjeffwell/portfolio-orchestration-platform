@@ -21,6 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "@kubernetes/client-node": "^0.21.0",
+    "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

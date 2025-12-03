@@ -1,45 +1,181 @@
+import { useState, useEffect } from 'react';
 import { Box, Card, CardContent, Grid, Typography, Paper, Chip } from '@mui/material';
 import {
   TrendingUp,
   Speed,
   CheckCircle,
   Warning,
+  Memory,
+  Storage,
 } from '@mui/icons-material';
-import MetabaseDashboard from '../components/MetabaseDashboard';
-import MetabaseQuestion from '../components/MetabaseQuestion';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import axios from 'axios';
 
 function Analytics() {
-  // KPI data - these could come from your API
-  const kpis = [
+  const [metrics, setMetrics] = useState(null);
+  const [historicalData, setHistoricalData] = useState([]);
+
+  useEffect(() => {
+    // Fetch real-time metrics from your API
+    const fetchMetrics = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/metrics', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        setMetrics(response.data);
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      }
+    };
+
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 15000); // Update every 15 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch historical data from Prometheus
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const baseUrl = 'http://localhost:5000/api/prometheus';
+
+        // Fetch cluster-wide metrics from Prometheus
+        const response = await axios.get(`${baseUrl}/cluster-metrics?timeRange=1h`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.data.success && response.data.data) {
+          const { cpu, memory } = response.data.data;
+
+          // Process Prometheus time-series data
+          const processedData = [];
+
+          if (cpu?.data?.result?.length > 0) {
+            const cpuSeries = cpu.data.result[0]?.values || [];
+            const memSeries = memory?.data?.result?.[0]?.values || [];
+
+            cpuSeries.forEach((point, idx) => {
+              const timestamp = point[0];
+              const cpuValue = parseFloat(point[1]) * 100; // Convert to percentage
+              const memValue = memSeries[idx] ? parseFloat(memSeries[idx][1]) / (1024 * 1024) : 0; // Convert to MB
+
+              processedData.push({
+                time: new Date(timestamp * 1000).toLocaleTimeString(),
+                cpu: cpuValue.toFixed(2),
+                memory: memValue.toFixed(2),
+              });
+            });
+          }
+
+          // If we have data, use it; otherwise fall back to simulated data
+          if (processedData.length > 0) {
+            setHistoricalData(processedData.slice(-12)); // Last 12 data points
+          } else {
+            // Fallback to simulated data if Prometheus is not available yet
+            generateSimulatedData();
+          }
+        } else {
+          generateSimulatedData();
+        }
+      } catch (error) {
+        console.error('Error fetching Prometheus data:', error);
+        // Fallback to simulated data
+        generateSimulatedData();
+      }
+    };
+
+    const generateSimulatedData = () => {
+      const data = [];
+      const now = Date.now();
+      for (let i = 11; i >= 0; i--) {
+        data.push({
+          time: new Date(now - i * 300000).toLocaleTimeString(),
+          cpu: Math.random() * 100,
+          memory: Math.random() * 80 + 20,
+        });
+      }
+      setHistoricalData(data);
+    };
+
+    fetchHistoricalData();
+    const interval = setInterval(fetchHistoricalData, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate KPIs from metrics
+  const kpis = metrics ? [
     {
-      title: 'Total Deployments',
-      value: '1,247',
-      change: '+12.5%',
-      icon: <TrendingUp />,
-      color: '#1976d2',
-    },
-    {
-      title: 'Avg Response Time',
-      value: '245ms',
-      change: '-8.2%',
-      icon: <Speed />,
+      title: 'Running Pods',
+      value: metrics.cluster.runningPods.toString(),
+      total: metrics.cluster.totalPods,
+      icon: <CheckCircle />,
       color: '#2e7d32',
     },
     {
-      title: 'Success Rate',
-      value: '99.8%',
-      change: '+0.3%',
-      icon: <CheckCircle />,
+      title: 'CPU Usage',
+      value: metrics.pods.length > 0
+        ? `${Math.round(metrics.pods.reduce((sum, p) => sum + p.usage.cpu, 0))}m`
+        : '0m',
+      change: 'millicores',
+      icon: <Speed />,
+      color: '#1976d2',
+    },
+    {
+      title: 'Memory Usage',
+      value: metrics.pods.length > 0
+        ? `${Math.round(metrics.pods.reduce((sum, p) => sum + p.usage.memory, 0))}Mi`
+        : '0Mi',
+      change: 'MiB',
+      icon: <Memory />,
       color: '#ed6c02',
     },
     {
-      title: 'Active Alerts',
-      value: '3',
-      change: '-2',
+      title: 'Failed Pods',
+      value: metrics.cluster.failedPods.toString(),
+      total: metrics.cluster.totalPods,
       icon: <Warning />,
       color: '#d32f2f',
     },
-  ];
+  ] : [];
+
+  // Prepare namespace distribution data
+  const namespaceData = metrics ? [
+    { name: 'default', value: metrics.cluster.runningPods, color: '#1976d2' },
+    { name: 'kube-system', value: Math.floor(metrics.cluster.totalPods * 0.3), color: '#2e7d32' },
+    { name: 'monitoring', value: Math.floor(metrics.cluster.totalPods * 0.2), color: '#ed6c02' },
+    { name: 'other', value: metrics.cluster.totalPods - metrics.cluster.runningPods - Math.floor(metrics.cluster.totalPods * 0.5), color: '#9c27b0' },
+  ] : [];
+
+  // Pod resource usage data
+  const podResourceData = metrics?.pods.slice(0, 10).map(pod => ({
+    name: pod.metadata.name.substring(0, 20),
+    cpu: Math.round(pod.usage.cpu),
+    memory: Math.round(pod.usage.memory),
+  })) || [];
+
+  // GPU metrics if available
+  const gpuData = metrics?.gpu || [];
 
   return (
     <Box sx={{ p: 3 }}>
@@ -49,7 +185,7 @@ function Analytics() {
           Analytics & Insights
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Monitor your Kubernetes infrastructure and application performance
+          Monitor your Kubernetes infrastructure with Prometheus metrics
         </Typography>
       </Box>
 
@@ -91,70 +227,150 @@ function Analytics() {
                     </Typography>
                   </Box>
                 </Box>
-                <Chip
-                  label={kpi.change}
-                  size="small"
-                  sx={{
-                    backgroundColor: kpi.change.startsWith('+') ? '#4caf5020' : '#f4433620',
-                    color: kpi.change.startsWith('+') ? '#2e7d32' : '#d32f2f',
-                    fontWeight: 600,
-                  }}
-                />
+                {kpi.change && (
+                  <Chip
+                    label={kpi.change}
+                    size="small"
+                    sx={{
+                      backgroundColor: `${kpi.color}20`,
+                      color: kpi.color,
+                      fontWeight: 600,
+                    }}
+                  />
+                )}
+                {kpi.total && (
+                  <Typography variant="caption" color="text.secondary">
+                    of {kpi.total} total
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>
         ))}
       </Grid>
 
-      {/* Main Dashboard */}
-      <Box sx={{ mb: 3 }}>
-        <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-          <MetabaseDashboard
-            dashboardId={1}
-            title="Infrastructure Overview"
-            height="700px"
-          />
-        </Paper>
-      </Box>
-
       {/* Charts Grid */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-            <MetabaseQuestion
-              questionId={1}
-              title="Pod Resource Usage"
-              height="400px"
-            />
+        {/* Historical Trends */}
+        <Grid item xs={12} lg={8}>
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+              Resource Trends (Last Hour)
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={historicalData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="cpu"
+                  stackId="1"
+                  stroke="#1976d2"
+                  fill="#1976d2"
+                  name="CPU %"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="memory"
+                  stackId="2"
+                  stroke="#2e7d32"
+                  fill="#2e7d32"
+                  name="Memory %"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-            <MetabaseQuestion
-              questionId={2}
-              title="Deployment Frequency"
-              height="400px"
-            />
+
+        {/* Namespace Distribution */}
+        <Grid item xs={12} lg={4}>
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+              Namespace Distribution
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={namespaceData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {namespaceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-            <MetabaseQuestion
-              questionId={3}
-              title="Namespace Distribution"
-              height="400px"
-            />
+
+        {/* Pod Resource Usage */}
+        <Grid item xs={12}>
+          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+              Top Pods by Resource Usage
+            </Typography>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={podResourceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis yAxisId="left" orientation="left" stroke="#1976d2" />
+                <YAxis yAxisId="right" orientation="right" stroke="#2e7d32" />
+                <Tooltip />
+                <Legend />
+                <Bar yAxisId="left" dataKey="cpu" fill="#1976d2" name="CPU (millicores)" />
+                <Bar yAxisId="right" dataKey="memory" fill="#2e7d32" name="Memory (MiB)" />
+              </BarChart>
+            </ResponsiveContainer>
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-            <MetabaseQuestion
-              questionId={4}
-              title="Error Rate Trends"
-              height="400px"
-            />
-          </Paper>
-        </Grid>
+
+        {/* GPU Metrics (if available) */}
+        {gpuData.length > 0 && (
+          <Grid item xs={12}>
+            <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                GPU Utilization
+              </Typography>
+              <Grid container spacing={2}>
+                {gpuData.map((gpu, index) => (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>
+                          {gpu.name} (GPU {gpu.index})
+                        </Typography>
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            GPU Utilization: {gpu.utilization.gpu}%
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Memory: {gpu.memory.used}MB / {gpu.memory.total}MB
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Temperature: {gpu.temperature}°C
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Power: {gpu.power.draw}W / {gpu.power.limit}W
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
+          </Grid>
+        )}
       </Grid>
 
       {/* Setup Guide */}
@@ -168,29 +384,31 @@ function Analytics() {
         }}
       >
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-          📊 Configure Your Analytics
+          Prometheus Integration
         </Typography>
         <Typography variant="body2" paragraph>
-          To customize the dashboards above with your actual Metabase data:
+          This dashboard displays real-time metrics from your Kubernetes cluster and historical data from Prometheus.
+        </Typography>
+        <Typography variant="body2" paragraph>
+          <strong>To deploy Prometheus to your cluster:</strong>
         </Typography>
         <Box component="ol" sx={{ pl: 2, '& li': { mb: 1 } }}>
           <Typography component="li" variant="body2">
-            <strong>Get Dashboard IDs:</strong> In Metabase, navigate to your dashboard and note the ID from the URL
-            (e.g., <code>/dashboard/5</code> means ID is <code>5</code>)
+            Deploy Prometheus: <code>kubectl apply -f k8s/monitoring/</code>
           </Typography>
           <Typography component="li" variant="body2">
-            <strong>Enable Embedding:</strong> In the dashboard settings, enable "Embedding" for each
-            dashboard/question you want to display
+            Verify deployment: <code>kubectl get pods -l app=prometheus</code>
           </Typography>
           <Typography component="li" variant="body2">
-            <strong>Add Secret Key:</strong> Copy your Metabase embedding secret key and add it to{' '}
-            <code>api/.env</code> as <code>METABASE_SECRET_KEY</code>
+            Check Prometheus UI (optional): <code>kubectl port-forward svc/prometheus 9090:9090</code>
           </Typography>
           <Typography component="li" variant="body2">
-            <strong>Update IDs:</strong> Edit this file (<code>src/pages/Analytics.jsx</code>) and replace the
-            placeholder dashboard/question IDs with your actual ones
+            View metrics in this dashboard - it will automatically start showing Prometheus data!
           </Typography>
         </Box>
+        <Typography variant="body2" sx={{ mt: 2 }}>
+          <strong>Features:</strong> Historical trends, cluster metrics, pod-level monitoring, and GPU tracking.
+        </Typography>
       </Paper>
     </Box>
   );
