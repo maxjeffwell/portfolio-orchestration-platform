@@ -134,7 +134,7 @@ function Analytics() {
 
         // Query for pod count by namespace
         const response = await axios.get(
-          `${baseUrl}/query?query=count(kube_pod_info{phase="Running"}) by (namespace)`,
+          `${baseUrl}/query?query=count(kube_pod_info) by (namespace)`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -461,21 +461,21 @@ function Analytics() {
         elevation={1}
         sx={{
           p: 3,
-          backgroundColor: '#f5f5f5',
+          backgroundColor: '#e8e8e8',
           borderRadius: 2,
           borderLeft: '4px solid #1976d2',
         }}
       >
-        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#000000' }}>
           Prometheus Integration
         </Typography>
-        <Typography variant="body2" paragraph>
+        <Typography variant="body2" paragraph sx={{ color: '#1a1a1a' }}>
           This dashboard displays real-time metrics from your Kubernetes cluster and historical data from Prometheus.
         </Typography>
-        <Typography variant="body2" paragraph>
+        <Typography variant="body2" paragraph sx={{ color: '#1a1a1a' }}>
           <strong>To deploy Prometheus to your cluster:</strong>
         </Typography>
-        <Box component="ol" sx={{ pl: 2, '& li': { mb: 1 } }}>
+        <Box component="ol" sx={{ pl: 2, '& li': { mb: 1, color: '#1a1a1a' } }}>
           <Typography component="li" variant="body2">
             Deploy Prometheus: <code>kubectl apply -f k8s/monitoring/</code>
           </Typography>
@@ -489,7 +489,7 @@ function Analytics() {
             View metrics in this dashboard - it will automatically start showing Prometheus data!
           </Typography>
         </Box>
-        <Typography variant="body2" sx={{ mt: 2 }}>
+        <Typography variant="body2" sx={{ mt: 2, color: '#1a1a1a' }}>
           <strong>Features:</strong> Historical trends, cluster metrics, pod-level monitoring, and GPU tracking.
         </Typography>
       </Paper>

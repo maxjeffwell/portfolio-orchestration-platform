@@ -3,6 +3,9 @@ import metricsController from '../controllers/metricsController.js';
 
 const router = express.Router();
 
+// Get all metrics (for Analytics page)
+router.get('/', metricsController.getAllMetrics.bind(metricsController));
+
 // Get pod metrics
 router.get('/pods', metricsController.getPodMetrics.bind(metricsController));
 

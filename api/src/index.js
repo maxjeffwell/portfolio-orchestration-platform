@@ -62,8 +62,10 @@ app.use('/api/auth', authRoutes);
 // Protected routes (require authentication)
 app.use('/api/pods', authMiddleware, podRoutes);
 app.use('/api/deployments', authMiddleware, deploymentRoutes);
-app.use('/api/metrics', authMiddleware, metricsRoutes);
-app.use('/api/prometheus', authMiddleware, prometheusRoutes);
+
+// Read-only monitoring routes, no auth required
+app.use('/api/metrics', metricsRoutes);
+app.use('/api/prometheus', prometheusRoutes);
 
 // 404 handler
 app.use((req, res) => {

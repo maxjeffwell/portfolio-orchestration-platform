@@ -7,6 +7,8 @@ const router = express.Router();
 // Prometheus service URL (internal Kubernetes service)
 const PROMETHEUS_URL = process.env.PROMETHEUS_URL || 'http://prometheus:9090';
 
+logger.info(`Prometheus URL configured as: ${PROMETHEUS_URL}`);
+
 /**
  * Query Prometheus API
  * GET /api/prometheus/query?query=up

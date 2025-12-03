@@ -2,6 +2,63 @@ import k8sClient from '../config/kubernetes.js';
 import logger from '../utils/logger.js';
 
 class MetricsController {
+  async getAllMetrics(req, res) {
+    try {
+      const coreV1Api = k8sClient.getCoreV1Api();
+      const metricsClient = k8sClient.getMetricsClient();
+
+      // Get cluster info
+      const nodesResponse = await coreV1Api.listNode();
+      const nodes = nodesResponse.body.items;
+      const podsResponse = await coreV1Api.listPodForAllNamespaces();
+      const allPods = podsResponse.body.items;
+
+      // Get pod metrics
+      let podMetrics = [];
+      try {
+        const podMetricsResponse = await metricsClient.getPodMetrics('default');
+        podMetrics = podMetricsResponse.items.map(item => ({
+          metadata: {
+            name: item.metadata.name,
+            namespace: item.metadata.namespace,
+          },
+          usage: {
+            cpu: item.containers.reduce((sum, c) => sum + this.parseCpu(c.usage.cpu), 0) * 1000, // millicores
+            memory: item.containers.reduce((sum, c) => sum + this.parseMemory(c.usage.memory), 0) / (1024 * 1024), // MiB
+          },
+        }));
+      } catch (err) {
+        logger.warn('Pod metrics not available:', err.message);
+      }
+
+      // GPU metrics (placeholder)
+      const gpuMetrics = [];
+
+      const clusterMetrics = {
+        nodes: nodes.length,
+        totalPods: allPods.length,
+        runningPods: allPods.filter(p => p.status.phase === 'Running').length,
+        pendingPods: allPods.filter(p => p.status.phase === 'Pending').length,
+        failedPods: allPods.filter(p => p.status.phase === 'Failed').length,
+        namespaces: [...new Set(allPods.map(p => p.metadata.namespace))].length,
+      };
+
+      res.json({
+        success: true,
+        pods: podMetrics,
+        cluster: clusterMetrics,
+        gpu: gpuMetrics,
+      });
+    } catch (error) {
+      logger.error('Error fetching all metrics:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch metrics',
+        message: error.message,
+      });
+    }
+  }
+
   async getPodMetrics(req, res) {
     try {
       const metricsClient = k8sClient.getMetricsClient();
