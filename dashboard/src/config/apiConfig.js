@@ -6,8 +6,9 @@
  */
 
 // Base URL for the API server
-// Reads from VITE_API_URL environment variable, falls back to /portfolio/api for production or localhost:5000/api for dev
-export const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/portfolio/api');
+// In production, use relative /api path (routed by ingress)
+// For local dev, set VITE_API_URL=http://localhost:5000/api
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Socket.IO URL (server root, not /api)
 // Handles both relative and absolute URLs
