@@ -1,125 +1,47 @@
 import podService from '../services/podService.js';
-import logger from '../utils/logger.js';
+import { asyncHandler, sendSuccess } from '../utils/asyncHandler.js';
 
 class PodController {
-  async getAllPods(req, res) {
-    try {
-      const namespace = req.query.namespace || 'default';
-      const pods = await podService.getAllPods(namespace);
+  getAllPods = asyncHandler(async (req, res) => {
+    const namespace = req.query.namespace || 'default';
+    const pods = await podService.getAllPods(namespace);
+    sendSuccess(res, pods);
+  });
 
-      res.json({
-        success: true,
-        count: pods.length,
-        data: pods,
-      });
-    } catch (error) {
-      logger.error('Error in getAllPods controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get pods',
-      });
-    }
-  }
+  getPortfolioPods = asyncHandler(async (req, res) => {
+    const pods = await podService.getPortfolioPods();
+    sendSuccess(res, pods);
+  });
 
-  async getPortfolioPods(req, res) {
-    try {
-      const pods = await podService.getPortfolioPods();
+  getPodByName = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const pod = await podService.getPodByName(name, namespace);
+    sendSuccess(res, pod);
+  });
 
-      res.json({
-        success: true,
-        count: pods.length,
-        data: pods,
-      });
-    } catch (error) {
-      logger.error('Error in getPortfolioPods controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get portfolio pods',
-      });
-    }
-  }
+  getPodLogs = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const containerName = req.query.container || null;
+    const tailLines = parseInt(req.query.tail) || 100;
+    const logs = await podService.getPodLogs(name, namespace, containerName, tailLines);
+    sendSuccess(res, logs);
+  });
 
-  async getPodByName(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
+  deletePod = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const result = await podService.deletePod(name, namespace);
+    sendSuccess(res, result);
+  });
 
-      const pod = await podService.getPodByName(name, namespace);
-
-      res.json({
-        success: true,
-        data: pod,
-      });
-    } catch (error) {
-      logger.error('Error in getPodByName controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get pod',
-      });
-    }
-  }
-
-  async getPodLogs(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
-      const containerName = req.query.container || null;
-      const tailLines = parseInt(req.query.tail) || 100;
-
-      const logs = await podService.getPodLogs(name, namespace, containerName, tailLines);
-
-      res.json({
-        success: true,
-        data: logs,
-      });
-    } catch (error) {
-      logger.error('Error in getPodLogs controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get pod logs',
-      });
-    }
-  }
-
-  async deletePod(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
-
-      const result = await podService.deletePod(name, namespace);
-
-      res.json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      logger.error('Error in deletePod controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to delete pod',
-      });
-    }
-  }
-
-  async restartPod(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
-
-      const result = await podService.restartPod(name, namespace);
-
-      res.json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      logger.error('Error in restartPod controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to restart pod',
-      });
-    }
-  }
+  restartPod = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const result = await podService.restartPod(name, namespace);
+    sendSuccess(res, result);
+  });
 }
 
 export default new PodController();

@@ -1,111 +1,44 @@
 import deploymentService from '../services/deploymentService.js';
-import logger from '../utils/logger.js';
+import { asyncHandler, sendSuccess, ApiError } from '../utils/asyncHandler.js';
 
 class DeploymentController {
-  async getAllDeployments(req, res) {
-    try {
-      const namespace = req.query.namespace || 'default';
-      const deployments = await deploymentService.getAllDeployments(namespace);
+  getAllDeployments = asyncHandler(async (req, res) => {
+    const namespace = req.query.namespace || 'default';
+    const deployments = await deploymentService.getAllDeployments(namespace);
+    sendSuccess(res, deployments);
+  });
 
-      res.json({
-        success: true,
-        count: deployments.length,
-        data: deployments,
-      });
-    } catch (error) {
-      logger.error('Error in getAllDeployments controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get deployments',
-      });
+  getPortfolioDeployments = asyncHandler(async (req, res) => {
+    const deployments = await deploymentService.getPortfolioDeployments();
+    sendSuccess(res, deployments);
+  });
+
+  getDeploymentByName = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const deployment = await deploymentService.getDeploymentByName(name, namespace);
+    sendSuccess(res, deployment);
+  });
+
+  scaleDeployment = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const { replicas } = req.body;
+
+    if (typeof replicas !== 'number' || replicas < 0) {
+      throw new ApiError('Invalid replicas value. Must be a positive number.', 400);
     }
-  }
 
-  async getPortfolioDeployments(req, res) {
-    try {
-      const deployments = await deploymentService.getPortfolioDeployments();
+    const result = await deploymentService.scaleDeployment(name, namespace, replicas);
+    sendSuccess(res, result);
+  });
 
-      res.json({
-        success: true,
-        count: deployments.length,
-        data: deployments,
-      });
-    } catch (error) {
-      logger.error('Error in getPortfolioDeployments controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get portfolio deployments',
-      });
-    }
-  }
-
-  async getDeploymentByName(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
-
-      const deployment = await deploymentService.getDeploymentByName(name, namespace);
-
-      res.json({
-        success: true,
-        data: deployment,
-      });
-    } catch (error) {
-      logger.error('Error in getDeploymentByName controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to get deployment',
-      });
-    }
-  }
-
-  async scaleDeployment(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
-      const { replicas } = req.body;
-
-      if (typeof replicas !== 'number' || replicas < 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid replicas value. Must be a positive number.',
-        });
-      }
-
-      const result = await deploymentService.scaleDeployment(name, namespace, replicas);
-
-      res.json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      logger.error('Error in scaleDeployment controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to scale deployment',
-      });
-    }
-  }
-
-  async restartDeployment(req, res) {
-    try {
-      const { name } = req.params;
-      const namespace = req.query.namespace || 'default';
-
-      const result = await deploymentService.restartDeployment(name, namespace);
-
-      res.json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      logger.error('Error in restartDeployment controller:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to restart deployment',
-      });
-    }
-  }
+  restartDeployment = asyncHandler(async (req, res) => {
+    const { name } = req.params;
+    const namespace = req.query.namespace || 'default';
+    const result = await deploymentService.restartDeployment(name, namespace);
+    sendSuccess(res, result);
+  });
 }
 
 export default new DeploymentController();
