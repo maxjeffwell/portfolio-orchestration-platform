@@ -417,21 +417,36 @@ function Analytics() {
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
               Namespace Distribution
             </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <Pie
                   data={namespaceData}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => {
+                  labelLine={{ stroke: '#888', strokeWidth: 1 }}
+                  label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
+                    const RADIAN = Math.PI / 180;
+                    const radius = outerRadius + 35;
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
                     const truncatedName = name.length > 12 ? `${name.substring(0, 12)}...` : name;
-                    return `${truncatedName} ${(percent * 100).toFixed(0)}%`;
+
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        fill="#666"
+                        textAnchor={x > cx ? 'start' : 'end'}
+                        dominantBaseline="central"
+                        style={{ fontSize: '13px', fontWeight: 500 }}
+                      >
+                        {`${truncatedName} ${(percent * 100).toFixed(0)}%`}
+                      </text>
+                    );
                   }}
-                  outerRadius={70}
+                  outerRadius={65}
                   fill="#8884d8"
                   dataKey="value"
-                  style={{ fontSize: '12px' }}
                 >
                   {namespaceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
