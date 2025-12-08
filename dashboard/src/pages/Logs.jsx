@@ -99,7 +99,7 @@ export default function Logs() {
           Logs
         </Typography>
         {streaming && (
-          <Typography variant="body2" color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography component="div" variant="body2" color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box
               sx={{
                 width: 8,

@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import { API_BASE_URL } from '../config/apiConfig.js';
+import { SOCKET_URL } from '../config/apiConfig.js';
 
 class SocketService {
   constructor() {
@@ -12,8 +12,7 @@ class SocketService {
       return this.socket;
     }
 
-    // Use API server URL for WebSocket connections
-    const SOCKET_URL = API_BASE_URL;
+    // Use server root URL for WebSocket connections (not /api)
     const token = localStorage.getItem('auth_token');
 
     this.socket = io(SOCKET_URL, {

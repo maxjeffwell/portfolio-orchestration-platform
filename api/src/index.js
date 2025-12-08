@@ -318,6 +318,7 @@ function startPeriodicUpdates() {
 
 // Log streaming management
 const logStreams = new Map(); // Map<podName, { stream, buffer, lastEmit }>
+const MAX_LOG_BUFFER_SIZE = 1000; // Maximum lines to buffer before dropping old ones
 
 async function startLogStream(podName) {
   if (logStreams.has(podName)) {
@@ -337,6 +338,12 @@ async function startLogStream(podName) {
 
     stream.on('data', (chunk) => {
       const lines = chunk.toString().split('\n').filter(line => line.trim());
+
+      // Prevent unbounded buffer growth - drop old lines if buffer is full
+      while (logBuffer.length + lines.length > MAX_LOG_BUFFER_SIZE) {
+        logBuffer.shift();
+      }
+
       logBuffer.push(...lines);
 
       // Throttle: emit at most every 500ms
@@ -388,7 +395,14 @@ function stopLogStream(podName) {
   const streamData = logStreams.get(podName);
   if (streamData) {
     try {
+      // Remove all event listeners before destroying to prevent memory leaks
+      streamData.stream.removeAllListeners();
       streamData.stream.destroy();
+
+      // Clear the buffer reference to allow garbage collection
+      if (streamData.buffer) {
+        streamData.buffer.length = 0;
+      }
     } catch (error) {
       logger.debug(`Error destroying log stream for ${podName}:`, error.message);
     }
