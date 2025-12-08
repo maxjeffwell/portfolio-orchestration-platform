@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, memo } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -17,7 +17,7 @@ import podService from '../services/podService';
 import deploymentService from '../services/deploymentService';
 import socketService from '../services/socketService';
 
-const Dashboard = memo(function Dashboard() {
+function Dashboard() {
   const [stats, setStats] = useState({
     totalPods: 0,
     runningPods: 0,
@@ -28,7 +28,7 @@ const Dashboard = memo(function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchStats = useCallback(async (showLoading = true) => {
+  const fetchStats = async (showLoading = true) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -56,7 +56,7 @@ const Dashboard = memo(function Dashboard() {
         setLoading(false);
       }
     }
-  }, []); // Empty deps - fetchStats doesn't need external dependencies
+  };
 
   useEffect(() => {
     fetchStats();
@@ -77,7 +77,7 @@ const Dashboard = memo(function Dashboard() {
       socketService.off('pods:update', handleUpdate);
       socketService.off('deployments:update', handleUpdate);
     };
-  }, [fetchStats]);
+  }, []);
 
   if (loading) {
     return (
@@ -91,8 +91,7 @@ const Dashboard = memo(function Dashboard() {
     return <Alert severity="error">Error loading dashboard: {error}</Alert>;
   }
 
-  // Memoize statCards to prevent recreation on every render
-  const statCards = useMemo(() => [
+  const statCards = [
     {
       title: 'Total Pods',
       value: stats.totalPods,
@@ -123,7 +122,7 @@ const Dashboard = memo(function Dashboard() {
       icon: <CheckCircleIcon color="primary" sx={{ fontSize: 40 }} />,
       color: 'primary',
     },
-  ], [stats]);
+  ];
 
   return (
     <Box>
@@ -151,6 +150,6 @@ const Dashboard = memo(function Dashboard() {
       </Grid>
     </Box>
   );
-});
+}
 
 export default Dashboard;
