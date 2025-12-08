@@ -122,6 +122,25 @@ io.on('connection', (socket) => {
   });
 });
 
+// Metrics caching
+const metricsCache = {
+  gpu: { data: null, timestamp: 0, ttl: 30000 }, // Cache GPU metrics for 30 seconds
+  cluster: { data: null, timestamp: 0, ttl: 30000 }, // Cache cluster metrics for 30 seconds
+};
+
+function getCachedMetrics(key) {
+  const cached = metricsCache[key];
+  if (cached.data && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedMetrics(key, data) {
+  metricsCache[key].data = data;
+  metricsCache[key].timestamp = Date.now();
+}
+
 // Periodic pod status updates (every 5 seconds)
 let podUpdateInterval;
 let deploymentUpdateInterval;
@@ -170,6 +189,13 @@ function startPeriodicUpdates() {
   // Metrics updates (every 15 seconds)
   metricsUpdateInterval = setInterval(async () => {
     try {
+      // Check if any clients are subscribed before fetching expensive metrics
+      const subscriberCount = io.sockets.adapter.rooms.get('metrics')?.size || 0;
+      if (subscriberCount === 0) {
+        logger.debug('Skipping metrics fetch - no subscribers');
+        return;
+      }
+
       const metricsClient = k8sClient.getMetricsClient();
       const coreV1Api = k8sClient.getCoreV1Api();
 
@@ -210,50 +236,65 @@ function startPeriodicUpdates() {
         },
       }));
 
-      // Get cluster metrics
-      const nodesResponse = await coreV1Api.listNode();
-      const nodes = nodesResponse.body.items || [];
-      const podsResponse = await coreV1Api.listPodForAllNamespaces();
-      const allPods = podsResponse.body.items || [];
+      // Get cluster metrics (with caching)
+      let clusterMetrics = getCachedMetrics('cluster');
+      if (!clusterMetrics) {
+        const nodesResponse = await coreV1Api.listNode();
+        const nodes = nodesResponse.body.items || [];
+        const podsResponse = await coreV1Api.listPodForAllNamespaces();
+        const allPods = podsResponse.body.items || [];
 
-      const clusterMetrics = {
-        nodes: nodes.length,
-        totalPods: allPods.length,
-        runningPods: allPods.filter(p => p.status.phase === 'Running').length,
-        pendingPods: allPods.filter(p => p.status.phase === 'Pending').length,
-        failedPods: allPods.filter(p => p.status.phase === 'Failed').length,
-        namespaces: [...new Set(allPods.map(p => p.metadata.namespace))].length,
-      };
+        clusterMetrics = {
+          nodes: nodes.length,
+          totalPods: allPods.length,
+          runningPods: allPods.filter(p => p.status.phase === 'Running').length,
+          pendingPods: allPods.filter(p => p.status.phase === 'Pending').length,
+          failedPods: allPods.filter(p => p.status.phase === 'Failed').length,
+          namespaces: [...new Set(allPods.map(p => p.metadata.namespace))].length,
+        };
+        setCachedMetrics('cluster', clusterMetrics);
+        logger.debug('Fetched and cached cluster metrics');
+      } else {
+        logger.debug('Using cached cluster metrics');
+      }
 
-      // Get GPU metrics
-      let gpuMetrics = [];
-      try {
-        const { stdout } = await execAsync(
-          'nvidia-smi --query-gpu=index,name,utilization.gpu,utilization.memory,memory.used,memory.total,temperature.gpu,power.draw,power.limit --format=csv,noheader,nounits'
-        );
+      // Get GPU metrics (with caching)
+      let gpuMetrics = getCachedMetrics('gpu');
+      if (!gpuMetrics) {
+        gpuMetrics = [];
+        try {
+          const { stdout } = await execAsync(
+            'nvidia-smi --query-gpu=index,name,utilization.gpu,utilization.memory,memory.used,memory.total,temperature.gpu,power.draw,power.limit --format=csv,noheader,nounits'
+          );
 
-        gpuMetrics = stdout.trim().split('\n').map(line => {
-          const [index, name, gpuUtil, memUtil, memUsed, memTotal, temp, powerDraw, powerLimit] = line.split(', ');
-          return {
-            index: parseInt(index),
-            name: name.trim(),
-            utilization: {
-              gpu: parseFloat(gpuUtil),
-              memory: parseFloat(memUtil)
-            },
-            memory: {
-              used: parseFloat(memUsed),
-              total: parseFloat(memTotal)
-            },
-            temperature: parseFloat(temp),
-            power: {
-              draw: parseFloat(powerDraw),
-              limit: parseFloat(powerLimit)
-            }
-          };
-        });
-      } catch (error) {
-        logger.debug('GPU metrics not available:', error.message);
+          gpuMetrics = stdout.trim().split('\n').map(line => {
+            const [index, name, gpuUtil, memUtil, memUsed, memTotal, temp, powerDraw, powerLimit] = line.split(', ');
+            return {
+              index: parseInt(index),
+              name: name.trim(),
+              utilization: {
+                gpu: parseFloat(gpuUtil),
+                memory: parseFloat(memUtil)
+              },
+              memory: {
+                used: parseFloat(memUsed),
+                total: parseFloat(memTotal)
+              },
+              temperature: parseFloat(temp),
+              power: {
+                draw: parseFloat(powerDraw),
+                limit: parseFloat(powerLimit)
+              }
+            };
+          });
+          setCachedMetrics('gpu', gpuMetrics);
+          logger.debug('Fetched and cached GPU metrics');
+        } catch (error) {
+          logger.debug('GPU metrics not available:', error.message);
+          setCachedMetrics('gpu', []); // Cache empty array to avoid retrying on every interval
+        }
+      } else {
+        logger.debug('Using cached GPU metrics');
       }
 
       const metricsData = {
@@ -262,7 +303,7 @@ function startPeriodicUpdates() {
         gpu: gpuMetrics
       };
 
-      logger.debug(`Emitting metrics:update to ${io.sockets.adapter.rooms.get('metrics')?.size || 0} clients`);
+      logger.debug(`Emitting metrics:update to ${subscriberCount} clients`);
       io.to('metrics').emit('metrics:update', metricsData);
     } catch (error) {
       logger.debug('Error sending metrics updates (metrics-server may not be available):', error.message);
