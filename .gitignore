@@ -151,3 +151,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+
+# Playwright MCP
+.playwright-mcp/
