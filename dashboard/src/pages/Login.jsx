@@ -62,14 +62,14 @@ const Login = () => {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'background.default',
-        padding: 2,
+        px: 2,
       }}
     >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ width: '100%', maxWidth: 450 }}
+        style={{ width: '100%', maxWidth: '450px' }}
       >
         <Paper
           elevation={3}
@@ -78,7 +78,6 @@ const Login = () => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            width: '100%',
           }}
         >
             <Typography component="h1" variant="h5" gutterBottom>
