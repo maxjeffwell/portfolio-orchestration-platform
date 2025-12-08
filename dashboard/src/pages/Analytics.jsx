@@ -35,6 +35,23 @@ function Analytics() {
   const [namespaceData, setNamespaceData] = useState([]);
   const [podResourceData, setPodResourceData] = useState([]);
 
+  // Format power for display (convert to mW if < 1W)
+  const formatPower = (watts) => {
+    if (watts === null || watts === undefined) return 'N/A';
+    if (watts < 1) {
+      return `${(watts * 1000).toFixed(1)} mW`;
+    }
+    return `${watts.toFixed(1)} W`;
+  };
+
+  // Format memory for display
+  const formatMemory = (mb, total) => {
+    if (total > 1024) {
+      return `${(mb / 1024).toFixed(1)} / ${(total / 1024).toFixed(1)} GB`;
+    }
+    return `${mb.toFixed(0)} / ${total.toFixed(0)} MB`;
+  };
+
   useEffect(() => {
     // Fetch real-time metrics from your API
     const fetchMetrics = async () => {
@@ -302,28 +319,35 @@ function Analytics() {
                 borderLeft: `4px solid ${kpi.color}`,
               }}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <CardContent sx={{ pb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1.5 }}>
                   <Box
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: 48,
-                      height: 48,
+                      width: 40,
+                      height: 40,
                       borderRadius: 2,
                       backgroundColor: `${kpi.color}20`,
                       color: kpi.color,
-                      mr: 2,
+                      mr: 1.5,
+                      flexShrink: 0,
                     }}
                   >
                     {kpi.icon}
                   </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       {kpi.title}
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 600,
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {kpi.value}
                     </Typography>
                   </Box>
@@ -336,11 +360,12 @@ function Analytics() {
                       backgroundColor: `${kpi.color}20`,
                       color: kpi.color,
                       fontWeight: 600,
+                      fontSize: '0.75rem',
                     }}
                   />
                 )}
                 {kpi.total && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: kpi.change ? 1 : 0 }}>
                     of {kpi.total} total
                   </Typography>
                 )}
@@ -447,23 +472,41 @@ function Analytics() {
                   <Grid item xs={12} md={6} key={index}>
                     <Card variant="outlined">
                       <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>
+                        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
                           {gpu.name} (GPU {gpu.index})
                         </Typography>
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            GPU Utilization: {gpu.utilization.gpu}%
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Memory: {gpu.memory.used}MB / {gpu.memory.total}MB
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Temperature: {gpu.temperature}°C
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Power: {gpu.power.draw}W / {gpu.power.limit}W
-                          </Typography>
-                        </Box>
+                        <Grid container spacing={2}>
+                          <Grid item xs={6}>
+                            <Typography variant="caption" color="text.secondary">GPU Utilization</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {gpu.utilization.gpu.toFixed(1)}%
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="caption" color="text.secondary">Memory Util</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {gpu.utilization.memory.toFixed(1)}%
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="caption" color="text.secondary">Memory</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {formatMemory(gpu.memory.used, gpu.memory.total)}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="caption" color="text.secondary">Temperature</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {gpu.temperature?.toFixed(0) || 'N/A'}°C
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Typography variant="caption" color="text.secondary">Power Draw</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {formatPower(gpu.power?.draw)} {gpu.power?.limit ? `/ ${formatPower(gpu.power.limit)}` : ''}
+                            </Typography>
+                          </Grid>
+                        </Grid>
                       </CardContent>
                     </Card>
                   </Grid>

@@ -32,6 +32,23 @@ function Metrics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Format power for display (convert to mW if < 1W)
+  const formatPower = (watts) => {
+    if (watts === null || watts === undefined) return 'N/A';
+    if (watts < 1) {
+      return `${(watts * 1000).toFixed(1)} mW`;
+    }
+    return `${watts.toFixed(1)} W`;
+  };
+
+  // Format memory for display
+  const formatMemory = (mb, total) => {
+    if (total > 1024) {
+      return `${(mb / 1024).toFixed(1)} / ${(total / 1024).toFixed(1)} GB`;
+    }
+    return `${mb.toFixed(0)} / ${total.toFixed(0)} MB`;
+  };
+
   const fetchMetrics = async () => {
     try {
       setLoading(true);
@@ -149,27 +166,27 @@ function Metrics() {
                   Cluster Overview
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography color="textSecondary">Total Nodes</Typography>
-                    <Typography variant="h4">
+                  <Grid item xs={6} sm={6} md={3}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Total Nodes</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.nodes || 0}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography color="textSecondary">Total Pods</Typography>
-                    <Typography variant="h4">
+                  <Grid item xs={6} sm={6} md={3}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Total Pods</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.totalPods || 0}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography color="textSecondary">Running Pods</Typography>
-                    <Typography variant="h4">
+                  <Grid item xs={6} sm={6} md={3}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Running Pods</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.runningPods || 0}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography color="textSecondary">Namespaces</Typography>
-                    <Typography variant="h4">
+                  <Grid item xs={6} sm={6} md={3}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Namespaces</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.namespaces || 0}
                     </Typography>
                   </Grid>
@@ -182,41 +199,63 @@ function Metrics() {
         {metrics?.gpu && metrics.gpu.length > 0 && (
           <>
             {metrics.gpu.map((gpu) => (
-              <Grid item xs={12} key={gpu.index}>
+              <Grid item xs={12} md={6} key={gpu.index}>
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                       GPU {gpu.index}: {gpu.name}
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Typography color="textSecondary">GPU Utilization</Typography>
-                        <Typography variant="h4" color={gpu.utilization.gpu > 80 ? 'error' : 'primary'}>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                          GPU Utilization
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ fontWeight: 600 }}
+                          color={gpu.utilization.gpu > 80 ? 'error' : 'primary'}
+                        >
                           {gpu.utilization.gpu.toFixed(1)}%
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Typography color="textSecondary">Memory Utilization</Typography>
-                        <Typography variant="h4" color={gpu.utilization.memory > 80 ? 'error' : 'primary'}>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                          Memory Util
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ fontWeight: 600 }}
+                          color={gpu.utilization.memory > 80 ? 'error' : 'primary'}
+                        >
                           {gpu.utilization.memory.toFixed(1)}%
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Typography color="textSecondary">Memory Used</Typography>
-                        <Typography variant="h4">
-                          {gpu.memory.used.toFixed(0)} / {gpu.memory.total.toFixed(0)} MB
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                          Memory
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          {formatMemory(gpu.memory.used, gpu.memory.total)}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Typography color="textSecondary">Temperature</Typography>
-                        <Typography variant="h4" color={gpu.temperature > 80 ? 'error' : gpu.temperature > 70 ? 'warning.main' : 'success.main'}>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                          Temperature
+                        </Typography>
+                        <Typography
+                          variant="h5"
+                          sx={{ fontWeight: 600 }}
+                          color={gpu.temperature > 80 ? 'error' : gpu.temperature > 70 ? 'warning.main' : 'success.main'}
+                        >
                           {gpu.temperature?.toFixed(0) || 'N/A'}°C
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Typography color="textSecondary">Power Draw</Typography>
-                        <Typography variant="h4">
-                          {gpu.power?.draw?.toFixed(1) || 'N/A'} / {gpu.power?.limit?.toFixed(0) || 'N/A'} W
+                      <Grid item xs={12} sm={8}>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                          Power Draw
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                          {formatPower(gpu.power?.draw)} {gpu.power?.limit ? `/ ${formatPower(gpu.power.limit)}` : ''}
                         </Typography>
                       </Grid>
                     </Grid>
