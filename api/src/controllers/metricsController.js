@@ -1,6 +1,9 @@
 import k8sClient from '../config/kubernetes.js';
 import logger from '../utils/logger.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import axios from 'axios';
+
+const PROMETHEUS_URL = process.env.PROMETHEUS_URL || 'http://prometheus:9090';
 
 class MetricsController {
   getAllMetrics = asyncHandler(async (req, res) => {
@@ -31,8 +34,8 @@ class MetricsController {
       logger.warn('Pod metrics not available:', err.message);
     }
 
-    // GPU metrics (placeholder)
-    const gpuMetrics = [];
+    // GPU metrics from Prometheus (NVIDIA DCGM Exporter)
+    const gpuMetrics = await this.getGpuMetrics();
 
     const clusterMetrics = {
       nodes: nodes.length,
@@ -192,6 +195,87 @@ class MetricsController {
     }
 
     return parseFloat(memoryString); // Assume bytes if no unit
+  }
+
+  // Fetch GPU metrics from Prometheus (NVIDIA DCGM Exporter)
+  getGpuMetrics = async () => {
+    try {
+      // Query for all NVIDIA GPUs and their metrics
+      const queries = {
+        utilization: 'DCGM_FI_DEV_GPU_UTIL',
+        memoryUtil: 'DCGM_FI_DEV_MEM_COPY_UTIL',
+        memoryUsed: 'DCGM_FI_DEV_FB_USED',
+        memoryFree: 'DCGM_FI_DEV_FB_FREE',
+        temperature: 'DCGM_FI_DEV_GPU_TEMP',
+        powerDraw: 'DCGM_FI_DEV_POWER_USAGE',
+        powerLimit: 'DCGM_FI_DEV_POWER_MGMT_LIMIT',
+      };
+
+      // Fetch all metrics in parallel
+      const results = await Promise.all(
+        Object.entries(queries).map(async ([key, query]) => {
+          try {
+            const response = await axios.get(`${PROMETHEUS_URL}/api/v1/query`, {
+              params: { query },
+              timeout: 5000,
+            });
+            return { key, data: response.data.data.result || [] };
+          } catch (err) {
+            logger.warn(`Failed to query GPU metric ${key}:`, err.message);
+            return { key, data: [] };
+          }
+        })
+      );
+
+      // Convert results to a map for easy access
+      const metricsMap = {};
+      results.forEach(({ key, data }) => {
+        metricsMap[key] = data;
+      });
+
+      // If no GPUs found, return empty array
+      if (metricsMap.utilization.length === 0) {
+        return [];
+      }
+
+      // Build GPU metrics array
+      const gpuMetrics = metricsMap.utilization.map((gpuUtil) => {
+        const gpu = gpuUtil.metric.gpu;
+        const findMetric = (metrics) => metrics.find(m => m.metric.gpu === gpu);
+
+        const memUsed = findMetric(metricsMap.memoryUsed);
+        const memFree = findMetric(metricsMap.memoryFree);
+        const memUtil = findMetric(metricsMap.memoryUtil);
+        const temp = findMetric(metricsMap.temperature);
+        const power = findMetric(metricsMap.powerDraw);
+        const powerLim = findMetric(metricsMap.powerLimit);
+
+        return {
+          index: parseInt(gpu),
+          name: gpuUtil.metric.modelName || 'Unknown GPU',
+          uuid: gpuUtil.metric.UUID || '',
+          utilization: {
+            gpu: parseFloat(gpuUtil.value[1]),
+            memory: memUtil ? parseFloat(memUtil.value[1]) : 0,
+          },
+          memory: {
+            used: memUsed ? parseFloat(memUsed.value[1]) : 0,
+            free: memFree ? parseFloat(memFree.value[1]) : 0,
+            total: memUsed && memFree ? parseFloat(memUsed.value[1]) + parseFloat(memFree.value[1]) : 0,
+          },
+          temperature: temp ? parseFloat(temp.value[1]) : null,
+          power: {
+            draw: power ? parseFloat(power.value[1]) / 1000 : null, // Convert mW to W
+            limit: powerLim ? parseFloat(powerLim.value[1]) / 1000 : null,
+          },
+        };
+      });
+
+      return gpuMetrics;
+    } catch (error) {
+      logger.error('Error fetching GPU metrics from Prometheus:', error.message);
+      return [];
+    }
   }
 }
 
