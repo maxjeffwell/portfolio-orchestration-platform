@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio-dashboard
+  namespace: default
+  labels:
+    app: portfolio-dashboard
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portfolio-dashboard
+  template:
+    metadata:
+      labels:
+        app: portfolio-dashboard
+        portfolio: "true"
+    spec:
+      containers:
+      - name: dashboard
+        image: portfolio-dashboard:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

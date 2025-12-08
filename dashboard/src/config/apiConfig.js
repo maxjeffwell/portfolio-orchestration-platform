@@ -6,13 +6,26 @@
  */
 
 // Base URL for the API server
-// Reads from VITE_API_URL environment variable, falls back to localhost:5000/api
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Reads from VITE_API_URL environment variable, falls back to /portfolio/api for production or localhost:5000/api for dev
+export const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000/api' : '/portfolio/api');
 
 // Socket.IO URL (server root, not /api)
-// Extract the server root from API_BASE_URL by removing /api suffix
-const apiUrl = new URL(API_BASE_URL);
-export const SOCKET_URL = `${apiUrl.protocol}//${apiUrl.host}`;
+// Handles both relative and absolute URLs
+const getSocketUrl = () => {
+  // Check if API_BASE_URL is relative or absolute
+  const isRelative = API_BASE_URL.startsWith('/');
+
+  if (isRelative) {
+    // For relative URLs, use current origin
+    return window.location.origin;
+  } else {
+    // For absolute URLs, extract protocol and host
+    const apiUrl = new URL(API_BASE_URL);
+    return `${apiUrl.protocol}//${apiUrl.host}`;
+  }
+};
+
+export const SOCKET_URL = getSocketUrl();
 
 // Helper function to construct full API URLs
 export const getApiUrl = (resourcePath) => {
