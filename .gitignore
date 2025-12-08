@@ -5,6 +5,9 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
+.pnpm-store/
+.yarn/
 
 # Production builds
 dist/
@@ -47,6 +50,7 @@ pids
 # IDE and editor files
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
@@ -56,6 +60,9 @@ pids
 
 # ArtiForge
 .artiforge/
+
+# Claude Code
+.claude/
 
 # OS files
 .DS_Store
@@ -75,6 +82,11 @@ coverage/
 tmp/
 temp/
 *.tmp
+
+# Local development overrides
+*.local
+local/
+.local/
 
 # Helm
 helm/*/charts/
