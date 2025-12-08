@@ -28,9 +28,12 @@ Example response for validation errors:
       "message": "Username is required",
       "value": ""
     }
-  ]
+  ],
+  "requestId": "d69473fb-a501-4d29-b5e7-664ee7052870"
 }
 ```
+
+Each response includes a unique `requestId` that can be used to correlate client-side errors with server-side logs. The request ID is also returned in the `X-Request-ID` response header.
 
 ### Validation Rules
 
@@ -188,13 +191,74 @@ test('authLogin fails with empty username', async () => {
 
 Integration tests verify validation at the route level in `api/tests/integration/*.test.js`.
 
+## Error Handling
+
+### Request IDs
+
+Every request is assigned a unique request ID (UUID v4) that:
+- Appears in the `X-Request-ID` response header
+- Is included in all error responses
+- Is logged with all server-side errors for correlation
+
+If a client provides an `X-Request-ID` header (e.g., from a load balancer), that ID will be used instead of generating a new one.
+
+### Error Response Format
+
+All errors follow a consistent format:
+
+**Validation Errors (400)**:
+```json
+{
+  "success": false,
+  "errors": [
+    {"field": "username", "message": "Username is required", "value": ""}
+  ],
+  "requestId": "d69473fb-a501-4d29-b5e7-664ee7052870"
+}
+```
+
+**Operational Errors (4xx)**:
+```json
+{
+  "success": false,
+  "error": "Invalid credentials",
+  "requestId": "e7a8f3b2-c401-4d29-a5e7-764ee8052880"
+}
+```
+
+**Server Errors (5xx)**:
+```json
+{
+  "success": false,
+  "error": "An unexpected error occurred. Please try again later.",
+  "requestId": "f1b9d4c3-d501-4e39-b6f8-874ff9062990"
+}
+```
+
+For security reasons, server errors (5xx) return a generic message to clients, but full error details including stack traces are logged server-side with the request ID.
+
+### Structured Logging
+
+All errors are logged with structured context:
+- `requestId`: Unique identifier for correlation
+- `statusCode`: HTTP status code
+- `message`: Error message
+- `stack`: Stack trace (server errors only)
+- `path`: Request path
+- `method`: HTTP method
+- `user`: Username if authenticated
+- `ip`: Client IP address
+- `userAgent`: Client user agent
+- `isOperational`: Whether the error is operational (4xx) or programming (5xx)
+
 ## Security Considerations
 
 1. **Input Sanitization**: All input is trimmed and validated before processing
 2. **SQL Injection**: Parameterized queries are used with the database
 3. **XSS Prevention**: Input validation prevents malicious script injection
 4. **Resource Limits**: Numeric inputs have reasonable min/max bounds
-5. **Error Messages**: Validation errors don't leak sensitive system information
+5. **Error Information Disclosure**: Server errors (5xx) return generic messages; detailed errors are only logged
+6. **Request Tracing**: All requests have unique IDs for security audit trails
 
 ## Troubleshooting
 

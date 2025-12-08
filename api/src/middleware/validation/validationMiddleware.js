@@ -13,16 +13,27 @@ const validate = (validations) => async (req, res, next) => {
         value: err.value
       }));
 
-      logger.warn('Validation errors', { formatted });
+      const requestId = req.requestId || 'unknown';
+      logger.warn('Validation errors', {
+        requestId,
+        errors: formatted,
+        path: req.path,
+        method: req.method
+      });
+
       return res.status(400).json({
         success: false,
-        errors: formatted
+        errors: formatted,
+        requestId
       });
     }
 
     next();
   } catch (err) {
-    logger.error('Validation middleware error', err);
+    logger.error('Validation middleware error', {
+      requestId: req.requestId || 'unknown',
+      error: err.message
+    });
     next(err);
   }
 };

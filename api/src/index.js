@@ -17,6 +17,7 @@ import authRoutes from './routes/authRoutes.js';
 import prometheusRoutes from './routes/prometheusRoutes.js';
 import { authMiddleware } from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js';
+import requestIdMiddleware from './middleware/requestId.js';
 
 const execAsync = promisify(exec);
 
@@ -39,9 +40,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware
+// Request ID middleware (must be early in the chain)
+app.use(requestIdMiddleware);
+
+// Request logging middleware with request ID
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`, { requestId: req.requestId });
   next();
 });
 
