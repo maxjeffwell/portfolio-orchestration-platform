@@ -131,7 +131,7 @@ function Dashboard() {
       </Typography>
       <Grid container spacing={3}>
         {statCards.map((card) => (
-          <Grid item xs={12} sm={6} md={4} key={card.title}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.title}>
             <Card>
               <CardContent>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
