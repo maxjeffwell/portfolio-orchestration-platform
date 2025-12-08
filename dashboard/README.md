@@ -37,6 +37,9 @@ npm install
 
 # Copy environment variables
 cp .env.example .env
+
+# Or create .env manually with:
+# VITE_API_URL=http://localhost:5000
 ```
 
 ### Development
@@ -103,6 +106,8 @@ dashboard/
 ├── src/
 │   ├── components/        # React components
 │   │   └── Layout.jsx     # Main layout with navigation
+│   ├── config/            # Configuration modules
+│   │   └── apiConfig.js   # Centralized API URL configuration
 │   ├── pages/             # Page components
 │   │   ├── Dashboard.jsx  # Overview dashboard
 │   │   ├── Pods.jsx       # Pod management
@@ -118,6 +123,7 @@ dashboard/
 │   ├── theme.js           # Material-UI theme
 │   ├── App.jsx            # Main app component
 │   └── main.jsx           # Entry point
+├── .env                   # Environment variables
 ├── Dockerfile             # Multi-stage Docker build
 ├── nginx.conf             # Nginx configuration
 ├── vite.config.js         # Vite configuration
@@ -126,10 +132,55 @@ dashboard/
 
 ## Environment Variables
 
-Create a `.env` file based on `.env.example`:
+The dashboard uses Vite environment variables for configuration. All environment variables must be prefixed with `VITE_` to be exposed to the client code.
+
+### Required Variables
+
+Create a `.env` file in the dashboard root directory:
 
 ```env
+# API Configuration
 VITE_API_URL=http://localhost:5000
+```
+
+### Environment-Specific Configuration
+
+You can create environment-specific files to override the default configuration:
+
+- `.env.development` - Used during `npm run dev`
+- `.env.production` - Used during `npm run build`
+- `.env.local` - Local overrides (not committed to git)
+
+**Example `.env.production`:**
+```env
+VITE_API_URL=https://api.your-domain.com
+```
+
+### Configuration Module
+
+All API URLs are centralized in `src/config/apiConfig.js`, which reads from the `VITE_API_URL` environment variable. This ensures:
+
+- Single source of truth for API endpoints
+- Easy environment-specific configuration
+- No hardcoded URLs throughout the codebase
+
+**Services using centralized config:**
+- `src/services/api.js` - Axios instance with automatic baseURL
+- `src/services/socketService.js` - Socket.io connection
+- `src/pages/Analytics.jsx` - Prometheus metrics endpoints
+
+### Docker Configuration
+
+When running in Docker, pass environment variables using:
+
+```bash
+docker run -e VITE_API_URL=http://your-api:5000 -p 80:80 maxjeffwell/portfolio-dashboard
+```
+
+Or use an environment file:
+
+```bash
+docker run --env-file .env.production -p 80:80 maxjeffwell/portfolio-dashboard
 ```
 
 ## Available Scripts

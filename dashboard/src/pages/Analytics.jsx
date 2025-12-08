@@ -26,6 +26,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/apiConfig.js';
 
 function Analytics() {
   const [metrics, setMetrics] = useState(null);
@@ -37,7 +38,7 @@ function Analytics() {
     // Fetch real-time metrics from your API
     const fetchMetrics = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/metrics', {
+        const response = await axios.get(`${API_BASE_URL}/api/metrics`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
@@ -59,7 +60,7 @@ function Analytics() {
     const fetchHistoricalData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const baseUrl = 'http://localhost:5000/api/prometheus';
+        const baseUrl = `${API_BASE_URL}/api/prometheus`;
 
         // Fetch cluster-wide metrics from Prometheus
         const response = await axios.get(`${baseUrl}/cluster-metrics?timeRange=1h`, {
@@ -130,7 +131,7 @@ function Analytics() {
     const fetchNamespaceData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const baseUrl = 'http://localhost:5000/api/prometheus';
+        const baseUrl = `${API_BASE_URL}/api/prometheus`;
 
         // Query for pod count by namespace
         const response = await axios.get(
@@ -163,7 +164,7 @@ function Analytics() {
     const fetchPodResourceData = async () => {
       try {
         const token = localStorage.getItem('token');
-        const baseUrl = 'http://localhost:5000/api/prometheus';
+        const baseUrl = `${API_BASE_URL}/api/prometheus`;
 
         // Query for top pods by CPU and Memory
         const [cpuResponse, memResponse] = await Promise.all([
