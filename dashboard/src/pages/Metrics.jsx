@@ -118,7 +118,7 @@ function Metrics() {
       </Box>
 
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -138,7 +138,7 @@ function Metrics() {
           </Card>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -159,32 +159,32 @@ function Metrics() {
         </Grid>
 
         {metrics?.cluster && (
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   Cluster Overview
                 </Typography>
                 <Grid container spacing={2}>
-                  <Grid item xs={6} sm={6} md={3}>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Total Nodes</Typography>
                     <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.nodes || 0}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6} sm={6} md={3}>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Total Pods</Typography>
                     <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.totalPods || 0}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6} sm={6} md={3}>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Running Pods</Typography>
                     <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.runningPods || 0}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6} sm={6} md={3}>
+                  <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Namespaces</Typography>
                     <Typography variant="h5" sx={{ fontWeight: 600 }}>
                       {metrics.cluster.namespaces || 0}
@@ -199,14 +199,14 @@ function Metrics() {
         {metrics?.gpu && metrics.gpu.length > 0 && (
           <>
             {metrics.gpu.map((gpu) => (
-              <Grid item xs={12} md={6} key={gpu.index}>
+              <Grid size={{ xs: 12, md: 6 }} key={gpu.index}>
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                       GPU {gpu.index}: {gpu.name}
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={6} sm={4}>
+                      <Grid size={{ xs: 6, sm: 4 }}>
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
                           GPU Utilization
                         </Typography>
@@ -218,7 +218,7 @@ function Metrics() {
                           {gpu.utilization.gpu.toFixed(1)}%
                         </Typography>
                       </Grid>
-                      <Grid item xs={6} sm={4}>
+                      <Grid size={{ xs: 6, sm: 4 }}>
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
                           Memory Util
                         </Typography>
@@ -230,7 +230,7 @@ function Metrics() {
                           {gpu.utilization.memory.toFixed(1)}%
                         </Typography>
                       </Grid>
-                      <Grid item xs={6} sm={4}>
+                      <Grid size={{ xs: 6, sm: 4 }}>
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
                           Memory
                         </Typography>
@@ -238,7 +238,7 @@ function Metrics() {
                           {formatMemory(gpu.memory.used, gpu.memory.total)}
                         </Typography>
                       </Grid>
-                      <Grid item xs={6} sm={4}>
+                      <Grid size={{ xs: 6, sm: 4 }}>
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
                           Temperature
                         </Typography>
@@ -250,7 +250,7 @@ function Metrics() {
                           {gpu.temperature?.toFixed(0) || 'N/A'}°C
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={8}>
+                      <Grid size={{ xs: 12, sm: 8 }}>
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
                           Power Draw
                         </Typography>

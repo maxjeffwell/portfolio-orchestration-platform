@@ -310,7 +310,7 @@ function Analytics() {
       {/* KPI Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {kpis.map((kpi, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
             <Card
               elevation={2}
               sx={{
@@ -378,7 +378,7 @@ function Analytics() {
       {/* Charts Grid */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         {/* Historical Trends */}
-        <Grid item xs={12} lg={8}>
+        <Grid size={{ xs: 12, lg: 8 }}>
           <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
               Resource Trends (Last Hour)
@@ -412,7 +412,7 @@ function Analytics() {
         </Grid>
 
         {/* Namespace Distribution */}
-        <Grid item xs={12} lg={4}>
+        <Grid size={{ xs: 12, lg: 4 }}>
           <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
               Namespace Distribution
@@ -440,7 +440,7 @@ function Analytics() {
         </Grid>
 
         {/* Pod Resource Usage */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
               Top Pods by Resource Usage
@@ -462,45 +462,45 @@ function Analytics() {
 
         {/* GPU Metrics (if available) */}
         {gpuData.length > 0 && (
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
               <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
                 GPU Utilization
               </Typography>
               <Grid container spacing={2}>
                 {gpuData.map((gpu, index) => (
-                  <Grid item xs={12} md={6} key={index}>
+                  <Grid size={{ xs: 12, md: 6 }} key={index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
                           {gpu.name} (GPU {gpu.index})
                         </Typography>
                         <Grid container spacing={2}>
-                          <Grid item xs={6}>
+                          <Grid size={{ xs: 6 }}>
                             <Typography variant="caption" color="text.secondary">GPU Utilization</Typography>
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
                               {gpu.utilization.gpu.toFixed(1)}%
                             </Typography>
                           </Grid>
-                          <Grid item xs={6}>
+                          <Grid size={{ xs: 6 }}>
                             <Typography variant="caption" color="text.secondary">Memory Util</Typography>
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
                               {gpu.utilization.memory.toFixed(1)}%
                             </Typography>
                           </Grid>
-                          <Grid item xs={6}>
+                          <Grid size={{ xs: 6 }}>
                             <Typography variant="caption" color="text.secondary">Memory</Typography>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                               {formatMemory(gpu.memory.used, gpu.memory.total)}
                             </Typography>
                           </Grid>
-                          <Grid item xs={6}>
+                          <Grid size={{ xs: 6 }}>
                             <Typography variant="caption" color="text.secondary">Temperature</Typography>
                             <Typography variant="h6" sx={{ fontWeight: 600 }}>
                               {gpu.temperature?.toFixed(0) || 'N/A'}°C
                             </Typography>
                           </Grid>
-                          <Grid item xs={12}>
+                          <Grid size={{ xs: 12 }}>
                             <Typography variant="caption" color="text.secondary">Power Draw</Typography>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                               {formatPower(gpu.power?.draw)} {gpu.power?.limit ? `/ ${formatPower(gpu.power.limit)}` : ''}
