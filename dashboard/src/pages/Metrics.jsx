@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Card,
@@ -27,12 +27,12 @@ import {
 import metricsService from '../services/metricsService';
 import socketService from '../services/socketService';
 
-export default function Metrics() {
+const Metrics = memo(function Metrics() {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       setLoading(true);
       const [podMetrics, clusterMetrics] = await Promise.all([
@@ -51,7 +51,7 @@ export default function Metrics() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // Empty deps - fetchMetrics doesn't need external dependencies
 
   useEffect(() => {
     fetchMetrics();
@@ -71,7 +71,7 @@ export default function Metrics() {
     return () => {
       socketService.off('metrics:update', handleMetricsUpdate);
     };
-  }, []);
+  }, [fetchMetrics]);
 
   if (loading) {
     return (
@@ -85,11 +85,14 @@ export default function Metrics() {
     return <Alert severity="error">Error loading metrics: {error}</Alert>;
   }
 
-  const podMetricsData = metrics?.pods?.map((pod) => ({
-    name: pod.metadata?.name?.substring(0, 15) + '...',
-    cpu: parseFloat(pod.usage?.cpu || 0),
-    memory: parseFloat(pod.usage?.memory || 0),
-  })) || [];
+  // Memoize chart data to prevent reprocessing on every render
+  const podMetricsData = useMemo(() => {
+    return metrics?.pods?.map((pod) => ({
+      name: pod.metadata?.name?.substring(0, 15) + '...',
+      cpu: parseFloat(pod.usage?.cpu || 0),
+      memory: parseFloat(pod.usage?.memory || 0),
+    })) || [];
+  }, [metrics?.pods]);
 
   return (
     <Box>
@@ -229,4 +232,6 @@ export default function Metrics() {
       </Grid>
     </Box>
   );
-}
+});
+
+export default Metrics;

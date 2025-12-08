@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Card,
@@ -17,7 +17,7 @@ import podService from '../services/podService';
 import deploymentService from '../services/deploymentService';
 import socketService from '../services/socketService';
 
-export default function Dashboard() {
+const Dashboard = memo(function Dashboard() {
   const [stats, setStats] = useState({
     totalPods: 0,
     runningPods: 0,
@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchStats = async (showLoading = true) => {
+  const fetchStats = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) {
         setLoading(true);
@@ -56,7 +56,7 @@ export default function Dashboard() {
         setLoading(false);
       }
     }
-  };
+  }, []); // Empty deps - fetchStats doesn't need external dependencies
 
   useEffect(() => {
     fetchStats();
@@ -77,7 +77,7 @@ export default function Dashboard() {
       socketService.off('pods:update', handleUpdate);
       socketService.off('deployments:update', handleUpdate);
     };
-  }, []);
+  }, [fetchStats]);
 
   if (loading) {
     return (
@@ -91,7 +91,8 @@ export default function Dashboard() {
     return <Alert severity="error">Error loading dashboard: {error}</Alert>;
   }
 
-  const statCards = [
+  // Memoize statCards to prevent recreation on every render
+  const statCards = useMemo(() => [
     {
       title: 'Total Pods',
       value: stats.totalPods,
@@ -122,7 +123,7 @@ export default function Dashboard() {
       icon: <CheckCircleIcon color="primary" sx={{ fontSize: 40 }} />,
       color: 'primary',
     },
-  ];
+  ], [stats]);
 
   return (
     <Box>
@@ -150,4 +151,6 @@ export default function Dashboard() {
       </Grid>
     </Box>
   );
-}
+});
+
+export default Dashboard;
