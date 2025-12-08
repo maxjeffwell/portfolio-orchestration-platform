@@ -16,6 +16,7 @@ import metricsRoutes from './routes/metricsRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import prometheusRoutes from './routes/prometheusRoutes.js';
 import { authMiddleware } from './middleware/auth.js';
+import errorHandler from './middleware/errorHandler.js';
 
 const execAsync = promisify(exec);
 
@@ -75,16 +76,8 @@ app.use((req, res) => {
   });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error('Unhandled error:', err);
-  res.status(500).json({
-    success: false,
-    error: process.env.NODE_ENV === 'production'
-      ? 'Internal server error'
-      : err.message,
-  });
-});
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 // WebSocket connection handling
 io.on('connection', (socket) => {

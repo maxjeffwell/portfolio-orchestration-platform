@@ -1,5 +1,7 @@
 import express from 'express';
 import metricsController from '../controllers/metricsController.js';
+import validate from '../middleware/validation/validationMiddleware.js';
+import { metricsNamespace } from '../middleware/validation/rules.js';
 
 const router = express.Router();
 
@@ -7,7 +9,7 @@ const router = express.Router();
 router.get('/', metricsController.getAllMetrics.bind(metricsController));
 
 // Get pod metrics
-router.get('/pods', metricsController.getPodMetrics.bind(metricsController));
+router.get('/pods', validate(metricsNamespace), metricsController.getPodMetrics.bind(metricsController));
 
 // Get node metrics
 router.get('/nodes', metricsController.getNodeMetrics.bind(metricsController));

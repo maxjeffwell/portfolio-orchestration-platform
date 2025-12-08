@@ -25,10 +25,7 @@ class DeploymentController {
     const namespace = req.query.namespace || 'default';
     const { replicas } = req.body;
 
-    if (typeof replicas !== 'number' || replicas < 0) {
-      throw new ApiError('Invalid replicas value. Must be a positive number.', 400);
-    }
-
+    // Validation handled by middleware
     const result = await deploymentService.scaleDeployment(name, namespace, replicas);
     sendSuccess(res, result);
   });

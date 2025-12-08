@@ -7,11 +7,7 @@ class AuthController {
   login = asyncHandler(async (req, res) => {
     const { username, password } = req.body;
 
-    if (!username || !password) {
-      throw new ApiError('Username and password are required', 400);
-    }
-
-    // Find user in database
+    // Find user in database (validation handled by middleware)
     const user = await userService.findUserByUsername(username);
 
     if (!user) {
