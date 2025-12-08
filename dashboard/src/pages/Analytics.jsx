@@ -27,6 +27,7 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/apiConfig.js';
+import { withCache } from '../utils/queryCache.js';
 
 function Analytics() {
   const [metrics, setMetrics] = useState(null);
@@ -62,10 +63,14 @@ function Analytics() {
         const token = localStorage.getItem('token');
         const baseUrl = `${API_BASE_URL}/prometheus`;
 
-        // Fetch cluster-wide metrics from Prometheus
-        const response = await axios.get(`${baseUrl}/cluster-metrics?timeRange=1h`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Fetch cluster-wide metrics from Prometheus (with caching)
+        const response = await withCache(
+          () => axios.get(`${baseUrl}/cluster-metrics?timeRange=1h`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          'prometheus-cluster-metrics-1h',
+          30000 // 30 second cache
+        );
 
         if (response.data.success && response.data.data) {
           const { cpu, memory } = response.data.data;
@@ -133,10 +138,14 @@ function Analytics() {
         const token = localStorage.getItem('token');
         const baseUrl = `${API_BASE_URL}/prometheus`;
 
-        // Query for pod count by namespace
-        const response = await axios.get(
-          `${baseUrl}/query?query=count(kube_pod_info) by (namespace)`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        // Query for pod count by namespace (with caching)
+        const response = await withCache(
+          () => axios.get(
+            `${baseUrl}/query?query=count(kube_pod_info) by (namespace)`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          ),
+          'prometheus-namespace-pods',
+          30000 // 30 second cache
         );
 
         if (response.data.success && response.data.data?.data?.result) {
@@ -166,15 +175,23 @@ function Analytics() {
         const token = localStorage.getItem('token');
         const baseUrl = `${API_BASE_URL}/prometheus`;
 
-        // Query for top pods by CPU and Memory
+        // Query for top pods by CPU and Memory (with caching)
         const [cpuResponse, memResponse] = await Promise.all([
-          axios.get(
-            `${baseUrl}/query?query=topk(10, sum(rate(container_cpu_usage_seconds_total{pod!="",container!=""}[5m])) by (pod))`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          withCache(
+            () => axios.get(
+              `${baseUrl}/query?query=topk(10, sum(rate(container_cpu_usage_seconds_total{pod!="",container!=""}[5m])) by (pod))`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            ),
+            'prometheus-pod-cpu-top10',
+            30000 // 30 second cache
           ),
-          axios.get(
-            `${baseUrl}/query?query=topk(10, sum(container_memory_working_set_bytes{pod!="",container!=""}) by (pod))`,
-            { headers: { Authorization: `Bearer ${token}` } }
+          withCache(
+            () => axios.get(
+              `${baseUrl}/query?query=topk(10, sum(container_memory_working_set_bytes{pod!="",container!=""}) by (pod))`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            ),
+            'prometheus-pod-memory-top10',
+            30000 // 30 second cache
           ),
         ]);
 
