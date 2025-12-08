@@ -54,6 +54,9 @@ pids
 *.sublime-project
 *.sublime-workspace
 
+# ArtiForge
+.artiforge/
+
 # OS files
 .DS_Store
 .DS_Store?
