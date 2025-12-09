@@ -35,8 +35,8 @@ spec:
           value: "http://api-service:5000"
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "64Mi"
+            cpu: "10m"
           limits:
             memory: "256Mi"
             cpu: "200m"

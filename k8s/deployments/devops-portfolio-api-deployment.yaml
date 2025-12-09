@@ -23,6 +23,10 @@ spec:
         - containerPort: 5000
           name: http
           protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
         env:
         - name: PORT
           value: "5000"

@@ -17,8 +17,12 @@ spec:
     spec:
       containers:
       - name: tenantflow-frontend
-        image: maxjeffwell/tenantflow-frontend:latest
+        image: tenantflow-frontend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"

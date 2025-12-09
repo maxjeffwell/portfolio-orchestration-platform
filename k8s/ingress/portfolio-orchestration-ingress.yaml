@@ -12,87 +12,45 @@ spec:
   tls:
   - hosts:
     - pop-portfolio.el-jefe.me
+    - tenantflow.el-jefe.me
+    - vertex-platform.el-jefe.me
+    - podrick.el-jefe.me
     secretName: pop-portfolio-tls
   rules:
+  # 1. Pop Portfolio (Dashboard + Consolidated Apps)
   - host: pop-portfolio.el-jefe.me
     http:
       paths:
-      # 1. Dashboard (Lower Priority / Default)
+      # Dashboard (Root)
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: portfolio-dashboard
+            name: devops-portfolio-dashboard
             port:
               number: 80
-      
-      # 2. Legacy /portfolio path
-      - path: /portfolio
-        pathType: Prefix
-        backend:
-          service:
-            name: portfolio-dashboard
-            port:
-              number: 80
-
----
-# Direct API routes with higher priority to handle /api/* requests from the frontend
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: portfolio-orchestration-api-ingress
-  namespace: default
-  annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
-    traefik.ingress.kubernetes.io/router.priority: "200"
-spec:
-  ingressClassName: traefik
-  tls:
-  - hosts:
-    - pop-portfolio.el-jefe.me
-    secretName: pop-portfolio-tls
-  rules:
-  - host: pop-portfolio.el-jefe.me
-    http:
-      paths:
+              
+      # Dashboard API (Direct)
       - path: /api
         pathType: Prefix
         backend:
           service:
-            name: portfolio-api
+            name: devops-portfolio-api
             port:
-              number: 5000
-      - path: /portfolio/api
+              number: 5000 # Mapped port (TargetPort 5001->5000 in svc)
+
+      # Legacy Portfolio Dashboard
+      - path: /portfolio
         pathType: Prefix
         backend:
           service:
-            name: portfolio-api
+            name: devops-portfolio-dashboard
             port:
-              number: 5000
+              number: 80
 
----
-# Portfolio Apps with medium priority
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: portfolio-apps-ingress
-  namespace: default
-  annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
-    traefik.ingress.kubernetes.io/router.priority: "150"
-spec:
-  ingressClassName: traefik
-  tls:
-  - hosts:
-    - pop-portfolio.el-jefe.me
-    secretName: pop-portfolio-tls
-  rules:
-  - host: pop-portfolio.el-jefe.me
-    http:
-      paths:
-      # Bookmarked App
+      # -- App Paths (Stay on Main Domain) --
+
+      # Bookmarked
       - path: /bookmarked
         pathType: Prefix
         backend:
@@ -101,7 +59,7 @@ spec:
             port:
               number: 80
 
-      # Firebook App
+      # Firebook
       - path: /firebook
         pathType: Prefix
         backend:
@@ -110,7 +68,7 @@ spec:
             port:
               number: 80
 
-      # IntervalAI App
+      # IntervalAI
       - path: /intervalai
         pathType: Prefix
         backend:
@@ -119,7 +77,7 @@ spec:
             port:
               number: 80
 
-      # EducationELLy App
+      # EducationELLy
       - path: /educationelly
         pathType: Prefix
         backend:
@@ -128,7 +86,7 @@ spec:
             port:
               number: 3000
 
-      # EducationELLy GraphQL App
+      # EducationELLy GraphQL
       - path: /educationelly-graphql
         pathType: Prefix
         backend:
@@ -137,7 +95,7 @@ spec:
             port:
               number: 80
 
-      # Code Talk App
+      # Code Talk
       - path: /code-talk
         pathType: Prefix
         backend:
@@ -146,8 +104,11 @@ spec:
             port:
               number: 5000
 
-      # TenantFlow App
-      - path: /tenantflow
+  # 2. TenantFlow (Subdomain)
+  - host: tenantflow.el-jefe.me
+    http:
+      paths:
+      - path: /
         pathType: Prefix
         backend:
           service:
@@ -155,20 +116,26 @@ spec:
             port:
               number: 80
 
-      # DevOps Portfolio Dashboard
-      - path: /devops-portfolio
+  # 3. Vertex Platform (Subdomain)
+  - host: vertex-platform.el-jefe.me
+    http:
+      paths:
+      - path: /
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-dashboard
+            name: microservices-platform
             port:
               number: 80
 
-      # DevOps Portfolio API
-      - path: /devops-portfolio-api
+  # 4. Podrick (Subdomain)
+  - host: podrick.el-jefe.me
+    http:
+      paths:
+      - path: /
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-api
+            name: devops-manager-platform
             port:
-              number: 5001
+              number: 80
