@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: podrick-redirect
+  namespace: default
+spec:
+  redirectRegex:
+    regex: ^https://podrick\.el-jefe\.me/?$
+    replacement: https://podrick.el-jefe.me/portfolio
+    permanent: true
