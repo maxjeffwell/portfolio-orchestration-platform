@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-portfolio-api
+  namespace: default
+  labels:
+    app: devops-portfolio-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-portfolio-api
+  template:
+    metadata:
+      labels:
+        app: devops-portfolio-api
+    spec:
+      containers:
+      - name: devops-portfolio-api
+        image: devops-portfolio-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          value: "5000"

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tenantflow-frontend
+  namespace: default
+  labels:
+    app: tenantflow-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tenantflow-frontend
+  template:
+    metadata:
+      labels:
+        app: tenantflow-frontend
+    spec:
+      containers:
+      - name: tenantflow-frontend
+        image: tenantflow-frontend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          protocol: TCP
