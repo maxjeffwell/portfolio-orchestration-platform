@@ -132,6 +132,11 @@ spec:
             secretKeyRef:
               name: vertex-platform-secret
               key: influxdb-token
+        - name: INFLUXDB_URL
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: influxdb-url
         livenessProbe:
           httpGet:
             path: /health
