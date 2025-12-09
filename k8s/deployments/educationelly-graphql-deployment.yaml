@@ -100,12 +100,12 @@ spec:
         - name: MONGODB_URI
           valueFrom:
             secretKeyRef:
-              name: educationelly-graphql-secret
+              name: educationelly-graphql-secrets
               key: mongodb-uri
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: educationelly-graphql-secret
+              name: educationelly-graphql-secrets
               key: jwt-secret
         resources:
           requests:

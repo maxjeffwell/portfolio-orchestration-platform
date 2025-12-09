@@ -100,12 +100,12 @@ spec:
         - name: MONGODB_URI
           valueFrom:
             secretKeyRef:
-              name: intervalai-secret
+              name: intervalai-secrets
               key: mongodb-uri
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: intervalai-secret
+              name: intervalai-secrets
               key: jwt-secret
         resources:
           requests:
