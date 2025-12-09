@@ -42,6 +42,11 @@ spec:
             secretKeyRef:
               name: vertex-platform-secret
               key: auth-database-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: jwt-secret
         livenessProbe:
           httpGet:
             path: /health
