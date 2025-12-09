@@ -32,7 +32,7 @@ spec:
           protocol: TCP
         env:
         - name: VITE_API_URL
-          value: "http://api-service:5000"
+          value: "http://devops-portfolio-api:5001"
         resources:
           requests:
             memory: "64Mi"

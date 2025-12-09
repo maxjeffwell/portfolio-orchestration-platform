@@ -95,12 +95,12 @@ spec:
         - name: MONGODB_URI
           valueFrom:
             secretKeyRef:
-              name: educationelly-secrets
+              name: educationelly-secret
               key: mongodb-uri
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: educationelly-secrets
+              name: educationelly-secret
               key: jwt-secret
         resources:
           requests:

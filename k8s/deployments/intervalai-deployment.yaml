@@ -26,6 +26,7 @@ spec:
       - name: intervalai-client
         image: maxjeffwell/spaced-repetition-capstone-client:latest
         imagePullPolicy: Always
+        command: ["nginx", "-g", "daemon off;"]
         securityContext:
           runAsUser: 0
           capabilities:
@@ -46,7 +47,7 @@ spec:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
@@ -54,7 +55,7 @@ spec:
           httpGet:
             path: /
             port: 80
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
@@ -100,12 +101,12 @@ spec:
         - name: MONGODB_URI
           valueFrom:
             secretKeyRef:
-              name: intervalai-secrets
+              name: intervalai-secret
               key: mongodb-uri
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
-              name: intervalai-secrets
+              name: intervalai-secret
               key: jwt-secret
         resources:
           requests:

@@ -17,12 +17,40 @@ spec:
     spec:
       containers:
       - name: tenantflow-frontend
-        image: tenantflow-frontend:latest
-        imagePullPolicy: IfNotPresent
+        image: maxjeffwell/tenantflow-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
+          name: http
           protocol: TCP
         resources:
           requests:
             memory: "64Mi"
             cpu: "10m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: false
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - NET_BIND_SERVICE

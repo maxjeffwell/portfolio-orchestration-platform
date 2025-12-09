@@ -37,7 +37,7 @@ spec:
           service:
             name: devops-portfolio-api
             port:
-              number: 5000 # Mapped port (TargetPort 5001->5000 in svc)
+              number: 5001
 
       # Legacy Portfolio Dashboard
       - path: /portfolio
@@ -116,19 +116,34 @@ spec:
             port:
               number: 80
 
-  # 3. Vertex Platform (Subdomain)
+  # 3. Vertex Platform (Subdomain) - Microservices API
   - host: vertex-platform.el-jefe.me
     http:
       paths:
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: vertex-platform-auth
+            port:
+              number: 3001
+      - path: /analytics
+        pathType: Prefix
+        backend:
+          service:
+            name: vertex-platform-analytics
+            port:
+              number: 3005
+      # Default route to auth service
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: microservices-platform
+            name: vertex-platform-auth
             port:
-              number: 80
+              number: 3001
 
-  # 4. Podrick (Subdomain)
+  # 4. Podrick (Subdomain) - Shares devops-portfolio deployment
   - host: podrick.el-jefe.me
     http:
       paths:
@@ -136,6 +151,13 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: devops-manager-platform
+            name: devops-portfolio-dashboard
             port:
               number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: devops-portfolio-api
+            port:
+              number: 5001
