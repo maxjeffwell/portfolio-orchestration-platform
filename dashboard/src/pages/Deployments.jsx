@@ -37,6 +37,9 @@ const APP_URLS = {
   'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly',
   'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql',
   'code-talk-client': 'https://pop-portfolio.el-jefe.me/code-talk',
+  'tenantflow-frontend': 'https://pop-portfolio.el-jefe.me/tenantflow',
+  'devops-portfolio-dashboard': 'https://pop-portfolio.el-jefe.me/devops-portfolio',
+  'devops-portfolio-api': 'https://pop-portfolio.el-jefe.me/devops-portfolio-api',
   'portfolio-dashboard': 'https://pop-portfolio.el-jefe.me/',
   'portfolio-api': 'https://pop-portfolio.el-jefe.me/api',
 };

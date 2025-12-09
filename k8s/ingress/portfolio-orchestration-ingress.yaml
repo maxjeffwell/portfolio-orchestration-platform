@@ -145,3 +145,30 @@ spec:
             name: code-talk-client
             port:
               number: 5000
+
+      # TenantFlow App
+      - path: /tenantflow
+        pathType: Prefix
+        backend:
+          service:
+            name: tenantflow-frontend
+            port:
+              number: 80
+
+      # DevOps Portfolio Dashboard
+      - path: /devops-portfolio
+        pathType: Prefix
+        backend:
+          service:
+            name: devops-portfolio-dashboard
+            port:
+              number: 80
+
+      # DevOps Portfolio API
+      - path: /devops-portfolio-api
+        pathType: Prefix
+        backend:
+          service:
+            name: devops-portfolio-api
+            port:
+              number: 5001
