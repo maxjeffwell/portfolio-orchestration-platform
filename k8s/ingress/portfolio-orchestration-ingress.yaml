@@ -70,3 +70,78 @@ spec:
             name: portfolio-api
             port:
               number: 5000
+
+---
+# Portfolio Apps with medium priority
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portfolio-apps-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.priority: "150"
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - pop-portfolio.el-jefe.me
+    secretName: pop-portfolio-tls
+  rules:
+  - host: pop-portfolio.el-jefe.me
+    http:
+      paths:
+      # Bookmarked App
+      - path: /bookmarked
+        pathType: Prefix
+        backend:
+          service:
+            name: bookmarked-client
+            port:
+              number: 80
+
+      # Firebook App
+      - path: /firebook
+        pathType: Prefix
+        backend:
+          service:
+            name: firebook
+            port:
+              number: 80
+
+      # IntervalAI App
+      - path: /intervalai
+        pathType: Prefix
+        backend:
+          service:
+            name: intervalai-client
+            port:
+              number: 80
+
+      # EducationELLy App
+      - path: /educationelly
+        pathType: Prefix
+        backend:
+          service:
+            name: educationelly-client
+            port:
+              number: 3000
+
+      # EducationELLy GraphQL App
+      - path: /educationelly-graphql
+        pathType: Prefix
+        backend:
+          service:
+            name: educationelly-graphql-client
+            port:
+              number: 80
+
+      # Code Talk App
+      - path: /code-talk
+        pathType: Prefix
+        backend:
+          service:
+            name: code-talk-client
+            port:
+              number: 5000
