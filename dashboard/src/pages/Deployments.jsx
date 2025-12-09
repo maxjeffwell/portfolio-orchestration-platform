@@ -24,9 +24,22 @@ import {
 import {
   Refresh as RefreshIcon,
   Edit as EditIcon,
+  OpenInNew as OpenInNewIcon,
 } from '@mui/icons-material';
 import deploymentService from '../services/deploymentService';
 import socketService from '../services/socketService';
+
+// URL mapping for portfolio apps
+const APP_URLS = {
+  'bookmarked-client': 'https://pop-portfolio.el-jefe.me/bookmarked',
+  'firebook': 'https://pop-portfolio.el-jefe.me/firebook',
+  'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai',
+  'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly',
+  'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql',
+  'code-talk-client': 'https://pop-portfolio.el-jefe.me/code-talk',
+  'portfolio-dashboard': 'https://pop-portfolio.el-jefe.me/',
+  'portfolio-api': 'https://pop-portfolio.el-jefe.me/api',
+};
 
 export default function Deployments() {
   const [deployments, setDeployments] = useState([]);
@@ -133,6 +146,7 @@ export default function Deployments() {
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>URL</TableCell>
                   <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Namespace</TableCell>
                   <TableCell>Replicas</TableCell>
                   <TableCell>Status</TableCell>
@@ -144,10 +158,28 @@ export default function Deployments() {
                 {deployments.map((deployment) => {
                   const available = deployment.status?.availableReplicas || 0;
                   const desired = deployment.spec?.replicas || 0;
+                  const deploymentName = deployment.metadata?.name;
+                  const appUrl = APP_URLS[deploymentName];
 
                   return (
                     <TableRow key={deployment.metadata?.uid}>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{deployment.metadata?.name}</TableCell>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{deploymentName}</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
+                        {appUrl ? (
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={appUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open app"
+                          >
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">-</Typography>
+                        )}
+                      </TableCell>
                       <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{deployment.metadata?.namespace}</TableCell>
                       <TableCell>
                         {available} / {desired}
