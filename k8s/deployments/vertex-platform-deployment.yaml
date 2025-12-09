@@ -37,6 +37,11 @@ spec:
           value: "3001"
         - name: NODE_ENV
           value: "production"
+        - name: AUTH_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: auth-database-url
         livenessProbe:
           httpGet:
             path: /health
@@ -97,6 +102,31 @@ spec:
           value: "3005"
         - name: NODE_ENV
           value: "production"
+        - name: INFLUXDB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: influxdb-username
+        - name: INFLUXDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: influxdb-password
+        - name: INFLUXDB_ORG
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: influxdb-org
+        - name: INFLUXDB_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: influxdb-bucket
+        - name: INFLUXDB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: influxdb-token
         livenessProbe:
           httpGet:
             path: /health
