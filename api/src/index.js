@@ -22,6 +22,7 @@ import requestIdMiddleware from './middleware/requestId.js';
 const execAsync = promisify(exec);
 
 const app = express();
+app.enable('trust proxy'); // This fixes the Mixed Content redirect issue
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
