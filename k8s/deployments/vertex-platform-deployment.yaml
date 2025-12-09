@@ -137,6 +137,25 @@ spec:
             secretKeyRef:
               name: vertex-platform-secret
               key: influxdb-url
+        - name: KAFKA_BROKERS
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: kafka-brokers
+        - name: KAFKA_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: kafka-username
+        - name: KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vertex-platform-secret
+              key: kafka-password
+        - name: KAFKA_SSL
+          value: "true"
+        - name: KAFKA_SASL_MECHANISM
+          value: "PLAIN"
         livenessProbe:
           httpGet:
             path: /health
