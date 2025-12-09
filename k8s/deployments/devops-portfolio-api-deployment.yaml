@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: devops-portfolio-api
-        image: devops-portfolio-api:latest
+        image: maxjeffwell/portfolio-api:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000
