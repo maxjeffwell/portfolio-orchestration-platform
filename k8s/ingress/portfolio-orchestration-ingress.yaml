@@ -39,6 +39,15 @@ spec:
             port:
               number: 5001
 
+      # WebSocket (Socket.IO)
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: devops-portfolio-api
+            port:
+              number: 5001
+
       # Legacy Portfolio Dashboard
       - path: /portfolio
         pathType: Prefix
