@@ -6,5 +6,5 @@ metadata:
 spec:
   redirectRegex:
     regex: ^https://podrick\.el-jefe\.me/?$
-    replacement: https://podrick.el-jefe.me/portfolio
+    replacement: https://podrick.el-jefe.me/applications
     permanent: true

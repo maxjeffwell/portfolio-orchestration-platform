@@ -21,27 +21,34 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-dashboard
+            name: podrick-dashboard
             port:
               number: 80
       - path: /api
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-api
+            name: podrick-api
             port:
               number: 5001
       - path: /socket.io
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-api
+            name: podrick-api
             port:
               number: 5001
-      - path: /portfolio
+      - path: /applications
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-dashboard
+            name: podrick-dashboard
+            port:
+              number: 80
+      - path: /analytics
+        pathType: Prefix
+        backend:
+          service:
+            name: podrick-dashboard
             port:
               number: 80
