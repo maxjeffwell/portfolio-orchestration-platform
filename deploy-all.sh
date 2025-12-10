@@ -77,6 +77,7 @@ kubectl apply -f k8s/secrets/code-talk-secret.yaml
 kubectl apply -f k8s/secrets/educationelly-secret.yaml
 kubectl apply -f k8s/secrets/educationelly-graphql-secret.yaml
 kubectl apply -f k8s/secrets/intervalai-secret.yaml
+kubectl apply -f k8s/secrets/portfolio-api-secret.yaml
 
 echo ""
 echo "Step 3: Deploying Application Services"
@@ -112,6 +113,10 @@ kubectl apply -f k8s/deployments/intervalai-deployment.yaml
 echo "Deploying Firebook..."
 kubectl apply -f k8s/deployments/firebook-deployment.yaml
 
+# Deploy Portfolio API
+echo "Deploying Portfolio API..."
+kubectl apply -f k8s/deployments/portfolio-api-deployment.yaml
+
 echo ""
 echo "Step 5: Waiting for Application Deployments"
 echo "--------------------------------------------"
@@ -130,6 +135,7 @@ wait_for_deployment code-talk-server
 wait_for_deployment educationelly-server
 wait_for_deployment educationelly-graphql-server
 wait_for_deployment intervalai-server
+wait_for_deployment portfolio-api
 
 echo ""
 echo "====================================="
