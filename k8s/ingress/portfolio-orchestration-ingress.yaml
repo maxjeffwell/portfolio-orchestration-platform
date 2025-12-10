@@ -4,17 +4,11 @@ metadata:
   name: portfolio-orchestration-ingress
   namespace: default
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
+    # Use both entrypoints - Cloudflare terminates SSL
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.priority: "100"
 spec:
   ingressClassName: traefik
-  tls:
-  - hosts:
-    - pop-portfolio.el-jefe.me
-    - tenantflow.el-jefe.me
-    - vertex-platform.el-jefe.me
-    secretName: pop-portfolio-tls
   rules:
   # 1. Pop Portfolio (Dashboard + Consolidated Apps)
   - host: pop-portfolio.el-jefe.me
@@ -29,23 +23,23 @@ spec:
             port:
               number: 80
               
-      # Dashboard API (Direct)
+      # Portfolio API (Auth & Backend)
       - path: /api
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-api
+            name: portfolio-api
             port:
-              number: 5001
+              number: 5000
 
       # WebSocket (Socket.IO)
       - path: /socket.io
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-api
+            name: portfolio-api
             port:
-              number: 5001
+              number: 5000
 
       # Legacy Portfolio Dashboard
       - path: /portfolio
