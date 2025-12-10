@@ -30,9 +30,6 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
-        env:
-        - name: VITE_API_URL
-          value: "http://devops-portfolio-api:5001"
         resources:
           requests:
             memory: "64Mi"

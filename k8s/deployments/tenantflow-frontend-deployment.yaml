@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: tenantflow-frontend
-        image: maxjeffwell/tenantflow-frontend:latest
-        imagePullPolicy: Always
+        image: tenantflow-frontend:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http
