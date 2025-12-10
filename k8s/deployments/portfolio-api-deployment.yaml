@@ -35,6 +35,28 @@ spec:
           value: "5000"
         - name: NODE_ENV
           value: "production"
+        - name: CORS_ORIGIN
+          value: "https://pop-portfolio.el-jefe.me"
+        - name: AUTH_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: auth-database-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: jwt-secret
+        - name: ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: admin-username
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: admin-password
         livenessProbe:
           httpGet:
             path: /health
