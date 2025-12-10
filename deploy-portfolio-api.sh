@@ -23,23 +23,27 @@ stringData:
   admin-password: "admin123"
 EOF
 
-# 2. Apply the service
+# 2. Apply RBAC (ServiceAccount, ClusterRole, ClusterRoleBinding)
+echo "Applying RBAC for Kubernetes API access..."
+kubectl apply -f k8s/api-rbac.yaml
+
+# 3. Apply the service
 echo "Applying portfolio-api service..."
 kubectl apply -f k8s/services/portfolio-api-service.yaml
 
-# 3. Apply the deployment
+# 4. Apply the deployment
 echo "Applying portfolio-api deployment..."
 kubectl apply -f k8s/deployments/portfolio-api-deployment.yaml
 
-# 4. Restart the deployment to pick up any changes
+# 5. Restart the deployment to pick up any changes
 echo "Restarting portfolio-api deployment..."
 kubectl rollout restart deployment/portfolio-api
 
-# 5. Wait for rollout
+# 6. Wait for rollout
 echo "Waiting for rollout to complete..."
 kubectl rollout status deployment/portfolio-api --timeout=120s
 
-# 6. Show status
+# 7. Show status
 echo ""
 echo "=== Portfolio API Status ==="
 kubectl get pods -l app=portfolio-api
