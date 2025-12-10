@@ -35,6 +35,10 @@ kubectl apply -f k8s/services/portfolio-api-service.yaml
 echo "Applying portfolio-api deployment..."
 kubectl apply -f k8s/deployments/portfolio-api-deployment.yaml
 
+# 4b. Apply the API ingress (with priority 200)
+echo "Applying portfolio-api ingress..."
+kubectl apply -f k8s/ingress/portfolio-api-ingress.yaml
+
 # 5. Restart the deployment to pick up any changes
 echo "Restarting portfolio-api deployment..."
 kubectl rollout restart deployment/portfolio-api

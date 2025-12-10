@@ -6,7 +6,6 @@ metadata:
   annotations:
     # Use both entrypoints - Cloudflare terminates SSL
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-    traefik.ingress.kubernetes.io/router.priority: "100"
 spec:
   ingressClassName: traefik
   rules:
@@ -22,24 +21,6 @@ spec:
             name: devops-portfolio-dashboard
             port:
               number: 80
-              
-      # Portfolio API (Auth & Backend)
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: portfolio-api
-            port:
-              number: 5000
-
-      # WebSocket (Socket.IO)
-      - path: /socket.io
-        pathType: Prefix
-        backend:
-          service:
-            name: portfolio-api
-            port:
-              number: 5000
 
       # Legacy Portfolio Dashboard
       - path: /portfolio

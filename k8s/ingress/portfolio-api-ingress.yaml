@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portfolio-api-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.priority: "200"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: pop-portfolio.el-jefe.me
+    http:
+      paths:
+      # Portfolio API
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: portfolio-api
+            port:
+              number: 5000
+      # WebSocket (Socket.IO)
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: portfolio-api
+            port:
+              number: 5000
