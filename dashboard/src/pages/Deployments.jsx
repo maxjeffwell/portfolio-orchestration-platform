@@ -153,7 +153,7 @@ export default function Deployments() {
                         {appUrl ? (
                           <IconButton
                             size="small"
-                            onClick={() => window.open(appUrl, "_blank")}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(appUrl, "_blank"); }}
                             title="Open app"
                           >
                             <OpenInNewIcon fontSize="small" />
