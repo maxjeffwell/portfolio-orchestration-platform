@@ -29,19 +29,18 @@ import {
 import deploymentService from '../services/deploymentService';
 import socketService from '../services/socketService';
 
-// URL mapping for portfolio apps
+// URL mapping for portfolio apps (only frontend/client apps that have public URLs)
 const APP_URLS = {
-  'bookmarked-client': 'https://pop-portfolio.el-jefe.me/bookmarked',
-  'firebook': 'https://pop-portfolio.el-jefe.me/firebook',
-  'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai',
-  'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly',
-  'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql',
-  'code-talk-client': 'https://pop-portfolio.el-jefe.me/code-talk',
-  'tenantflow-frontend': 'https://pop-portfolio.el-jefe.me/tenantflow',
-  'devops-portfolio-dashboard': 'https://pop-portfolio.el-jefe.me/devops-portfolio',
-  'devops-portfolio-api': 'https://pop-portfolio.el-jefe.me/devops-portfolio-api',
-  'portfolio-dashboard': 'https://pop-portfolio.el-jefe.me/',
-  'portfolio-api': 'https://pop-portfolio.el-jefe.me/api',
+  'bookmarked-client': 'https://pop-portfolio.el-jefe.me/bookmarked/',
+  'firebook': 'https://pop-portfolio.el-jefe.me/firebook/',
+  'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai/',
+  'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly/',
+  'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql/',
+  'code-talk-client': 'https://pop-portfolio.el-jefe.me/code-talk/',
+  'tenantflow-frontend': 'https://tenantflow.el-jefe.me/',
+  'devops-portfolio-dashboard': 'https://podrick.el-jefe.me/',
+  'vertex-platform-auth': 'https://vertex-platform.el-jefe.me/',
+  // Backend/API services don't have public URLs
 };
 
 export default function Deployments() {
