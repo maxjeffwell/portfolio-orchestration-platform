@@ -58,6 +58,8 @@ spec:
             secretKeyRef:
               name: portfolio-api-secrets
               key: admin-password
+        - name: PROMETHEUS_URL
+          value: "http://prometheus-prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
         livenessProbe:
           httpGet:
             path: /health
