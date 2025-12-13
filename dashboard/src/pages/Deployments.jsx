@@ -31,12 +31,12 @@ import socketService from '../services/socketService';
 
 // URL mapping for portfolio apps (only frontend/client apps that have public URLs)
 const APP_URLS = {
-  'bookmarked-client': 'https://pop-portfolio.el-jefe.me/portfolio/bookmarked/',
-  'firebook': 'https://pop-portfolio.el-jefe.me/portfolio/firebook/',
-  'intervalai-client': 'https://pop-portfolio.el-jefe.me/portfolio/intervalai/',
-  'educationelly-client': 'https://pop-portfolio.el-jefe.me/portfolio/educationelly/',
-  'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/portfolio/educationelly-graphql/',
-  'code-talk-client': 'https://pop-portfolio.el-jefe.me/portfolio/code-talk/',
+  'bookmarked-client': 'https://pop-portfolio.el-jefe.me/bookmarked/',
+  'firebook': 'https://pop-portfolio.el-jefe.me/firebook/',
+  'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai/',
+  'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly/',
+  'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql/',
+  'code-talk-client': 'https://pop-portfolio.el-jefe.me/code-talk/',
   'tenantflow-frontend': 'https://tenantflow.el-jefe.me/',
   'devops-portfolio-dashboard': 'https://podrick.el-jefe.me/',
   'vertex-platform-auth': 'https://vertex-platform.el-jefe.me/',
