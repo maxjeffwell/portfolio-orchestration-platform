@@ -1,0 +1,14 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: portfolio-strip-prefix
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+      - /bookmarked
+      - /firebook
+      - /intervalai
+      - /educationelly-graphql
+      - /educationelly
+      - /code-talk

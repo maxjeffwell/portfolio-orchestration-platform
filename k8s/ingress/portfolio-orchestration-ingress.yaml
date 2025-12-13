@@ -6,6 +6,7 @@ metadata:
   annotations:
     # Use both entrypoints - Cloudflare terminates SSL
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: default-portfolio-strip-prefix@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
