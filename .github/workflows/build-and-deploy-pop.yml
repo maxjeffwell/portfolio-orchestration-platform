@@ -1,4 +1,4 @@
-name: Build and Deploy POP
+name: Build and Deploy Pop! Portfolio
 
 on:
   push:
