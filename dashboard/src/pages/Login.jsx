@@ -168,6 +168,31 @@ const Login = () => {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </Box>
+
+          <Alert
+            severity="info"
+            sx={{
+              mt: 2,
+              width: '100%',
+              '& .MuiAlert-message': { width: '100%' }
+            }}
+          >
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              <strong>Demo Credentials</strong><br />
+              Username: <code>admin</code> &nbsp;|&nbsp; Password: <code>admin123</code>
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                setUsername('admin');
+                setPassword('admin123');
+              }}
+              disabled={loading}
+            >
+              Use Demo Credentials
+            </Button>
+          </Alert>
         </Paper>
       </motion.div>
     </Box>
