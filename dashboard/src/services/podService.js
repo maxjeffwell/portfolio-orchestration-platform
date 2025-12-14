@@ -28,8 +28,8 @@ export const podService = {
     return response.data.data;
   },
 
-  async deletePod(name) {
-    const response = await api.delete(`/pods/${name}`);
+  async deletePod(name, namespace = 'default') {
+    const response = await api.delete(`/pods/${name}?namespace=${namespace}`);
     return response.data.data;
   },
 };

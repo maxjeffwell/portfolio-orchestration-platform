@@ -74,12 +74,12 @@ export default function Pods() {
     }
   };
 
-  const handleDeletePod = async (podName) => {
+  const handleDeletePod = async (podName, namespace) => {
     if (!window.confirm(`Are you sure you want to delete pod ${podName}?`)) {
       return;
     }
     try {
-      await podService.deletePod(podName);
+      await podService.deletePod(podName, namespace);
       fetchPods();
     } catch (err) {
       console.error('Error deleting pod:', err);
@@ -191,7 +191,7 @@ export default function Pods() {
                       </IconButton>
                       <IconButton
                         size="small"
-                        onClick={() => handleDeletePod(pod.metadata?.name)}
+                        onClick={() => handleDeletePod(pod.metadata?.name, pod.metadata?.namespace)}
                         title="Delete Pod"
                         color="error"
                       >
