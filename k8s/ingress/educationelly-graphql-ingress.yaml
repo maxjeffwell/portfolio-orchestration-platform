@@ -1,10 +1,35 @@
+# GraphQL API Ingress (higher priority)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: educationelly-graphql-ingress
+  name: educationelly-graphql-api-ingress
   namespace: default
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.priority: "10"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: educationelly-graphql-k8s.el-jefe.me
+    http:
+      paths:
+      - path: /graphql
+        pathType: Prefix
+        backend:
+          service:
+            name: educationelly-graphql-server
+            port:
+              number: 8000
+---
+# Client Ingress (lower priority)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: educationelly-graphql-client-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.priority: "1"
 spec:
   ingressClassName: traefik
   rules:
