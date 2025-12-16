@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: educationelly-client
-        image: maxjeffwell/educationelly-client:latest
+        image: maxjeffwell/educationelly-client:k8s
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
