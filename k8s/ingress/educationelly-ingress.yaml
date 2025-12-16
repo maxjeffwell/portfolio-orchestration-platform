@@ -5,6 +5,7 @@ metadata:
   namespace: default
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: default-educationelly-strip-api@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
