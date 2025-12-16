@@ -18,7 +18,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-dashboard
+            name: pop-portfolio-dashboard
             port:
               number: 80
 
@@ -27,7 +27,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: devops-portfolio-dashboard
+            name: pop-portfolio-dashboard
             port:
               number: 80
 
