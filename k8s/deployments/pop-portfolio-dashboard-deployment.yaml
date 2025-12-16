@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pop-portfolio-dashboard
+  namespace: default
+  labels:
+    app: pop-portfolio-dashboard
+    component: dashboard
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pop-portfolio-dashboard
+  template:
+    metadata:
+      labels:
+        app: pop-portfolio-dashboard
+        component: dashboard
+        tier: frontend
+    spec:
+      containers:
+      - name: dashboard
+        image: maxjeffwell/pop-portfolio-dashboard:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
