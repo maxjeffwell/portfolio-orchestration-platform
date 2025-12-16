@@ -35,7 +35,7 @@ const APP_URLS = {
   'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai/',
   'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly/',
   'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql/',
-  'code-talk-client': 'https://pop-portfolio.el-jefe.me/code-talk/',
+  'code-talk-client': 'https://code-talk-k8s.el-jefe.me/',
   'tenantflow-frontend': 'https://tenantflow.el-jefe.me/',
   'devops-portfolio-dashboard': 'https://podrick.el-jefe.me/',
   'vertex-platform-auth': 'https://vertex-platform.el-jefe.me/',
