@@ -34,13 +34,5 @@ spec:
               number: 80
 
       # Note: EducationELLy uses subdomain educationelly-k8s.el-jefe.me (see educationelly-ingress.yaml)
-
-      # EducationELLy GraphQL
-      - path: /educationelly-graphql
-        pathType: Prefix
-        backend:
-          service:
-            name: educationelly-graphql-client
-            port:
-              number: 80
+      # Note: EducationELLy GraphQL uses subdomain educationelly-graphql-k8s.el-jefe.me (see educationelly-graphql-ingress.yaml)
       # Note: Code Talk uses subdomain code-talk-k8s.el-jefe.me (see code-talk-ingress.yaml)

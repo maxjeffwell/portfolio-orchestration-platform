@@ -34,7 +34,7 @@ const APP_URLS = {
   'firebook': 'https://pop-portfolio.el-jefe.me/firebook/',
   'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai/',
   'educationelly-client': 'https://educationelly-k8s.el-jefe.me/',
-  'educationelly-graphql-client': 'https://pop-portfolio.el-jefe.me/educationelly-graphql/',
+  'educationelly-graphql-client': 'https://educationelly-graphql-k8s.el-jefe.me/',
   'code-talk-client': 'https://code-talk-k8s.el-jefe.me/',
   'tenantflow-frontend': 'https://tenantflow.el-jefe.me/',
   'devops-portfolio-dashboard': 'https://podrick.el-jefe.me/',
