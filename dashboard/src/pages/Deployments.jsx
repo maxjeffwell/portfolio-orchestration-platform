@@ -39,6 +39,8 @@ const APP_URLS = {
   'tenantflow-frontend': 'https://tenantflow.el-jefe.me/',
   'devops-portfolio-dashboard': 'https://podrick.el-jefe.me/',
   'vertex-platform-auth': 'https://vertex-platform.el-jefe.me/',
+  'grafana': 'https://grafana.el-jefe.me/login',
+  'prometheus': 'https://prometheus.el-jefe.me/query',
   // Backend/API services don't have public URLs
 };
 export default function Deployments() {
