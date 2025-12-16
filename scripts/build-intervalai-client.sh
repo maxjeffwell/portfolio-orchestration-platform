@@ -1,9 +1,10 @@
 #!/bin/bash
-# Update IntervalAI client with correct API configuration and redeploy
+# Build IntervalAI client with correct API configuration
+# Run this LOCAL script where the source code is located
 
 set -e
 
-echo "🔄 Building and updating IntervalAI client..."
+echo "🔄 Building IntervalAI client with correct API URL..."
 
 # Navigate to IntervalAI client directory
 # Accept path as argument, or try to find it
@@ -21,7 +22,7 @@ else
     echo "Usage: $0 [path-to-client-directory]"
     echo ""
     echo "Example:"
-    echo "  $0 ~/projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
+    echo "  $0 ~/GitHub_Projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
     exit 1
 fi
 
@@ -44,23 +45,8 @@ docker build \
 echo "📤 Pushing to Docker Hub..."
 docker push maxjeffwell/spaced-repetition-capstone-client:latest
 
-echo "📦 Restarting IntervalAI client deployment..."
-kubectl rollout restart deployment/intervalai-client -n default
-
-echo "⏳ Waiting for deployment to complete..."
-kubectl rollout status deployment/intervalai-client -n default --timeout=5m
-
-echo "✅ Checking deployment status..."
-kubectl get deployment intervalai-client -n default
-kubectl get pods -l app=intervalai,component=client -n default
-
 echo ""
-echo "🎉 IntervalAI client updated successfully!"
-echo "🌐 The app should now connect to the backend at /api"
-echo "🔗 Visit: https://intervalai-k8s.el-jefe.me/"
+echo "✅ Build complete and pushed to Docker Hub!"
 echo ""
-echo "To verify:"
-echo "  1. Visit https://intervalai-k8s.el-jefe.me/"
-echo "  2. Try to log in or register"
-echo "  3. Check browser console for any errors"
-echo "  4. Check pod logs: kubectl logs -l app=intervalai,component=client -n default"
+echo "Next step: Run this on your server to deploy:"
+echo "  ./scripts/deploy-intervalai-client.sh"
