@@ -11,13 +11,14 @@ spec:
   - host: code-talk-k8s.el-jefe.me
     http:
       paths:
-      - path: /
+      # GraphQL endpoint (must come before / to take precedence)
+      - path: /graphql
         pathType: Prefix
         backend:
           service:
-            name: code-talk-client
+            name: code-talk-server
             port:
-              number: 5000
+              number: 8000
       - path: /api
         pathType: Prefix
         backend:
@@ -32,3 +33,11 @@ spec:
             name: code-talk-server
             port:
               number: 8000
+      # Client (catch-all, must be last)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: code-talk-client
+            port:
+              number: 5000
