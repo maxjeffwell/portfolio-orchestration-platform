@@ -30,7 +30,7 @@ import deploymentService from '../services/deploymentService';
 import socketService from '../services/socketService';
 // URL mapping for portfolio apps (only frontend/client apps that have public URLs)
 const APP_URLS = {
-  'bookmarked-client': 'https://pop-portfolio.el-jefe.me/bookmarked/',
+  'bookmarked-client': 'https://bookmarked-k8s.el-jefe.me/',
   'firebook': 'https://pop-portfolio.el-jefe.me/firebook/',
   'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai/',
   'educationelly-client': 'https://pop-portfolio.el-jefe.me/educationelly/',

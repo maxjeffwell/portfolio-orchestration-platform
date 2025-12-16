@@ -6,7 +6,6 @@ metadata:
 spec:
   stripPrefix:
     prefixes:
-      - /bookmarked
       - /firebook
       - /intervalai
       - /educationelly-graphql

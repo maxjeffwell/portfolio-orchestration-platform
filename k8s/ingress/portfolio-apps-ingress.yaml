@@ -13,14 +13,7 @@ spec:
   - host: pop-portfolio.el-jefe.me
     http:
       paths:
-      # Bookmarked
-      - path: /bookmarked
-        pathType: Prefix
-        backend:
-          service:
-            name: bookmarked-client
-            port:
-              number: 80
+      # Note: Bookmarked uses subdomain bookmarked-k8s.el-jefe.me (see bookmarked-ingress.yaml)
 
       # Firebook
       - path: /firebook
