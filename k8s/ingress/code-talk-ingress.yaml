@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: code-talk-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: code-talk-k8s.el-jefe.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: code-talk-client
+            port:
+              number: 5000
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: code-talk-server
+            port:
+              number: 8000
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: code-talk-server
+            port:
+              number: 8000
