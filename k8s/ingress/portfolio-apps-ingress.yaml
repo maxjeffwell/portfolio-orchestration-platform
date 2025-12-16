@@ -14,15 +14,7 @@ spec:
     http:
       paths:
       # Note: Bookmarked uses subdomain bookmarked-k8s.el-jefe.me (see bookmarked-ingress.yaml)
-
-      # Firebook
-      - path: /firebook
-        pathType: Prefix
-        backend:
-          service:
-            name: firebook
-            port:
-              number: 80
+      # Note: FireBook uses subdomain firebook-k8s.el-jefe.me (see firebook-ingress.yaml)
 
       # IntervalAI
       - path: /intervalai
