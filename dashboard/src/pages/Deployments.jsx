@@ -32,7 +32,7 @@ import socketService from '../services/socketService';
 const APP_URLS = {
   'bookmarked-client': 'https://bookmarked-k8s.el-jefe.me/',
   'firebook': 'https://firebook-k8s.el-jefe.me/',
-  'intervalai-client': 'https://pop-portfolio.el-jefe.me/intervalai/',
+  'intervalai-client': 'https://intervalai-k8s.el-jefe.me/',
   'educationelly-client': 'https://educationelly-k8s.el-jefe.me/',
   'educationelly-graphql-client': 'https://educationelly-graphql-k8s.el-jefe.me/',
   'code-talk-client': 'https://code-talk-k8s.el-jefe.me/',
