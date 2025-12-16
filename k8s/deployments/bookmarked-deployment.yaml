@@ -102,6 +102,21 @@ spec:
             secretKeyRef:
               name: bookmarked-secret
               key: database-url
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: bookmarked-secret
+              key: openai-api-key
+        - name: OPENAI_MODEL
+          value: "gpt-4o-mini"
+        - name: OPENAI_TEMPERATURE
+          value: "0.4"
+        - name: OPENAI_MAX_TOKENS
+          value: "1000"
+        - name: AI_FEATURES_ENABLED
+          value: "true"
+        - name: AI_CACHE_ENABLED
+          value: "true"
         resources:
           requests:
             memory: "64Mi"
