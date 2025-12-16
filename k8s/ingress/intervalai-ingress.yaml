@@ -18,3 +18,10 @@ spec:
             name: intervalai-client
             port:
               number: 80
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: intervalai-server
+            port:
+              number: 8080
