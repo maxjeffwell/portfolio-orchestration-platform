@@ -6,7 +6,24 @@ set -e
 echo "🔄 Building and updating IntervalAI client..."
 
 # Navigate to IntervalAI client directory
-CLIENT_DIR="/home/maxjeffwell/GitHub_Projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
+# Accept path as argument, or try to find it
+if [ -n "$1" ]; then
+    CLIENT_DIR="$1"
+elif [ -d "/home/maxjeffwell/GitHub_Projects/spaced-repetition-capstone/spaced-repetition-capstone-client" ]; then
+    CLIENT_DIR="/home/maxjeffwell/GitHub_Projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
+elif [ -d "$HOME/projects/spaced-repetition-capstone/spaced-repetition-capstone-client" ]; then
+    CLIENT_DIR="$HOME/projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
+elif [ -d "$HOME/GitHub_Projects/spaced-repetition-capstone/spaced-repetition-capstone-client" ]; then
+    CLIENT_DIR="$HOME/GitHub_Projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
+else
+    echo "❌ Error: IntervalAI client directory not found"
+    echo ""
+    echo "Usage: $0 [path-to-client-directory]"
+    echo ""
+    echo "Example:"
+    echo "  $0 ~/projects/spaced-repetition-capstone/spaced-repetition-capstone-client"
+    exit 1
+fi
 
 if [ ! -d "$CLIENT_DIR" ]; then
     echo "❌ Error: Client directory not found at $CLIENT_DIR"
