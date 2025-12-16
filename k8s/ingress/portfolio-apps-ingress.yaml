@@ -57,12 +57,4 @@ spec:
             name: educationelly-graphql-client
             port:
               number: 80
-
-      # Code Talk
-      - path: /code-talk
-        pathType: Prefix
-        backend:
-          service:
-            name: code-talk-client
-            port:
-              number: 5000
+      # Note: Code Talk uses subdomain code-talk-k8s.el-jefe.me (see code-talk-ingress.yaml)
