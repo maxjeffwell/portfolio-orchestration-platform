@@ -33,14 +33,7 @@ spec:
             port:
               number: 80
 
-      # EducationELLy
-      - path: /educationelly
-        pathType: Prefix
-        backend:
-          service:
-            name: educationelly-client
-            port:
-              number: 3000
+      # Note: EducationELLy uses subdomain educationelly-k8s.el-jefe.me (see educationelly-ingress.yaml)
 
       # EducationELLy GraphQL
       - path: /educationelly-graphql
