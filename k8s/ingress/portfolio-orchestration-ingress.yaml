@@ -31,61 +31,18 @@ spec:
             port:
               number: 80
 
-      # -- App Paths (Stay on Main Domain) --
-
-      # Bookmarked
-      - path: /bookmarked
+      # Portfolio API
+      - path: /api
         pathType: Prefix
         backend:
           service:
-            name: bookmarked-client
-            port:
-              number: 80
-
-      # Firebook
-      - path: /firebook
-        pathType: Prefix
-        backend:
-          service:
-            name: firebook
-            port:
-              number: 80
-
-      # IntervalAI
-      - path: /intervalai
-        pathType: Prefix
-        backend:
-          service:
-            name: intervalai-client
-            port:
-              number: 80
-
-      # EducationELLy
-      - path: /educationelly
-        pathType: Prefix
-        backend:
-          service:
-            name: educationelly-client
-            port:
-              number: 3000
-
-      # EducationELLy GraphQL
-      - path: /educationelly-graphql
-        pathType: Prefix
-        backend:
-          service:
-            name: educationelly-graphql-client
-            port:
-              number: 80
-
-      # Code Talk
-      - path: /code-talk
-        pathType: Prefix
-        backend:
-          service:
-            name: code-talk-client
+            name: portfolio-api
             port:
               number: 5000
+
+      # Note: App routes (/bookmarked, /firebook, /intervalai, /educationelly,
+      # /educationelly-graphql, /code-talk) are in portfolio-apps-ingress.yaml
+      # with stripPrefix middleware applied
 
   # 2. TenantFlow (Subdomain)
   - host: tenantflow.el-jefe.me
