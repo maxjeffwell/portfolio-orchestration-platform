@@ -1,18 +1,19 @@
+# API Ingress with stripPrefix middleware
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: educationelly-ingress
+  name: educationelly-api-ingress
   namespace: default
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.middlewares: default-educationelly-strip-api@kubernetescrd
+    traefik.ingress.kubernetes.io/router.priority: "10"
 spec:
   ingressClassName: traefik
   rules:
   - host: educationelly-k8s.el-jefe.me
     http:
       paths:
-      # Server API routes (must come before / to match first)
       - path: /api
         pathType: Prefix
         backend:
@@ -20,7 +21,22 @@ spec:
             name: educationelly-server
             port:
               number: 8080
-      # Client routes (catch-all)
+---
+# Client Ingress without middleware
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: educationelly-client-ingress
+  namespace: default
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.priority: "1"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: educationelly-k8s.el-jefe.me
+    http:
+      paths:
       - path: /
         pathType: Prefix
         backend:
