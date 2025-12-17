@@ -27,7 +27,7 @@ spec:
         image: maxjeffwell/spaced-repetition-capstone-client:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080
+        - containerPort: 80
           name: http
           protocol: TCP
         resources:
@@ -40,7 +40,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /
-            port: 8080
+            port: 80
           initialDelaySeconds: 60
           periodSeconds: 10
           timeoutSeconds: 5
@@ -48,7 +48,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /
-            port: 8080
+            port: 80
           initialDelaySeconds: 30
           periodSeconds: 5
           timeoutSeconds: 3
