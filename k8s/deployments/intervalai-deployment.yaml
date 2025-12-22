@@ -104,6 +104,8 @@ spec:
             secretKeyRef:
               name: intervalai-secret
               key: jwt-secret
+        - name: TFJS_BACKEND
+          value: "node"
         resources:
           requests:
             memory: "64Mi"
