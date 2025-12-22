@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: bookmarked-client
-        image: maxjeffwell/bookmarked-client:k8s
+        image: maxjeffwell/bookmarks-react-hooks-client:latest
         imagePullPolicy: Always
         securityContext:
           runAsUser: 0
