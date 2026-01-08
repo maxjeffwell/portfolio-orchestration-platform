@@ -83,6 +83,7 @@ spec:
       - name: code-talk-server
         image: maxjeffwell/code-talk-graphql-server:latest
         imagePullPolicy: Always
+        command: ["npm", "start"]
         ports:
         - containerPort: 8000
           name: http
