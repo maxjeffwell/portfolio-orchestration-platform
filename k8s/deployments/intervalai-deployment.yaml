@@ -106,6 +106,23 @@ spec:
               key: jwt-secret
         - name: TFJS_BACKEND
           value: "node"
+        - name: USE_TRITON
+          value: "true"
+        - name: USE_SERVER_PREDICTION
+          value: "true"
+        - name: TRITON_MODEL_NAME
+          value: "interval_ai"
+        - name: PRIMARY_TRITON_URL
+          value: "https://intervalai-triton.el-jefe.me"
+        - name: RUNPOD_URL
+          value: "https://api.runpod.ai/v2/7a2s0z4p6x0i8n"
+        - name: RUNPOD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: intervalai-secret
+              key: runpod-api-key
+        - name: FALLBACK_TRITON_URL
+          value: "http://triton-service:8000"
         resources:
           requests:
             memory: "64Mi"

@@ -173,6 +173,8 @@ spec:
           value: "PLAIN"
         - name: KAFKA_TOPIC
           value: "topic_0"
+        - name: KAFKA_GROUP_ID
+          value: "analytics-service-group-v2"
         livenessProbe:
           httpGet:
             path: /health
