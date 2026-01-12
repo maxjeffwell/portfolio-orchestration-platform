@@ -123,6 +123,12 @@ spec:
               key: runpod-api-key
         - name: FALLBACK_TRITON_URL
           value: "http://triton-service:8000"
+        - name: API_ONLY
+          value: "true"
+        - name: AI_PROVIDER
+          value: "gateway"
+        - name: AI_GATEWAY_URL
+          value: "http://shared-ai-gateway-service:8002"
         resources:
           requests:
             memory: "128Mi"
