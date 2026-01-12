@@ -4,16 +4,19 @@ metadata:
   name: tenantflow-frontend
   namespace: default
   labels:
-    app: tenantflow-frontend
+    app: tenantflow
+    component: frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tenantflow-frontend
+      app: tenantflow
+      component: frontend
   template:
     metadata:
       labels:
-        app: tenantflow-frontend
+        app: tenantflow
+        component: frontend
     spec:
       containers:
       - name: tenantflow-frontend

@@ -138,41 +138,13 @@ spec:
               name: vertex-platform-secret
               key: influxdb-url
         - name: KAFKA_BROKERS
-          valueFrom:
-            secretKeyRef:
-              name: vertex-platform-secret
-              key: kafka-brokers
+          value: "vertex-kafka-kafka-bootstrap.microservices.svc.cluster.local:9092"
         - name: KAFKA_BOOTSTRAP_SERVERS
-          valueFrom:
-            secretKeyRef:
-              name: vertex-platform-secret
-              key: kafka-brokers
-        - name: KAFKA_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: vertex-platform-secret
-              key: kafka-username
-        - name: KAFKA_SASL_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: vertex-platform-secret
-              key: kafka-username
-        - name: KAFKA_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: vertex-platform-secret
-              key: kafka-password
-        - name: KAFKA_SASL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: vertex-platform-secret
-              key: kafka-password
+          value: "vertex-kafka-kafka-bootstrap.microservices.svc.cluster.local:9092"
         - name: KAFKA_SSL
-          value: "true"
-        - name: KAFKA_SASL_MECHANISM
-          value: "PLAIN"
+          value: "false"
         - name: KAFKA_TOPIC
-          value: "topic_0"
+          value: "analytics.events"
         - name: KAFKA_GROUP_ID
           value: "analytics-service-group-v2"
         livenessProbe:
