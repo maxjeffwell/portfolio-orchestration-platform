@@ -7,55 +7,7 @@ const router = express.Router();
 // AI Gateway service URL (internal Kubernetes service or external URL)
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || 'http://shared-ai-gateway:8002';
 
-// Lens Loop proxy URL (optional - for observability)
-const LENS_LOOP_PROXY = process.env.LENS_LOOP_PROXY;
-const LENS_LOOP_PROJECT = process.env.LENS_LOOP_PROJECT || 'pop-ai-assistant';
-
 logger.info(`AI Gateway URL configured as: ${AI_GATEWAY_URL}`);
-if (LENS_LOOP_PROXY) {
-  logger.info(`Lens Loop proxy configured: ${LENS_LOOP_PROXY}`);
-}
-
-/**
- * Log request/response to Lens Loop for observability
- * Since Claude uses a different API format, we log manually rather than proxying
- */
-async function logToLensLoop(request, response, durationMs) {
-  if (!LENS_LOOP_PROXY) return;
-
-  try {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      project: LENS_LOOP_PROJECT,
-      provider: 'anthropic',
-      model: response.model || 'claude-sonnet-4-20250514',
-      request: {
-        messages: request.messages?.length || 0,
-        maxTokens: request.maxTokens,
-        temperature: request.temperature,
-      },
-      response: {
-        responseLength: response.response?.length || 0,
-        usage: response.usage,
-      },
-      durationMs,
-      backend: response.backend,
-    };
-
-    // POST to Lens Loop log endpoint (if available)
-    await axios.post(`${LENS_LOOP_PROXY}/api/logs`, logEntry, {
-      timeout: 2000,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Loop-Project': LENS_LOOP_PROJECT,
-      },
-    }).catch(() => {
-      // Silent fail - observability shouldn't break the app
-    });
-  } catch (error) {
-    logger.debug('Lens Loop logging failed (non-critical):', error.message);
-  }
-}
 
 /**
  * Chat with AI (Claude)
@@ -90,9 +42,6 @@ router.post('/chat', async (req, res) => {
     });
 
     const durationMs = Date.now() - startTime;
-
-    // Log to Lens Loop for observability
-    await logToLensLoop(req.body, response.data, durationMs);
 
     logger.info(`AI chat response received in ${durationMs}ms, backend: ${response.data.backend}`);
 
