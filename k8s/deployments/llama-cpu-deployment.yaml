@@ -80,4 +80,4 @@ spec:
       volumes:
       - name: models
         persistentVolumeClaim:
-          claimName: ai-models-pvc
+          claimName: llm-models-pvc
