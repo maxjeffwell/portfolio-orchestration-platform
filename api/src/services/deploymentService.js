@@ -35,6 +35,39 @@ class DeploymentService {
     }
   }
 
+  async getAllDeploymentsAllNamespaces() {
+    try {
+      const appsV1Api = k8sClient.getAppsV1Api();
+      const response = await appsV1Api.listDeploymentForAllNamespaces();
+
+      return response.body.items.map(deployment => ({
+        metadata: {
+          name: deployment.metadata.name,
+          namespace: deployment.metadata.namespace,
+          uid: deployment.metadata.uid,
+          creationTimestamp: deployment.metadata.creationTimestamp,
+          labels: deployment.metadata.labels,
+        },
+        spec: {
+          replicas: deployment.spec.replicas,
+          selector: deployment.spec.selector,
+          strategy: deployment.spec.strategy,
+        },
+        status: {
+          replicas: deployment.status.replicas || 0,
+          readyReplicas: deployment.status.readyReplicas || 0,
+          availableReplicas: deployment.status.availableReplicas || 0,
+          unavailableReplicas: deployment.status.unavailableReplicas || 0,
+          updatedReplicas: deployment.status.updatedReplicas || 0,
+          conditions: deployment.status.conditions || [],
+        },
+      }));
+    } catch (error) {
+      logger.error('Error getting deployments from all namespaces:', error);
+      throw error;
+    }
+  }
+
   async getPortfolioDeployments() {
     try {
       const appsV1Api = k8sClient.getAppsV1Api();

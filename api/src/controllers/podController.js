@@ -13,6 +13,11 @@ class PodController {
     sendSuccess(res, pods);
   });
 
+  getAllPodsAllNamespaces = asyncHandler(async (req, res) => {
+    const pods = await podService.getAllPodsAllNamespaces();
+    sendSuccess(res, pods);
+  });
+
   getPodByName = asyncHandler(async (req, res) => {
     const { name } = req.params;
     const namespace = req.query.namespace || 'default';

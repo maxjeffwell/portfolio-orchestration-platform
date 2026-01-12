@@ -13,6 +13,11 @@ class DeploymentController {
     sendSuccess(res, deployments);
   });
 
+  getAllDeploymentsAllNamespaces = asyncHandler(async (req, res) => {
+    const deployments = await deploymentService.getAllDeploymentsAllNamespaces();
+    sendSuccess(res, deployments);
+  });
+
   getDeploymentByName = asyncHandler(async (req, res) => {
     const { name } = req.params;
     const namespace = req.query.namespace || 'default';

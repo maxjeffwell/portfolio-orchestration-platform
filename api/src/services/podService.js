@@ -41,6 +41,45 @@ class PodService {
     }
   }
 
+  async getAllPodsAllNamespaces() {
+    try {
+      const coreV1Api = k8sClient.getCoreV1Api();
+      const response = await coreV1Api.listPodForAllNamespaces();
+
+      return response.body.items.map(pod => ({
+        metadata: {
+          name: pod.metadata.name,
+          namespace: pod.metadata.namespace,
+          uid: pod.metadata.uid,
+          creationTimestamp: pod.metadata.creationTimestamp,
+          labels: pod.metadata.labels,
+        },
+        status: {
+          phase: pod.status.phase,
+          podIP: pod.status.podIP,
+          hostIP: pod.status.hostIP,
+          startTime: pod.status.startTime,
+          containerStatuses: pod.status.containerStatuses?.map(status => ({
+            name: status.name,
+            ready: status.ready,
+            restartCount: status.restartCount,
+            state: status.state,
+          })) || [],
+        },
+        spec: {
+          containers: pod.spec.containers.map(container => ({
+            name: container.name,
+            image: container.image,
+            ports: container.ports || [],
+          })),
+        },
+      }));
+    } catch (error) {
+      logger.error('Error getting pods from all namespaces:', error);
+      throw error;
+    }
+  }
+
   async getPortfolioPods() {
     try {
       const coreV1Api = k8sClient.getCoreV1Api();

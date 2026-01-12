@@ -11,6 +11,9 @@ router.get('/', validate(podNamespace), podController.getAllPods.bind(podControl
 // Get all portfolio pods (filtered by label portfolio=true)
 router.get('/portfolio', podController.getPortfolioPods.bind(podController));
 
+// Get all pods across all namespaces
+router.get('/all', podController.getAllPodsAllNamespaces.bind(podController));
+
 // Get a specific pod by name
 router.get('/:name', validate([...podName, ...podNamespace]), podController.getPodByName.bind(podController));
 

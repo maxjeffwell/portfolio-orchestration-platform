@@ -15,6 +15,7 @@ import deploymentRoutes from './routes/deploymentRoutes.js';
 import metricsRoutes from './routes/metricsRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import prometheusRoutes from './routes/prometheusRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { authMiddleware } from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js';
 import requestIdMiddleware from './middleware/requestId.js';
@@ -72,6 +73,9 @@ app.use('/api/deployments', authMiddleware, deploymentRoutes);
 // Read-only monitoring routes, no auth required
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/prometheus', prometheusRoutes);
+
+// AI routes (protected - requires authentication)
+app.use('/api/ai', authMiddleware, aiRoutes);
 
 // 404 handler
 app.use((req, res) => {

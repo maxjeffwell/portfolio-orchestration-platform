@@ -12,6 +12,7 @@ import Deployments from './pages/Deployments';
 import Metrics from './pages/Metrics';
 import Logs from './pages/Logs';
 import Analytics from './pages/Analytics';
+import AIChat from './pages/AIChat';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
                     <Route path="/metrics" element={<Metrics />} />
                     <Route path="/logs" element={<Logs />} />
                     <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/ai-chat" element={<AIChat />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

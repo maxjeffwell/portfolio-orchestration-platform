@@ -11,6 +11,9 @@ router.get('/', validate(deploymentNamespace), deploymentController.getAllDeploy
 // Get all portfolio deployments (filtered by label portfolio=true)
 router.get('/portfolio', deploymentController.getPortfolioDeployments.bind(deploymentController));
 
+// Get all deployments across all namespaces
+router.get('/all', deploymentController.getAllDeploymentsAllNamespaces.bind(deploymentController));
+
 // Get a specific deployment by name
 router.get('/:name', validate([...deploymentName, ...deploymentNamespace]), deploymentController.getDeploymentByName.bind(deploymentController));
 

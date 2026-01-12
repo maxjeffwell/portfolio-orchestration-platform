@@ -21,6 +21,7 @@ import {
   Assessment as AssessmentIcon,
   Description as LogsIcon,
   BarChart as AnalyticsIcon,
+  Psychology as AIChatIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -36,6 +37,7 @@ const menuItems = [
   { text: 'Metrics', icon: <AssessmentIcon />, path: '/metrics' },
   { text: 'Logs', icon: <LogsIcon />, path: '/logs' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
+  { text: 'AI Chat', icon: <AIChatIcon />, path: '/ai-chat' },
 ];
 
 export default function Layout({ children }) {
