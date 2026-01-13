@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: educationelly-client
-        image: maxjeffwell/educationelly-client:20260113-073245-8237f5a
+        image: maxjeffwell/educationelly-client:20260113-075130-28729b4
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
@@ -81,7 +81,7 @@ spec:
     spec:
       containers:
       - name: educationelly-server
-        image: maxjeffwell/educationelly-server:20260113-073245-8237f5a
+        image: maxjeffwell/educationelly-server:20260113-075130-28729b4
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
