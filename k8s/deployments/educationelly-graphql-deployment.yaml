@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: educationelly-graphql-client
-        image: maxjeffwell/educationelly-graphql-client:20260110-012720-4b4b875
+        image: maxjeffwell/educationelly-graphql-client:20260113-073248-8237f5a
         imagePullPolicy: Always
         securityContext:
           runAsUser: 0
@@ -86,7 +86,7 @@ spec:
     spec:
       containers:
       - name: educationelly-graphql-server
-        image: maxjeffwell/educationelly-graphql-server:latest
+        image: maxjeffwell/educationelly-graphql-server:20260113-073248-8237f5a
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
