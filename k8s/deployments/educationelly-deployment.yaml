@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: educationelly-client
-        image: maxjeffwell/educationelly-client:20260114-chat-update
+        image: maxjeffwell/educationelly-client:20260114-updates
         imagePullPolicy: Always
         ports:
         - containerPort: 3000
