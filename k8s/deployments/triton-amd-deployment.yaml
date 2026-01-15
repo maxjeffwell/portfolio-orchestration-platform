@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triton-amd
+  namespace: default
+  labels:
+    app: triton-amd
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: triton-amd
+  template:
+    metadata:
+      labels:
+        app: triton-amd
+        portfolio: "true"
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: vmi2951245
+      containers:
+        - name: triton
+          image: nvcr.io/nvidia/tritonserver:24.01-py3
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secrets
+                  key: redis-password
+          args:
+            - tritonserver
+            - --model-repository=/models
+            - --allow-gpu-metrics=false
+            - --cache-config
+            - redis,host=redis.default.svc.cluster.local
+            - --cache-config
+            - redis,port=6379
+            - --cache-config
+            - redis,password=$(REDIS_PASSWORD)
+            - --model-control-mode=explicit
+            - --load-model=interval_ai
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 8001
+              name: grpc
+            - containerPort: 8002
+              name: metrics
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          volumeMounts:
+            - name: models
+              mountPath: /models
+      volumes:
+        - name: models
+          hostPath:
+            path: /home/maxjeffwell/ai-models
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: triton-amd
+  namespace: default
+  labels:
+    app: triton-amd
+    portfolio: "true"
+spec:
+  selector:
+    app: triton-amd
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+    - name: grpc
+      port: 8001
+      targetPort: 8001
+    - name: metrics
+      port: 8002
+      targetPort: 8002
