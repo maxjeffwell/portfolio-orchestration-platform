@@ -24,6 +24,7 @@ import {
   Psychology as AIChatIcon,
   Logout as LogoutIcon,
   AccountTree as ArgoIcon,
+  Hub as PodrickIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -41,6 +42,7 @@ const menuItems = [
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'AI Chat', icon: <AIChatIcon />, path: '/ai-chat' },
   { text: 'ArgoCD', icon: <ArgoIcon />, path: 'https://argocd.el-jefe.me', external: true },
+  { text: 'PodRick', icon: <PodrickIcon />, path: 'https://podrick.el-jefe.me', external: true },
 ];
 
 export default function Layout({ children }) {
