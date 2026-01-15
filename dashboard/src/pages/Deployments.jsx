@@ -31,7 +31,7 @@ import socketService from '../services/socketService';
 // URL mapping for portfolio apps (only frontend/client apps that have public URLs)
 const APP_URLS = {
   'bookmarked-client': 'https://bookmarked-k8s.el-jefe.me/',
-  'firebook': 'https://firebook-k8s.el-jefe.me/',
+  'firebook-client': 'https://firebook-k8s.el-jefe.me/',
   'intervalai-client': 'https://intervalai-k8s.el-jefe.me/',
   'educationelly-client': 'https://educationelly-k8s.el-jefe.me/',
   'educationelly-graphql-client': 'https://educationelly-graphql-k8s.el-jefe.me/',
