@@ -18,7 +18,7 @@ spec:
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
-        image: maxjeffwell/portfolio-api:20260115-keel-webhook
+        image: maxjeffwell/portfolio-api:20260115-gotify-client
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
@@ -67,6 +67,11 @@ spec:
             secretKeyRef:
               name: portfolio-api-secrets
               key: gotify-app-token
+        - name: GOTIFY_CLIENT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: gotify-client-token
         livenessProbe:
           httpGet:
             path: /health

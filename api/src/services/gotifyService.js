@@ -3,6 +3,7 @@ import logger from '../utils/logger.js';
 
 const GOTIFY_URL = process.env.GOTIFY_URL || 'http://gotify.monitoring:80';
 const GOTIFY_APP_TOKEN = process.env.GOTIFY_APP_TOKEN;
+const GOTIFY_CLIENT_TOKEN = process.env.GOTIFY_CLIENT_TOKEN;
 
 class GotifyService {
   constructor() {
@@ -57,14 +58,14 @@ class GotifyService {
    */
   async getMessages(limit = 50) {
     try {
-      if (!GOTIFY_APP_TOKEN) {
-        throw new Error('GOTIFY_APP_TOKEN is not configured');
+      if (!GOTIFY_CLIENT_TOKEN) {
+        throw new Error('GOTIFY_CLIENT_TOKEN is not configured');
       }
 
       const response = await this.client.get('/message', {
         params: { limit },
         headers: {
-          'X-Gotify-Key': GOTIFY_APP_TOKEN,
+          'X-Gotify-Key': GOTIFY_CLIENT_TOKEN,
         },
       });
 
@@ -82,13 +83,13 @@ class GotifyService {
    */
   async deleteMessage(id) {
     try {
-      if (!GOTIFY_APP_TOKEN) {
-        throw new Error('GOTIFY_APP_TOKEN is not configured');
+      if (!GOTIFY_CLIENT_TOKEN) {
+        throw new Error('GOTIFY_CLIENT_TOKEN is not configured');
       }
 
       await this.client.delete(`/message/${id}`, {
         headers: {
-          'X-Gotify-Key': GOTIFY_APP_TOKEN,
+          'X-Gotify-Key': GOTIFY_CLIENT_TOKEN,
         },
       });
 
@@ -106,13 +107,13 @@ class GotifyService {
    */
   async deleteAllMessages() {
     try {
-      if (!GOTIFY_APP_TOKEN) {
-        throw new Error('GOTIFY_APP_TOKEN is not configured');
+      if (!GOTIFY_CLIENT_TOKEN) {
+        throw new Error('GOTIFY_CLIENT_TOKEN is not configured');
       }
 
       await this.client.delete('/message', {
         headers: {
-          'X-Gotify-Key': GOTIFY_APP_TOKEN,
+          'X-Gotify-Key': GOTIFY_CLIENT_TOKEN,
         },
       });
 
