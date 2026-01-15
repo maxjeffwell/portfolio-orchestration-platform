@@ -17,6 +17,7 @@ import authRoutes from './routes/authRoutes.js';
 import prometheusRoutes from './routes/prometheusRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import webhookRoutes from './routes/webhookRoutes.js';
 import gotifyService from './services/gotifyService.js';
 import eventMonitorService from './services/eventMonitorService.js';
 import { authMiddleware } from './middleware/auth.js';
@@ -82,6 +83,9 @@ app.use('/api/ai', authMiddleware, aiRoutes);
 
 // Notification routes (protected - requires authentication)
 app.use('/api/notifications', authMiddleware, notificationRoutes);
+
+// Webhook routes (public - external services send webhooks without auth)
+app.use('/api/webhooks', webhookRoutes);
 
 // 404 handler
 app.use((req, res) => {

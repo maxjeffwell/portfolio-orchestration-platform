@@ -18,7 +18,7 @@ spec:
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
-        image: maxjeffwell/portfolio-api:20260115-gotify
+        image: maxjeffwell/portfolio-api:20260115-keel-webhook
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
