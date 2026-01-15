@@ -27,6 +27,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ConnectionStatus from './ConnectionStatus';
+import NotificationBell from './NotificationBell';
 
 const drawerWidth = 240;
 
@@ -107,6 +108,7 @@ export default function Layout({ children }) {
           {user && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
               <ConnectionStatus />
+              <NotificationBell />
               <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
                 {user.username}
               </Typography>

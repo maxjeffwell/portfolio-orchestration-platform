@@ -16,6 +16,9 @@ import metricsRoutes from './routes/metricsRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import prometheusRoutes from './routes/prometheusRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import gotifyService from './services/gotifyService.js';
+import eventMonitorService from './services/eventMonitorService.js';
 import { authMiddleware } from './middleware/auth.js';
 import errorHandler from './middleware/errorHandler.js';
 import requestIdMiddleware from './middleware/requestId.js';
@@ -77,6 +80,9 @@ app.use('/api/prometheus', prometheusRoutes);
 // AI routes (protected - requires authentication)
 app.use('/api/ai', authMiddleware, aiRoutes);
 
+// Notification routes (protected - requires authentication)
+app.use('/api/notifications', authMiddleware, notificationRoutes);
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
@@ -105,6 +111,11 @@ io.on('connection', (socket) => {
   socket.on('subscribe:metrics', () => {
     logger.info(`Client ${socket.id} subscribed to metrics updates`);
     socket.join('metrics');
+  });
+
+  socket.on('subscribe:notifications', () => {
+    logger.info(`Client ${socket.id} subscribed to notification updates`);
+    socket.join('notifications');
   });
 
   socket.on('subscribe:logs', (podName) => {
@@ -150,6 +161,8 @@ function setCachedMetrics(key, data) {
 let podUpdateInterval;
 let deploymentUpdateInterval;
 let metricsUpdateInterval;
+let notificationUpdateInterval;
+let lastNotificationId = 0;
 
 function startPeriodicUpdates() {
   podUpdateInterval = setInterval(async () => {
@@ -315,6 +328,31 @@ function startPeriodicUpdates() {
     }
   }, 15000); // Update every 15 seconds
 
+  // Notification updates (every 5 seconds)
+  notificationUpdateInterval = setInterval(async () => {
+    try {
+      const subscriberCount = io.sockets.adapter.rooms.get('notifications')?.size || 0;
+      if (subscriberCount === 0) {
+        return;
+      }
+
+      const messages = await gotifyService.getMessages(20);
+
+      // Check for new messages
+      const newMessages = messages.filter(msg => msg.id > lastNotificationId);
+      if (newMessages.length > 0) {
+        lastNotificationId = Math.max(...messages.map(msg => msg.id));
+        logger.debug(`Emitting notifications:update with ${newMessages.length} new messages`);
+        io.to('notifications').emit('notifications:update', {
+          messages,
+          newCount: newMessages.length,
+        });
+      }
+    } catch (error) {
+      logger.debug('Error fetching notifications:', error.message);
+    }
+  }, 5000); // Update every 5 seconds
+
   // Check log stream subscriptions every 5 seconds
   setInterval(checkLogStreamSubscriptions, 5000);
 
@@ -464,6 +502,14 @@ async function startServer() {
     // Start periodic WebSocket updates
     startPeriodicUpdates();
 
+    // Start Kubernetes event monitor for automatic notifications
+    if (process.env.GOTIFY_APP_TOKEN) {
+      eventMonitorService.start();
+      logger.info('Started Kubernetes event monitor for Gotify notifications');
+    } else {
+      logger.warn('GOTIFY_APP_TOKEN not configured, event monitor disabled');
+    }
+
     // Start HTTP server
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
@@ -479,6 +525,7 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
+  eventMonitorService.stop();
   httpServer.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);
@@ -487,6 +534,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   logger.info('SIGINT signal received: closing HTTP server');
+  eventMonitorService.stop();
   httpServer.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);

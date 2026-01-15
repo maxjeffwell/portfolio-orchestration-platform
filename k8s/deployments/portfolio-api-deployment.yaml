@@ -18,7 +18,7 @@ spec:
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
-        image: maxjeffwell/portfolio-api:latest
+        image: maxjeffwell/portfolio-api:20260115-gotify
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
@@ -60,6 +60,13 @@ spec:
               key: admin-password
         - name: PROMETHEUS_URL
           value: "http://10.43.14.137:9090"
+        - name: GOTIFY_URL
+          value: "http://gotify.monitoring:80"
+        - name: GOTIFY_APP_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: gotify-app-token
         livenessProbe:
           httpGet:
             path: /health
