@@ -23,6 +23,7 @@ import {
   BarChart as AnalyticsIcon,
   Psychology as AIChatIcon,
   Logout as LogoutIcon,
+  AccountTree as ArgoIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,6 +40,7 @@ const menuItems = [
   { text: 'Logs', icon: <LogsIcon />, path: '/logs' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'AI Chat', icon: <AIChatIcon />, path: '/ai-chat' },
+  { text: 'ArgoCD', icon: <ArgoIcon />, path: 'https://argocd.el-jefe.me', external: true },
 ];
 
 export default function Layout({ children }) {
@@ -67,12 +69,12 @@ export default function Layout({ children }) {
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              component={Link}
-              to={item.path}
-              selected={location.pathname === item.path}
+              component={item.external ? 'a' : Link}
+              {...(item.external ? { href: item.path, target: '_blank', rel: 'noopener noreferrer' } : { to: item.path })}
+              selected={!item.external && location.pathname === item.path}
               onClick={() => setMobileOpen(false)}
             >
-              <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
+              <ListItemIcon sx={{ color: !item.external && location.pathname === item.path ? 'primary.main' : 'inherit' }}>
                 {item.icon}
               </ListItemIcon>
               <ListItemText primary={item.text} />
