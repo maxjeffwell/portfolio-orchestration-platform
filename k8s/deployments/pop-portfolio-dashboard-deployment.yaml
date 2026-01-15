@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: dashboard
-        image: maxjeffwell/portfolio-dashboard:20260115-gotify
+        image: maxjeffwell/portfolio-dashboard:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
