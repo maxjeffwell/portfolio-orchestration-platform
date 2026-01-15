@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: code-talk-client
-        image: maxjeffwell/code-talk-graphql-client:latest
+        image: maxjeffwell/code-talk-graphql-client:20260114-copyright
         imagePullPolicy: Always
         ports:
         - containerPort: 5000

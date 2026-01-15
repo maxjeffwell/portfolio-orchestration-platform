@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: educationelly-graphql-client
-        image: maxjeffwell/educationelly-graphql-client:20260113-083637-6e7dd68
+        image: maxjeffwell/educationelly-graphql-client:20260114-chat-update
         imagePullPolicy: Always
         securityContext:
           runAsUser: 0
