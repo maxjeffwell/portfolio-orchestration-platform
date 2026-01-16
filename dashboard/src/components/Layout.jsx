@@ -25,6 +25,7 @@ import {
   Logout as LogoutIcon,
   AccountTree as ArgoIcon,
   Hub as PodrickIcon,
+  Apartment as TenantFlowIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,6 +44,7 @@ const menuItems = [
   { text: 'AI Chat', icon: <AIChatIcon />, path: '/ai-chat' },
   { text: 'ArgoCD', icon: <ArgoIcon />, path: 'https://argocd.el-jefe.me', external: true },
   { text: 'PodRick', icon: <PodrickIcon />, path: 'https://podrick.el-jefe.me', external: true },
+  { text: 'TenantFlow', icon: <TenantFlowIcon />, path: 'https://tenantflow.el-jefe.me', external: true },
 ];
 
 export default function Layout({ children }) {
