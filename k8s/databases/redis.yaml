@@ -3,6 +3,15 @@ kind: PersistentVolumeClaim
 metadata:
   name: redis-pvc
   namespace: default
+  labels:
+    app: redis
+    tier: database
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
+    description: "Protected PVC - manual deletion required"
+  finalizers:
+    - kubernetes.io/pvc-protection
 spec:
   accessModes:
     - ReadWriteOnce
@@ -15,6 +24,11 @@ kind: Secret
 metadata:
   name: redis-secrets
   namespace: default
+  labels:
+    app: redis
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
 type: Opaque
 stringData:
   redis-password: "redis123"
@@ -27,6 +41,10 @@ metadata:
   labels:
     app: redis
     tier: database
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
+    description: "Protected database - requires manual deletion"
 spec:
   serviceName: redis
   replicas: 1
@@ -39,6 +57,7 @@ spec:
         app: redis
         tier: database
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: redis
         image: redis:7-alpine
@@ -49,6 +68,8 @@ spec:
         - redis-server
         - --requirepass
         - $(REDIS_PASSWORD)
+        - --appendonly
+        - "yes"
         env:
         - name: REDIS_PASSWORD
           valueFrom:
@@ -65,6 +86,26 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "250m"
+        livenessProbe:
+          exec:
+            command:
+              - redis-cli
+              - -a
+              - $(REDIS_PASSWORD)
+              - ping
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+              - redis-cli
+              - -a
+              - $(REDIS_PASSWORD)
+              - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
       volumes:
       - name: redis-storage
         persistentVolumeClaim:
@@ -86,3 +127,17 @@ spec:
     name: redis
   selector:
     app: redis
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: default
+  labels:
+    app: redis
+    tier: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: redis

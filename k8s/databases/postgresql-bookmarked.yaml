@@ -3,6 +3,15 @@ kind: PersistentVolumeClaim
 metadata:
   name: postgresql-bookmarked-pvc
   namespace: default
+  labels:
+    app: postgresql-bookmarked
+    tier: database
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
+    description: "Protected PVC - manual deletion required"
+  finalizers:
+    - kubernetes.io/pvc-protection
 spec:
   accessModes:
     - ReadWriteOnce
@@ -15,6 +24,11 @@ kind: Secret
 metadata:
   name: postgresql-bookmarked-secrets
   namespace: default
+  labels:
+    app: postgresql-bookmarked
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
 type: Opaque
 stringData:
   postgres-password: "bookmarked_postgres123"
@@ -28,6 +42,10 @@ metadata:
   labels:
     app: postgresql-bookmarked
     tier: database
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
+    description: "Protected database - requires manual deletion"
 spec:
   serviceName: postgresql-bookmarked
   replicas: 1
@@ -40,6 +58,7 @@ spec:
         app: postgresql-bookmarked
         tier: database
     spec:
+      terminationGracePeriodSeconds: 60
       containers:
       - name: postgresql
         image: postgres:14
@@ -68,6 +87,28 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - bookmarked_user
+              - -d
+              - bookmarked
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - bookmarked_user
+              - -d
+              - bookmarked
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
       volumes:
       - name: postgresql-storage
         persistentVolumeClaim:
@@ -89,3 +130,17 @@ spec:
     name: postgresql
   selector:
     app: postgresql-bookmarked
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgresql-bookmarked-pdb
+  namespace: default
+  labels:
+    app: postgresql-bookmarked
+    tier: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: postgresql-bookmarked

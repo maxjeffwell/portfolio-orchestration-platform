@@ -3,6 +3,15 @@ kind: PersistentVolumeClaim
 metadata:
   name: mongodb-educationelly-pvc
   namespace: default
+  labels:
+    app: mongodb-educationelly
+    tier: database
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
+    description: "Protected PVC - manual deletion required"
+  finalizers:
+    - kubernetes.io/pvc-protection
 spec:
   accessModes:
     - ReadWriteOnce
@@ -15,6 +24,11 @@ kind: Secret
 metadata:
   name: mongodb-educationelly-secrets
   namespace: default
+  labels:
+    app: mongodb-educationelly
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
 type: Opaque
 stringData:
   mongodb-root-password: "educationelly_mongo123"
@@ -28,6 +42,10 @@ metadata:
   labels:
     app: mongodb-educationelly
     tier: database
+    protected: "true"
+  annotations:
+    helm.sh/resource-policy: keep
+    description: "Protected database - requires manual deletion"
 spec:
   serviceName: mongodb-educationelly
   replicas: 1
@@ -40,6 +58,7 @@ spec:
         app: mongodb-educationelly
         tier: database
     spec:
+      terminationGracePeriodSeconds: 60
       containers:
       - name: mongodb
         image: mongo:6
@@ -66,6 +85,24 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+              - mongosh
+              - --eval
+              - "db.adminCommand('ping')"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+              - mongosh
+              - --eval
+              - "db.adminCommand('ping')"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
       volumes:
       - name: mongodb-storage
         persistentVolumeClaim:
@@ -87,3 +124,17 @@ spec:
     name: mongodb
   selector:
     app: mongodb-educationelly
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mongodb-educationelly-pdb
+  namespace: default
+  labels:
+    app: mongodb-educationelly
+    tier: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: mongodb-educationelly
