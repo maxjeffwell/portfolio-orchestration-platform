@@ -112,7 +112,7 @@ function Metrics() {
   })) || [];
 
   // Custom tooltip to show full pod name
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -122,15 +122,16 @@ function Metrics() {
             border: '1px solid',
             borderColor: 'divider',
             borderRadius: 1,
-            p: 1.5,
-            boxShadow: 2,
+            p: 2,
+            boxShadow: 3,
+            maxWidth: 350,
           }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, wordBreak: 'break-all' }}>
+          <Typography variant="body1" sx={{ fontWeight: 600, mb: 1, wordBreak: 'break-all', fontSize: '0.95rem' }}>
             {data.fullName}
           </Typography>
           {payload.map((entry, index) => (
-            <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+            <Typography key={index} variant="body1" sx={{ color: entry.color, fontSize: '0.9rem' }}>
               {entry.name}: {entry.value.toFixed(1)}
             </Typography>
           ))}
@@ -162,20 +163,21 @@ function Metrics() {
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={podMetricsData} margin={{ top: 5, right: 10, left: -10, bottom: 80 }}>
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={podMetricsData} margin={{ top: 20, right: 20, left: 0, bottom: 120 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
                         angle={-45}
                         textAnchor="end"
-                        height={90}
-                        tick={{ fontSize: 12 }}
+                        height={120}
+                        tick={{ fontSize: 14 }}
                         interval={0}
+                        dy={10}
                       />
-                      <YAxis tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 14 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Legend wrapperStyle={{ fontSize: '14px' }} />
                       <Bar dataKey="cpu" fill="#2196f3" name="CPU (m)" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -197,20 +199,21 @@ function Metrics() {
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={podMetricsData} margin={{ top: 5, right: 10, left: -10, bottom: 80 }}>
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart data={podMetricsData} margin={{ top: 20, right: 20, left: 0, bottom: 120 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
                         angle={-45}
                         textAnchor="end"
-                        height={90}
-                        tick={{ fontSize: 12 }}
+                        height={120}
+                        tick={{ fontSize: 14 }}
                         interval={0}
+                        dy={10}
                       />
-                      <YAxis tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 14 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Legend wrapperStyle={{ fontSize: '14px' }} />
                       <Bar dataKey="memory" fill="#4caf50" name="Memory (Mi)" />
                     </BarChart>
                   </ResponsiveContainer>
