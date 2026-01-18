@@ -20,6 +20,8 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -142,14 +144,84 @@ export default function Pods() {
         </Button>
       </Box>
 
-      <Card>
+      {/* Mobile Card View */}
+      <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+        {pods.map((pod) => (
+          <Card key={pod.metadata?.uid} sx={{ mb: 1.5 }}>
+            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Box sx={{ minWidth: 0, flex: 1, mr: 1 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {pod.metadata?.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {pod.metadata?.namespace}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={pod.status?.phase || 'Unknown'}
+                  color={getStatusColor(pod.status?.phase)}
+                  size="small"
+                />
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Restarts: {pod.status?.containerStatuses?.[0]?.restartCount || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(pod.metadata?.creationTimestamp).toLocaleDateString()}
+                  </Typography>
+                </Box>
+                <Box>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleViewLogs(pod)}
+                    title="View Logs"
+                    sx={{ p: 0.75 }}
+                  >
+                    <ViewIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRestartPod(pod.metadata?.name)}
+                    title="Restart Pod"
+                    sx={{ p: 0.75 }}
+                  >
+                    <RefreshIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDeletePod(pod.metadata?.name, pod.metadata?.namespace)}
+                    title="Delete Pod"
+                    color="error"
+                    sx={{ p: 0.75 }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
+
+      {/* Desktop Table View */}
+      <Card sx={{ display: { xs: 'none', sm: 'block' } }}>
         <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
           <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Namespace</TableCell>
+                  <TableCell>Namespace</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Restarts</TableCell>
                   <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Age</TableCell>
@@ -159,8 +231,8 @@ export default function Pods() {
               <TableBody>
                 {pods.map((pod) => (
                   <TableRow key={pod.metadata?.uid}>
-                    <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{pod.metadata?.name}</TableCell>
-                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{pod.metadata?.namespace}</TableCell>
+                    <TableCell sx={{ fontSize: '0.875rem' }}>{pod.metadata?.name}</TableCell>
+                    <TableCell>{pod.metadata?.namespace}</TableCell>
                     <TableCell>
                       <Chip
                         label={pod.status?.phase || 'Unknown'}
@@ -206,11 +278,25 @@ export default function Pods() {
         </CardContent>
       </Card>
 
-      <Dialog open={logsOpen} onClose={() => setLogsOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Logs - {selectedPod?.metadata?.name}
+      <Dialog
+        open={logsOpen}
+        onClose={() => setLogsOpen(false)}
+        maxWidth="md"
+        fullWidth
+        fullScreen={window.innerWidth < 600}
+        PaperProps={{
+          sx: {
+            m: { xs: 0, sm: 2 },
+            maxHeight: { xs: '100%', sm: 'calc(100% - 64px)' },
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, py: { xs: 1.5, sm: 2 } }}>
+          <Typography noWrap sx={{ maxWidth: '100%' }}>
+            Logs - {selectedPod?.metadata?.name}
+          </Typography>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: { xs: 1, sm: 2 } }}>
           <TextField
             multiline
             fullWidth
@@ -218,13 +304,16 @@ export default function Pods() {
             variant="outlined"
             InputProps={{
               readOnly: true,
-              style: { fontFamily: 'monospace', fontSize: '12px' },
+              sx: {
+                fontFamily: 'monospace',
+                fontSize: { xs: '10px', sm: '12px' },
+              },
             }}
-            minRows={20}
+            minRows={15}
             maxRows={20}
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: { xs: 1, sm: 2 } }}>
           <Button onClick={() => setLogsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>

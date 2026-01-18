@@ -126,22 +126,51 @@ function Dashboard() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Typography
+        variant="h4"
+        gutterBottom
+        sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+      >
         Dashboard
       </Typography>
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         {statCards.map((card) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={card.title}>
-            <Card>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography color="textSecondary" gutterBottom>
+          <Grid size={{ xs: 6, sm: 6, md: 4 }} key={card.title}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  textAlign={{ xs: 'center', sm: 'left' }}
+                  gap={{ xs: 1, sm: 0 }}
+                >
+                  <Box order={{ xs: 2, sm: 1 }}>
+                    <Typography
+                      color="textSecondary"
+                      gutterBottom
+                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
                       {card.title}
                     </Typography>
-                    <Typography variant="h3">{card.value}</Typography>
+                    <Typography
+                      variant="h3"
+                      sx={{ fontSize: { xs: '1.75rem', sm: '3rem' } }}
+                    >
+                      {card.value}
+                    </Typography>
                   </Box>
-                  {card.icon}
+                  <Box
+                    order={{ xs: 1, sm: 2 }}
+                    sx={{
+                      '& .MuiSvgIcon-root': {
+                        fontSize: { xs: 32, sm: 40 },
+                      },
+                    }}
+                  >
+                    {card.icon}
+                  </Box>
                 </Box>
               </CardContent>
             </Card>

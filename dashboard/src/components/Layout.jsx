@@ -108,8 +108,22 @@ export default function Layout({ children }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, textAlign: 'center' }}>
-            Portfolio Orchestration Platform
+          <Typography
+            variant="h6"
+            noWrap
+            component="div"
+            sx={{
+              flexGrow: 1,
+              textAlign: 'center',
+              fontSize: { xs: '0.9rem', sm: '1.25rem' },
+            }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+              Portfolio Orchestration Platform
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+              POP Dashboard
+            </Box>
           </Typography>
           {user && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>

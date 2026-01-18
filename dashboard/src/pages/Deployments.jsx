@@ -127,15 +127,94 @@ export default function Deployments() {
           Refresh
         </Button>
       </Box>
-      <Card>
-        <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
+      {/* Mobile Card View */}
+      <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+        {deployments.map((deployment) => {
+          const available = deployment.status?.availableReplicas || 0;
+          const desired = deployment.spec?.replicas || 0;
+          const deploymentName = deployment.metadata?.name;
+          const appUrl = APP_URLS[deploymentName];
+          return (
+            <Card key={deployment.metadata?.uid} sx={{ mb: 1.5 }}>
+              <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                  <Box sx={{ minWidth: 0, flex: 1, mr: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {deploymentName}
+                      </Typography>
+                      {appUrl && (
+                        <IconButton
+                          size="small"
+                          onClick={(e) => { e.preventDefault(); window.open(appUrl, "_blank"); }}
+                          title="Open app"
+                          sx={{ p: 0.25 }}
+                        >
+                          <OpenInNewIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {deployment.metadata?.namespace}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={available === desired ? 'Ready' : 'Not Ready'}
+                    color={getStatusColor(available, desired)}
+                    size="small"
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Replicas: {available}/{desired}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {new Date(deployment.metadata?.creationTimestamp).toLocaleDateString()}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleOpenScaleDialog(deployment)}
+                      title="Scale Deployment"
+                      sx={{ p: 0.75 }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRestart(deployment.metadata?.name)}
+                      title="Restart Deployment"
+                      sx={{ p: 0.75 }}
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </Box>
+
+      {/* Desktop Table View */}
+      <Card sx={{ display: { xs: 'none', sm: 'block' } }}>
+        <CardContent sx={{ p: 2 }}>
           <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
                   <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>URL</TableCell>
-                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Namespace</TableCell>
+                  <TableCell>Namespace</TableCell>
                   <TableCell>Replicas</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Age</TableCell>
@@ -150,7 +229,7 @@ export default function Deployments() {
                   const appUrl = APP_URLS[deploymentName];
                   return (
                     <TableRow key={deployment.metadata?.uid}>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{deploymentName}</TableCell>
+                      <TableCell sx={{ fontSize: '0.875rem' }}>{deploymentName}</TableCell>
                       <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                         {appUrl ? (
                           <IconButton
@@ -164,7 +243,7 @@ export default function Deployments() {
                           <Typography variant="body2" color="text.secondary">-</Typography>
                         )}
                       </TableCell>
-                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{deployment.metadata?.namespace}</TableCell>
+                      <TableCell>{deployment.metadata?.namespace}</TableCell>
                       <TableCell>
                         {available} / {desired}
                       </TableCell>
@@ -204,9 +283,22 @@ export default function Deployments() {
           </TableContainer>
         </CardContent>
       </Card>
-      <Dialog open={scaleDialogOpen} onClose={() => setScaleDialogOpen(false)}>
-        <DialogTitle>
-          Scale Deployment - {selectedDeployment?.metadata?.name}
+      <Dialog
+        open={scaleDialogOpen}
+        onClose={() => setScaleDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            m: { xs: 2, sm: 3 },
+            width: { xs: 'calc(100% - 32px)', sm: 'auto' },
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, pb: 1 }}>
+          <Typography noWrap>
+            Scale - {selectedDeployment?.metadata?.name}
+          </Typography>
         </DialogTitle>
         <DialogContent>
           <TextField
@@ -215,11 +307,11 @@ export default function Deployments() {
             type="number"
             value={replicas}
             onChange={(e) => setReplicas(e.target.value)}
-            inputProps={{ min: 0 }}
+            inputProps={{ min: 0, inputMode: 'numeric' }}
             margin="normal"
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
           <Button onClick={() => setScaleDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleScale} variant="contained" color="primary">
             Scale

@@ -296,21 +296,29 @@ function Analytics() {
   const gpuData = metrics?.gpu || [];
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+      <Box sx={{ mb: { xs: 2, sm: 4 } }}>
+        <Typography
+          variant="h4"
+          gutterBottom
+          sx={{ fontWeight: 600, fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+        >
           Analytics & Insights
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          color="text.secondary"
+          sx={{ display: { xs: 'none', sm: 'block' } }}
+        >
           Monitor your Kubernetes infrastructure with Prometheus metrics
         </Typography>
       </Box>
 
       {/* KPI Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 1.5, sm: 3 }} sx={{ mb: { xs: 2, sm: 4 } }}>
         {kpis.map((kpi, index) => (
-          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }} key={index}>
             <Card
               elevation={2}
               sx={{
@@ -319,11 +327,18 @@ function Analytics() {
                 borderLeft: `4px solid ${kpi.color}`,
               }}
             >
-              <CardContent sx={{ pb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1.5 }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 }, pb: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    mb: { xs: 0.5, sm: 1.5 },
+                    flexDirection: { xs: 'column', sm: 'row' },
+                  }}
+                >
                   <Box
                     sx={{
-                      display: 'flex',
+                      display: { xs: 'none', sm: 'flex' },
                       alignItems: 'center',
                       justifyContent: 'center',
                       width: 40,
@@ -338,7 +353,11 @@ function Analytics() {
                     {kpi.icon}
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 0.5, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                    >
                       {kpi.title}
                     </Typography>
                     <Typography
@@ -346,29 +365,32 @@ function Analytics() {
                       sx={{
                         fontWeight: 600,
                         wordBreak: 'break-word',
+                        fontSize: { xs: '1.25rem', sm: '1.5rem' },
                       }}
                     >
                       {kpi.value}
                     </Typography>
                   </Box>
                 </Box>
-                {kpi.change && (
-                  <Chip
-                    label={kpi.change}
-                    size="small"
-                    sx={{
-                      backgroundColor: `${kpi.color}20`,
-                      color: kpi.color,
-                      fontWeight: 600,
-                      fontSize: '0.75rem',
-                    }}
-                  />
-                )}
-                {kpi.total && (
-                  <Typography variant="caption" color="text.secondary" sx={{ ml: kpi.change ? 1 : 0 }}>
-                    of {kpi.total} total
-                  </Typography>
-                )}
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                  {kpi.change && (
+                    <Chip
+                      label={kpi.change}
+                      size="small"
+                      sx={{
+                        backgroundColor: `${kpi.color}20`,
+                        color: kpi.color,
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  )}
+                  {kpi.total && (
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: kpi.change ? 1 : 0 }}>
+                      of {kpi.total} total
+                    </Typography>
+                  )}
+                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -376,20 +398,24 @@ function Analytics() {
       </Grid>
 
       {/* Charts Grid */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: 3 }}>
         {/* Historical Trends */}
         <Grid size={{ xs: 12, lg: 8 }}>
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+          <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: 2 }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               Resource Trends (Last Hour)
             </Typography>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={historicalData}>
+            <ResponsiveContainer width="100%" height={250}>
+              <AreaChart data={historicalData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
+                <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Area
                   type="monotone"
                   dataKey="cpu"
@@ -413,38 +439,26 @@ function Analytics() {
 
         {/* Namespace Distribution */}
         <Grid size={{ xs: 12, lg: 4 }}>
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+          <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: 2 }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               Namespace Distribution
             </Typography>
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                 <Pie
                   data={namespaceData}
                   cx="50%"
                   cy="50%"
-                  labelLine={{ stroke: '#888', strokeWidth: 1 }}
-                  label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
-                    const RADIAN = Math.PI / 180;
-                    const radius = outerRadius + 35;
-                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                    const truncatedName = name.length > 12 ? `${name.substring(0, 12)}...` : name;
-
-                    return (
-                      <text
-                        x={x}
-                        y={y}
-                        fill="#666"
-                        textAnchor={x > cx ? 'start' : 'end'}
-                        dominantBaseline="central"
-                        style={{ fontSize: '13px', fontWeight: 500 }}
-                      >
-                        {`${truncatedName} ${(percent * 100).toFixed(0)}%`}
-                      </text>
-                    );
+                  labelLine={false}
+                  label={({ name, percent }) => {
+                    const truncatedName = name.length > 8 ? `${name.substring(0, 8)}..` : name;
+                    return `${truncatedName} ${(percent * 100).toFixed(0)}%`;
                   }}
-                  outerRadius={65}
+                  outerRadius={70}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -460,22 +474,38 @@ function Analytics() {
 
         {/* Pod Resource Usage */}
         <Grid size={{ xs: 12 }}>
-          <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+          <Paper elevation={3} sx={{ p: { xs: 1.5, sm: 3 }, borderRadius: 2, overflowX: 'auto' }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ fontWeight: 600, fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               Top Pods by Resource Usage
             </Typography>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={podResourceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                <YAxis yAxisId="left" orientation="left" stroke="#1976d2" />
-                <YAxis yAxisId="right" orientation="right" stroke="#2e7d32" />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="cpu" fill="#1976d2" name="CPU (millicores)" />
-                <Bar yAxisId="right" dataKey="memory" fill="#2e7d32" name="Memory (MiB)" />
-              </BarChart>
-            </ResponsiveContainer>
+            <Box sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={podResourceData}
+                  margin={{ top: 5, right: 5, left: -10, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fontSize: 10 }}
+                    interval={0}
+                  />
+                  <YAxis yAxisId="left" orientation="left" stroke="#1976d2" tick={{ fontSize: 10 }} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#2e7d32" tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <Bar yAxisId="left" dataKey="cpu" fill="#1976d2" name="CPU (mc)" />
+                  <Bar yAxisId="right" dataKey="memory" fill="#2e7d32" name="Mem (Mi)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
           </Paper>
         </Grid>
 
@@ -540,38 +570,57 @@ function Analytics() {
       <Paper
         elevation={1}
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           backgroundColor: '#e8e8e8',
           borderRadius: 2,
           borderLeft: '4px solid #1976d2',
         }}
       >
-        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#000000' }}>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ fontWeight: 600, color: '#000000', fontSize: { xs: '1rem', sm: '1.25rem' } }}
+        >
           Prometheus Integration
         </Typography>
-        <Typography variant="body2" paragraph sx={{ color: '#1a1a1a' }}>
+        <Typography
+          variant="body2"
+          paragraph
+          sx={{ color: '#1a1a1a', display: { xs: 'none', sm: 'block' } }}
+        >
           This dashboard displays real-time metrics from your Kubernetes cluster and historical data from Prometheus.
         </Typography>
         <Typography variant="body2" paragraph sx={{ color: '#1a1a1a' }}>
-          <strong>To deploy Prometheus to your cluster:</strong>
+          <strong>To deploy Prometheus:</strong>
         </Typography>
-        <Box component="ol" sx={{ pl: 2, '& li': { mb: 1, color: '#1a1a1a' } }}>
-          <Typography component="li" variant="body2">
-            Deploy Prometheus: <code>kubectl apply -f k8s/monitoring/</code>
+        <Box
+          component="ol"
+          sx={{
+            pl: { xs: 2, sm: 3 },
+            '& li': { mb: 1, color: '#1a1a1a' },
+            '& code': {
+              fontSize: { xs: '0.7rem', sm: '0.875rem' },
+              wordBreak: 'break-all',
+            },
+          }}
+        >
+          <Typography component="li" variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+            Deploy: <code>kubectl apply -f k8s/monitoring/</code>
           </Typography>
-          <Typography component="li" variant="body2">
-            Verify deployment: <code>kubectl get pods -l app=prometheus</code>
+          <Typography component="li" variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+            Verify: <code>kubectl get pods -l app=prometheus</code>
           </Typography>
-          <Typography component="li" variant="body2">
-            Check Prometheus UI (optional): <code>kubectl port-forward svc/prometheus 9090:9090</code>
+          <Typography
+            component="li"
+            variant="body2"
+            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, display: { xs: 'none', sm: 'list-item' } }}
+          >
+            Check UI: <code>kubectl port-forward svc/prometheus 9090:9090</code>
           </Typography>
-          <Typography component="li" variant="body2">
-            View metrics in this dashboard - it will automatically start showing Prometheus data!
+          <Typography component="li" variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+            View metrics in this dashboard!
           </Typography>
         </Box>
-        <Typography variant="body2" sx={{ mt: 2, color: '#1a1a1a' }}>
-          <strong>Features:</strong> Historical trends, cluster metrics, pod-level monitoring, and GPU tracking.
-        </Typography>
       </Paper>
     </Box>
   );

@@ -11,19 +11,22 @@ import {
   Chip,
   Alert,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import {
   Send as SendIcon,
   SmartToy as BotIcon,
   Person as PersonIcon,
-  Psychology as ClaudeIcon,
+  Psychology as AIIcon,
   Clear as ClearIcon,
+  CheckCircle as CheckIcon,
+  Cancel as ErrorIcon,
 } from '@mui/icons-material';
-import aiService from '../services/aiService';
+import aiService, { AI_PROVIDERS, PROVIDER_INFO, getProviderFromModel } from '../services/aiService';
 import api from '../services/api';
 
 const buildSystemPrompt = (clusterContext) => {
-  let prompt = `You are Claude, an AI assistant integrated into the Portfolio Orchestration Platform (POP).
+  let prompt = `You are an AI assistant integrated into the Portfolio Orchestration Platform (POP).
 You help users manage their Kubernetes infrastructure, debug issues, and understand their deployments.
 Be concise, helpful, and technically accurate. When discussing K8s resources, be specific about namespaces,
 resource types, and commands. Format code blocks and commands clearly.
@@ -72,6 +75,35 @@ Use this real-time data to answer questions about the user's cluster. Reference 
   return prompt;
 };
 
+// Provider status chip component
+function ProviderStatusChip({ provider, isConfigured, compact = false }) {
+  const info = PROVIDER_INFO[provider];
+  if (!info) return null;
+
+  return (
+    <Tooltip title={`${info.description} - ${isConfigured ? 'Configured' : 'Not configured'}`}>
+      <Chip
+        icon={isConfigured ? <CheckIcon sx={{ fontSize: 14 }} /> : <ErrorIcon sx={{ fontSize: 14 }} />}
+        label={compact ? null : info.shortName}
+        size="small"
+        variant="outlined"
+        sx={{
+          borderColor: isConfigured ? info.color : 'text.disabled',
+          color: isConfigured ? info.color : 'text.disabled',
+          '& .MuiChip-icon': {
+            color: isConfigured ? 'success.main' : 'text.disabled',
+          },
+          '& .MuiChip-label': {
+            display: compact ? 'none' : 'block',
+            px: compact ? 0 : 1,
+          },
+          minWidth: compact ? 32 : 'auto',
+        }}
+      />
+    </Tooltip>
+  );
+}
+
 function AIChat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -109,7 +141,6 @@ function AIChat() {
     const fetchClusterContext = async () => {
       setContextLoading(true);
       try {
-        // Fetch all pods and deployments across ALL namespaces
         const [podsRes, deploymentsRes, metricsRes] = await Promise.allSettled([
           api.get('/pods/all'),
           api.get('/deployments/all'),
@@ -123,11 +154,6 @@ function AIChat() {
         };
 
         setClusterContext(context);
-        console.log('Cluster context loaded:', {
-          pods: context.pods?.length || 0,
-          deployments: context.deployments?.length || 0,
-          hasMetrics: !!context.metrics
-        });
       } catch (err) {
         console.error('Failed to fetch cluster context:', err);
         setClusterContext(null);
@@ -150,7 +176,6 @@ function AIChat() {
     setError(null);
 
     try {
-      // Build messages array with dynamic system prompt including cluster context
       const systemPrompt = buildSystemPrompt(clusterContext);
       const apiMessages = [
         { role: 'system', content: systemPrompt },
@@ -192,7 +217,6 @@ function AIChat() {
   };
 
   const formatMessage = (content) => {
-    // Simple markdown-like formatting for code blocks
     const parts = content.split(/(```[\s\S]*?```)/g);
     return parts.map((part, index) => {
       if (part.startsWith('```')) {
@@ -236,45 +260,91 @@ function AIChat() {
     });
   };
 
+  // Get provider color for message bubble
+  const getProviderColor = (model, backend) => {
+    const provider = getProviderFromModel(model) || getProviderFromModel(backend);
+    return provider?.color || '#6b7280';
+  };
+
+  // Check if any provider is configured
+  const hasAnyProvider = healthStatus?.anthropic?.configured || healthStatus?.groq?.configured;
+
   return (
     <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 0.5 }}>
-            AI Assistant
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Powered by Claude - Ask questions about your K8s infrastructure
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {healthStatus && (
+      <Box sx={{ mb: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
+        >
+          <Box sx={{ minWidth: 0, flex: { xs: '1 1 100%', sm: '0 1 auto' } }}>
+            <Typography
+              variant="h4"
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                mb: 0.5,
+                fontSize: { xs: '1.5rem', sm: '2.125rem' },
+              }}
+            >
+              AI Assistant
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ display: { xs: 'none', sm: 'block' } }}
+            >
+              Ask questions about your K8s infrastructure
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 0.75,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              justifyContent: { xs: 'flex-start', sm: 'flex-end' },
+            }}
+          >
+            {/* Provider status chips */}
+            {healthStatus && (
+              <>
+                <ProviderStatusChip
+                  provider={AI_PROVIDERS.ANTHROPIC}
+                  isConfigured={healthStatus.anthropic?.configured}
+                  compact={window.innerWidth < 600}
+                />
+                <ProviderStatusChip
+                  provider={AI_PROVIDERS.GROQ}
+                  isConfigured={healthStatus.groq?.configured}
+                  compact={window.innerWidth < 600}
+                />
+              </>
+            )}
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, display: { xs: 'none', sm: 'block' } }} />
             <Chip
-              icon={<ClaudeIcon />}
-              label={healthStatus.anthropic?.configured ? 'Claude Ready' : 'Claude Not Configured'}
-              color={healthStatus.anthropic?.configured ? 'success' : 'warning'}
+              label={
+                contextLoading
+                  ? 'Loading...'
+                  : clusterContext
+                    ? `${clusterContext.pods?.length || 0} pods`
+                    : 'No data'
+              }
+              color={contextLoading ? 'default' : clusterContext ? 'info' : 'warning'}
               size="small"
               variant="outlined"
             />
-          )}
-          <Chip
-            label={
-              contextLoading
-                ? 'Loading context...'
-                : clusterContext
-                  ? `${clusterContext.pods?.length || 0} pods, ${clusterContext.deployments?.length || 0} deployments`
-                  : 'No cluster data'
-            }
-            color={contextLoading ? 'default' : clusterContext ? 'info' : 'warning'}
-            size="small"
-            variant="outlined"
-          />
-          {messages.length > 0 && (
-            <IconButton onClick={clearChat} size="small" title="Clear chat">
-              <ClearIcon />
-            </IconButton>
-          )}
+            {messages.length > 0 && (
+              <IconButton onClick={clearChat} size="small" title="Clear chat">
+                <ClearIcon />
+              </IconButton>
+            )}
+          </Box>
         </Box>
       </Box>
 
@@ -307,88 +377,125 @@ function AIChat() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'text.secondary',
+                px: { xs: 1, sm: 2 },
               }}
             >
-              <ClaudeIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-              <Typography variant="h6" gutterBottom>
+              <AIIcon sx={{ fontSize: { xs: 48, sm: 64 }, mb: 2, opacity: 0.5 }} />
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+              >
                 How can I help you today?
               </Typography>
-              <Typography variant="body2" textAlign="center" sx={{ maxWidth: 400 }}>
-                Ask me about your deployments, pods, debugging issues, or anything related to your
+              <Typography
+                variant="body2"
+                textAlign="center"
+                sx={{
+                  maxWidth: 400,
+                  display: { xs: 'none', sm: 'block' },
+                }}
+              >
+                Ask about your deployments, pods, debugging issues, or anything related to your
                 Kubernetes infrastructure.
               </Typography>
-              <Box sx={{ mt: 3, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {!hasAnyProvider && healthStatus && (
+                <Alert severity="warning" sx={{ mt: 2, maxWidth: 400 }}>
+                  No AI providers configured. Check your API keys.
+                </Alert>
+              )}
+              <Box
+                sx={{
+                  mt: { xs: 2, sm: 3 },
+                  display: 'flex',
+                  gap: 1,
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  maxWidth: '100%',
+                }}
+              >
                 <Chip
-                  label="Show pod status"
+                  label="Pod status"
                   onClick={() => setInput('What pods are currently running in my cluster?')}
                   variant="outlined"
+                  size="small"
                   sx={{ cursor: 'pointer' }}
                 />
                 <Chip
-                  label="Debug CrashLoopBackOff"
+                  label="Debug crash"
                   onClick={() => setInput('How do I debug a pod stuck in CrashLoopBackOff?')}
                   variant="outlined"
+                  size="small"
                   sx={{ cursor: 'pointer' }}
                 />
                 <Chip
-                  label="K8s best practices"
+                  label="Best practices"
                   onClick={() => setInput('What are some Kubernetes best practices for production?')}
                   variant="outlined"
+                  size="small"
                   sx={{ cursor: 'pointer' }}
                 />
               </Box>
             </Box>
           )}
 
-          {messages.map((message, index) => (
-            <Box
-              key={index}
-              sx={{
-                display: 'flex',
-                gap: 1.5,
-                alignItems: 'flex-start',
-                flexDirection: message.role === 'user' ? 'row-reverse' : 'row',
-              }}
-            >
+          {messages.map((message, index) => {
+            const providerColor = message.role === 'assistant'
+              ? getProviderColor(message.model, message.backend)
+              : null;
+
+            return (
               <Box
+                key={index}
                 sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '50%',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: message.role === 'user' ? 'primary.main' : '#d97706',
-                  color: 'white',
-                  flexShrink: 0,
+                  gap: 1.5,
+                  alignItems: 'flex-start',
+                  flexDirection: message.role === 'user' ? 'row-reverse' : 'row',
                 }}
               >
-                {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: message.role === 'user' ? 'primary.main' : providerColor,
+                    color: 'white',
+                    flexShrink: 0,
+                  }}
+                >
+                  {message.role === 'user' ? <PersonIcon /> : <BotIcon />}
+                </Box>
+                <Paper
+                  elevation={1}
+                  sx={{
+                    p: { xs: 1.5, sm: 2 },
+                    maxWidth: { xs: '85%', sm: '80%' },
+                    backgroundColor: message.role === 'user' ? 'primary.main' : 'background.paper',
+                    color: message.role === 'user' ? 'white' : 'text.primary',
+                    borderRadius: 2,
+                    borderTopLeftRadius: message.role === 'user' ? 16 : 4,
+                    borderTopRightRadius: message.role === 'user' ? 4 : 16,
+                    borderLeft: message.role === 'assistant' ? `3px solid ${providerColor}` : 'none',
+                    '& pre': { fontSize: { xs: '0.75rem', sm: '0.85rem' } },
+                  }}
+                >
+                  {formatMessage(message.content)}
+                  {message.model && (
+                    <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                      <Typography variant="caption" sx={{ opacity: 0.7, color: providerColor }}>
+                        {message.model}
+                        {message.usage && ` · ${message.usage.prompt_tokens + message.usage.completion_tokens} tokens`}
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
               </Box>
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  maxWidth: '80%',
-                  backgroundColor: message.role === 'user' ? 'primary.main' : 'background.paper',
-                  color: message.role === 'user' ? 'white' : 'text.primary',
-                  borderRadius: 2,
-                  borderTopLeftRadius: message.role === 'user' ? 16 : 4,
-                  borderTopRightRadius: message.role === 'user' ? 4 : 16,
-                }}
-              >
-                {formatMessage(message.content)}
-                {message.model && (
-                  <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
-                    <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                      {message.model}
-                      {message.usage && ` | ${message.usage.prompt_tokens + message.usage.completion_tokens} tokens`}
-                    </Typography>
-                  </Box>
-                )}
-              </Paper>
-            </Box>
-          ))}
+            );
+          })}
 
           {isLoading && (
             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
@@ -400,7 +507,7 @@ function AIChat() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: '#d97706',
+                  backgroundColor: '#6b7280',
                   color: 'white',
                 }}
               >
@@ -410,7 +517,7 @@ function AIChat() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CircularProgress size={16} />
                   <Typography variant="body2" color="text.secondary">
-                    Claude is thinking...
+                    Thinking...
                   </Typography>
                 </Box>
               </Paper>
@@ -435,11 +542,11 @@ function AIChat() {
               fullWidth
               multiline
               maxRows={4}
-              placeholder="Ask Claude about your infrastructure..."
+              placeholder="Ask about your infrastructure..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={isLoading}
+              disabled={isLoading || !hasAnyProvider}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 3,
@@ -449,7 +556,7 @@ function AIChat() {
             <IconButton
               color="primary"
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || !hasAnyProvider}
               sx={{
                 backgroundColor: 'primary.main',
                 color: 'white',

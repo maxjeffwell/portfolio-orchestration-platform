@@ -117,43 +117,73 @@ function Metrics() {
         </Button>
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         <Grid size={{ xs: 12 }}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+              >
                 Pod CPU Usage (millicores)
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={podMetricsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="cpu" fill="#2196f3" name="CPU (m)" />
-                </BarChart>
-              </ResponsiveContainer>
+              <Box sx={{ overflowX: 'auto' }}>
+                <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={podMetricsData} margin={{ top: 5, right: 5, left: -15, bottom: 50 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                        tick={{ fontSize: 10 }}
+                        interval={0}
+                      />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Bar dataKey="cpu" fill="#2196f3" name="CPU (m)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
           <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+            <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Typography
+                variant="h6"
+                gutterBottom
+                sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+              >
                 Pod Memory Usage (Mi)
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={podMetricsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="memory" fill="#4caf50" name="Memory (Mi)" />
-                </BarChart>
-              </ResponsiveContainer>
+              <Box sx={{ overflowX: 'auto' }}>
+                <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={podMetricsData} margin={{ top: 5, right: 5, left: -15, bottom: 50 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                        tick={{ fontSize: 10 }}
+                        interval={0}
+                      />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Bar dataKey="memory" fill="#4caf50" name="Memory (Mi)" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -161,32 +191,60 @@ function Metrics() {
         {metrics?.cluster && (
           <Grid size={{ xs: 12 }}>
             <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
+                  sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                >
                   Cluster Overview
                 </Typography>
-                <Grid container spacing={2}>
+                <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                   <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Total Nodes</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      sx={{ mb: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
+                      Total Nodes
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       {metrics.cluster.nodes || 0}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Total Pods</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      sx={{ mb: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
+                      Total Pods
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       {metrics.cluster.totalPods || 0}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Running Pods</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      sx={{ mb: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
+                      Running Pods
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       {metrics.cluster.runningPods || 0}
                     </Typography>
                   </Grid>
                   <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>Namespaces</Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      color="textSecondary"
+                      sx={{ mb: 0.5, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
+                      Namespaces
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
                       {metrics.cluster.namespaces || 0}
                     </Typography>
                   </Grid>
@@ -201,60 +259,90 @@ function Metrics() {
             {metrics.gpu.map((gpu) => (
               <Grid size={{ xs: 12, md: 6 }} key={gpu.index}>
                 <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <Typography
+                      variant="h6"
+                      gutterBottom
+                      sx={{ mb: 2, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}
+                    >
                       GPU {gpu.index}: {gpu.name}
                     </Typography>
-                    <Grid container spacing={2}>
+                    <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                       <Grid size={{ xs: 6, sm: 4 }}>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                          GPU Utilization
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ mb: 0.5, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                        >
+                          GPU Util
                         </Typography>
                         <Typography
                           variant="h5"
-                          sx={{ fontWeight: 600 }}
+                          sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
                           color={gpu.utilization.gpu > 80 ? 'error' : 'primary'}
                         >
                           {gpu.utilization.gpu.toFixed(1)}%
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 6, sm: 4 }}>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                          Memory Util
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ mb: 0.5, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                        >
+                          Mem Util
                         </Typography>
                         <Typography
                           variant="h5"
-                          sx={{ fontWeight: 600 }}
+                          sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
                           color={gpu.utilization.memory > 80 ? 'error' : 'primary'}
                         >
                           {gpu.utilization.memory.toFixed(1)}%
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 6, sm: 4 }}>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ mb: 0.5, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                        >
                           Memory
                         </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}
+                        >
                           {formatMemory(gpu.memory.used, gpu.memory.total)}
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 6, sm: 4 }}>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                          Temperature
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ mb: 0.5, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                        >
+                          Temp
                         </Typography>
                         <Typography
                           variant="h5"
-                          sx={{ fontWeight: 600 }}
+                          sx={{ fontWeight: 600, fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
                           color={gpu.temperature > 80 ? 'error' : gpu.temperature > 70 ? 'warning.main' : 'success.main'}
                         >
                           {gpu.temperature?.toFixed(0) || 'N/A'}°C
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 12, sm: 8 }}>
-                        <Typography variant="body2" color="textSecondary" sx={{ mb: 0.5 }}>
-                          Power Draw
+                        <Typography
+                          variant="body2"
+                          color="textSecondary"
+                          sx={{ mb: 0.5, fontSize: { xs: '0.7rem', sm: '0.875rem' } }}
+                        >
+                          Power
                         </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 600, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}
+                        >
                           {formatPower(gpu.power?.draw)} {gpu.power?.limit ? `/ ${formatPower(gpu.power.limit)}` : ''}
                         </Typography>
                       </Grid>

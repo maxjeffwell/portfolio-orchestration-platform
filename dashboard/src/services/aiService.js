@@ -1,27 +1,68 @@
 import api from './api';
 
 /**
- * AI Service - Interfaces with Claude via the shared-ai-gateway
+ * AI Service - Interfaces with AI providers via the shared-ai-gateway
+ * Supports multiple backends: Anthropic (Claude) and Groq
  * All calls are routed through the POP backend proxy
  */
+
+// Available AI providers
+export const AI_PROVIDERS = {
+  ANTHROPIC: 'anthropic',
+  GROQ: 'groq',
+};
+
+// Provider display information
+export const PROVIDER_INFO = {
+  [AI_PROVIDERS.ANTHROPIC]: {
+    name: 'Claude',
+    shortName: 'Claude',
+    color: '#d97706',
+    description: 'Anthropic Claude',
+  },
+  [AI_PROVIDERS.GROQ]: {
+    name: 'Groq',
+    shortName: 'Groq',
+    color: '#f55036',
+    description: 'Groq LPU Inference',
+  },
+};
+
+/**
+ * Get provider info from a model name or backend identifier
+ * @param {string} modelOrBackend - Model name or backend identifier
+ * @returns {Object} Provider info object
+ */
+export const getProviderFromModel = (modelOrBackend) => {
+  if (!modelOrBackend) return null;
+  const lower = modelOrBackend.toLowerCase();
+
+  if (lower.includes('claude') || lower.includes('anthropic')) {
+    return PROVIDER_INFO[AI_PROVIDERS.ANTHROPIC];
+  }
+  if (lower.includes('groq') || lower.includes('llama') || lower.includes('mixtral')) {
+    return PROVIDER_INFO[AI_PROVIDERS.GROQ];
+  }
+  return null;
+};
+
 export const aiService = {
   /**
-   * Send a chat message to Claude
+   * Send a chat message to an AI provider
    * @param {Array} messages - Array of message objects with role and content
-   * @param {Object} options - Optional parameters (maxTokens, temperature)
+   * @param {Object} options - Optional parameters (maxTokens, temperature, backend)
    * @returns {Promise<Object>} Response with message and metadata
    */
   async chat(messages, options = {}) {
     const response = await api.post('/ai/chat', {
       messages,
-      backend: 'anthropic', // Always use Claude for POP
       ...options
     });
     return response.data;
   },
 
   /**
-   * Send a simple prompt to Claude
+   * Send a simple prompt to an AI provider
    * @param {string} prompt - The user's prompt
    * @param {string} systemPrompt - Optional system context
    * @param {Object} options - Optional parameters
@@ -38,7 +79,7 @@ export const aiService = {
   },
 
   /**
-   * Analyze Kubernetes resources using Claude
+   * Analyze Kubernetes resources using AI
    * @param {string} resourceType - Type of resource (pod, deployment, etc.)
    * @param {Object} resourceData - The resource data to analyze
    * @returns {Promise<Object>} Analysis results

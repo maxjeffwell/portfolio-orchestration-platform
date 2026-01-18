@@ -94,12 +94,27 @@ export default function Logs() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+        flexWrap="wrap"
+        gap={1}
+      >
+        <Typography
+          variant="h4"
+          sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}
+        >
           Logs
         </Typography>
         {streaming && (
-          <Typography component="div" variant="body2" color="success.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            component="div"
+            variant="body2"
+            color="success.main"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
             <Box
               sx={{
                 width: 8,
@@ -113,22 +128,40 @@ export default function Logs() {
                 },
               }}
             />
-            Live streaming
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Live streaming
+            </Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+              Live
+            </Box>
           </Typography>
         )}
       </Box>
 
-      <Box mb={3} display="flex" gap={2} alignItems="center">
-        <FormControl sx={{ minWidth: 300 }}>
+      <Box
+        mb={3}
+        display="flex"
+        gap={2}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        flexDirection={{ xs: 'column', sm: 'row' }}
+      >
+        <FormControl sx={{ minWidth: { xs: '100%', sm: 300 }, flex: { xs: 1, sm: 'none' } }}>
           <InputLabel>Select Pod</InputLabel>
           <Select
             value={selectedPod}
             onChange={(e) => setSelectedPod(e.target.value)}
             label="Select Pod"
+            MenuProps={{
+              PaperProps: {
+                sx: { maxHeight: 300 },
+              },
+            }}
           >
             {pods.map((pod) => (
               <MenuItem key={pod.metadata?.uid} value={pod.metadata?.name}>
-                {pod.metadata?.name}
+                <Typography noWrap sx={{ maxWidth: { xs: 250, sm: 400 } }}>
+                  {pod.metadata?.name}
+                </Typography>
               </MenuItem>
             ))}
           </Select>
@@ -139,15 +172,16 @@ export default function Logs() {
           onClick={fetchLogs}
           variant="outlined"
           disabled={!selectedPod || loading}
+          sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
         >
-          Refresh Logs
+          Refresh
         </Button>
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>Error loading logs: {error}</Alert>}
 
       <Card>
-        <CardContent>
+        <CardContent sx={{ p: { xs: 1, sm: 2 } }}>
           {loading ? (
             <Box display="flex" justifyContent="center" p={3}>
               <CircularProgress />
@@ -160,15 +194,20 @@ export default function Logs() {
               variant="outlined"
               InputProps={{
                 readOnly: true,
-                style: {
+                sx: {
                   fontFamily: 'monospace',
-                  fontSize: '12px',
+                  fontSize: { xs: '10px', sm: '12px' },
                   backgroundColor: '#1e1e1e',
                   color: '#d4d4d4',
                 },
               }}
-              minRows={25}
+              minRows={15}
               maxRows={25}
+              sx={{
+                '& .MuiInputBase-root': {
+                  minHeight: { xs: 300, sm: 'auto' },
+                },
+              }}
             />
           )}
         </CardContent>
