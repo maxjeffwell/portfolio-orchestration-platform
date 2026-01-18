@@ -1,0 +1,183 @@
+# Prometheus monitoring stack values
+# Managed by ArgoCD - do not modify directly in cluster
+
+kube-prometheus-stack:
+  # Prometheus configuration
+  prometheus:
+    prometheusSpec:
+      retention: 15d
+      replicas: 1
+      nodeSelector:
+        kubernetes.io/hostname: vmi2951245
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: local-path
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 50Gi
+      # Enable all ServiceMonitors and PodMonitors
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      pathType: ImplementationSpecific
+      paths:
+        - /prometheus(/|$)(.*)
+      hosts:
+        - ""
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+  # Alertmanager configuration
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+      storage:
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 2Gi
+    config:
+      global:
+        resolve_timeout: 5m
+      inhibit_rules:
+        - source_matchers:
+            - severity = critical
+          target_matchers:
+            - severity =~ warning|info
+          equal:
+            - namespace
+            - alertname
+        - source_matchers:
+            - severity = warning
+          target_matchers:
+            - severity = info
+          equal:
+            - namespace
+            - alertname
+        - source_matchers:
+            - alertname = InfoInhibitor
+          target_matchers:
+            - severity = info
+          equal:
+            - namespace
+        - target_matchers:
+            - alertname = InfoInhibitor
+      receivers:
+        - name: "null"
+      route:
+        group_by:
+          - namespace
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 12h
+        receiver: "null"
+        routes:
+          - matchers:
+              - alertname = "Watchdog"
+            receiver: "null"
+          - matchers:
+              - namespace = "gpu-operator"
+              - alertname =~ "KubeDaemonSetMisScheduled|KubeDaemonSetRolloutStuck"
+            receiver: "null"
+          - matchers:
+              - alertname =~ "KubeControllerManagerDown|KubeSchedulerDown|KubeProxyDown"
+            receiver: "null"
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      pathType: ImplementationSpecific
+      paths:
+        - /alertmanager(/|$)(.*)
+      hosts:
+        - ""
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+  # Grafana configuration
+  grafana:
+    enabled: true
+    # Use existing secret from ExternalSecret (prometheus-grafana-external-secret.yaml)
+    admin:
+      existingSecret: prometheus-grafana
+      userKey: admin-user
+      passwordKey: admin-password
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    grafana.ini:
+      server:
+        root_url: http://86.48.29.183/grafana
+        serve_from_sub_path: true
+    defaultDashboardsEnabled: true
+    defaultDashboardsTimezone: UTC
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://monitoring-kube-prometheus-prometheus:9090
+            access: proxy
+            isDefault: true
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      pathType: ImplementationSpecific
+      path: /grafana(/|$)(.*)
+      hosts:
+        - ""
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+  # Prometheus Operator
+  prometheusOperator:
+    enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  # Enable node exporter and kube-state-metrics
+  nodeExporter:
+    enabled: true
+  kubeStateMetrics:
+    enabled: true
+
+# Custom ingress for Traefik (in addition to nginx ingresses above)
+ingress:
+  enabled: true
+  prometheusHost: prometheus.el-jefe.me
+  prometheusService: prometheus-kube-prometheus-prometheus
+  prometheusPort: 9090
+  grafanaHost: grafana.el-jefe.me
+  grafanaService: prometheus-grafana
+  grafanaPort: 80
