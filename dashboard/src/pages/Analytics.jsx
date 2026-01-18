@@ -566,62 +566,6 @@ function Analytics() {
         )}
       </Grid>
 
-      {/* Setup Guide */}
-      <Paper
-        elevation={1}
-        sx={{
-          p: { xs: 2, sm: 3 },
-          backgroundColor: '#e8e8e8',
-          borderRadius: 2,
-          borderLeft: '4px solid #1976d2',
-        }}
-      >
-        <Typography
-          variant="h6"
-          gutterBottom
-          sx={{ fontWeight: 600, color: '#000000', fontSize: { xs: '1rem', sm: '1.25rem' } }}
-        >
-          Prometheus Integration
-        </Typography>
-        <Typography
-          variant="body2"
-          paragraph
-          sx={{ color: '#1a1a1a', display: { xs: 'none', sm: 'block' } }}
-        >
-          This dashboard displays real-time metrics from your Kubernetes cluster and historical data from Prometheus.
-        </Typography>
-        <Typography variant="body2" paragraph sx={{ color: '#1a1a1a' }}>
-          <strong>To deploy Prometheus:</strong>
-        </Typography>
-        <Box
-          component="ol"
-          sx={{
-            pl: { xs: 2, sm: 3 },
-            '& li': { mb: 1, color: '#1a1a1a' },
-            '& code': {
-              fontSize: { xs: '0.7rem', sm: '0.875rem' },
-              wordBreak: 'break-all',
-            },
-          }}
-        >
-          <Typography component="li" variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-            Deploy: <code>kubectl apply -f k8s/monitoring/</code>
-          </Typography>
-          <Typography component="li" variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-            Verify: <code>kubectl get pods -l app=prometheus</code>
-          </Typography>
-          <Typography
-            component="li"
-            variant="body2"
-            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, display: { xs: 'none', sm: 'list-item' } }}
-          >
-            Check UI: <code>kubectl port-forward svc/prometheus 9090:9090</code>
-          </Typography>
-          <Typography component="li" variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-            View metrics in this dashboard!
-          </Typography>
-        </Box>
-      </Paper>
     </Box>
   );
 }
