@@ -239,7 +239,8 @@ function Analytics() {
           const pods = Array.from(podMap.values())
             .map(pod => ({
               ...pod,
-              name: pod.name.substring(0, 20), // Truncate long names
+              fullName: pod.name, // Keep full name for tooltip
+              name: pod.name.length > 20 ? pod.name.substring(0, 20) + '...' : pod.name, // Truncate long names for axis
             }))
             .slice(0, 10);
 
@@ -410,12 +411,12 @@ function Analytics() {
               Resource Trends (Last Hour)
             </Typography>
             <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={historicalData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <AreaChart data={historicalData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} />
+                <XAxis dataKey="time" tick={{ fontSize: 14 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 14 }} />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Legend wrapperStyle={{ fontSize: '14px' }} />
                 <Area
                   type="monotone"
                   dataKey="cpu"
@@ -486,21 +487,41 @@ function Analytics() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={podResourceData}
-                  margin={{ top: 5, right: 5, left: -10, bottom: 60 }}
+                  margin={{ top: 5, right: 5, left: 0, bottom: 80 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="name"
                     angle={-45}
                     textAnchor="end"
-                    height={80}
-                    tick={{ fontSize: 10 }}
+                    height={100}
+                    tick={{ fontSize: 14 }}
                     interval={0}
                   />
-                  <YAxis yAxisId="left" orientation="left" stroke="#1976d2" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#2e7d32" tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <YAxis yAxisId="left" orientation="left" stroke="#1976d2" tick={{ fontSize: 14 }} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#2e7d32" tick={{ fontSize: 14 }} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <Box sx={{ bgcolor: 'background.paper', p: 1.5, border: '1px solid #ccc', borderRadius: 1, boxShadow: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              {data.fullName}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#1976d2' }}>
+                              CPU: {data.cpu} mc
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#2e7d32' }}>
+                              Memory: {data.memory} Mi
+                            </Typography>
+                          </Box>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }} />
                   <Bar yAxisId="left" dataKey="cpu" fill="#1976d2" name="CPU (mc)" />
                   <Bar yAxisId="right" dataKey="memory" fill="#2e7d32" name="Mem (Mi)" />
                 </BarChart>
