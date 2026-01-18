@@ -161,7 +161,7 @@ function Metrics() {
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
-                  <ResponsiveContainer width="100%" height={350}>
+                  <ResponsiveContainer width="100%" height={420}>
                     <BarChart data={podMetricsData} margin={{ top: 20, right: 20, left: 0, bottom: 120 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
@@ -197,7 +197,7 @@ function Metrics() {
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
-                  <ResponsiveContainer width="100%" height={350}>
+                  <ResponsiveContainer width="100%" height={420}>
                     <BarChart data={podMetricsData} margin={{ top: 20, right: 20, left: 0, bottom: 120 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
