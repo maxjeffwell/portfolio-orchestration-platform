@@ -136,15 +136,12 @@ kube-prometheus-stack:
         serve_from_sub_path: true
     defaultDashboardsEnabled: true
     defaultDashboardsTimezone: UTC
-    datasources:
-      datasources.yaml:
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            url: http://monitoring-kube-prometheus-prometheus:9090
-            access: proxy
-            isDefault: true
+    # Datasources are managed by kube-prometheus-stack defaults
+    # Removing custom datasource to avoid duplicate default error
+    sidecar:
+      datasources:
+        enabled: true
+        defaultDatasourceEnabled: true
     ingress:
       enabled: true
       ingressClassName: nginx
