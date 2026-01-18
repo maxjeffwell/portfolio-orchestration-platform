@@ -267,7 +267,7 @@ function AIChat() {
   };
 
   // Check if any provider is configured
-  const hasAnyProvider = healthStatus?.anthropic?.configured || healthStatus?.groq?.configured;
+  const hasAnyProvider = healthStatus?.anthropic?.configured || healthStatus?.backends?.groq?.configured;
 
   return (
     <Box sx={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
@@ -321,7 +321,7 @@ function AIChat() {
                 />
                 <ProviderStatusChip
                   provider={AI_PROVIDERS.GROQ}
-                  isConfigured={healthStatus.groq?.configured}
+                  isConfigured={healthStatus.backends?.groq?.configured}
                   compact={window.innerWidth < 600}
                 />
               </>
