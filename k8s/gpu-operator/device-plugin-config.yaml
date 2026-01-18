@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-plugin-config
+  namespace: gpu-operator
+data:
+  marmoset: |
+    version: v1
+    flags:
+      migStrategy: none
+    sharing:
+      timeSlicing:
+        resources:
+        - name: nvidia.com/gpu
+          replicas: 2
+          # GTX 1080 UUID - use this GPU for time-slicing
+          devices: ["GPU-8060da56-7daf-3ffb-07ad-102325b750f5"]
