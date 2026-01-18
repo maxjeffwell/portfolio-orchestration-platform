@@ -8,6 +8,8 @@ metadata:
     platform: vertex
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: vertex-platform-auth
@@ -78,6 +80,8 @@ metadata:
     platform: vertex
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: vertex-platform-analytics

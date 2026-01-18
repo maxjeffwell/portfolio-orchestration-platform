@@ -7,6 +7,8 @@ metadata:
     app: portfolio-api
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: portfolio-api
