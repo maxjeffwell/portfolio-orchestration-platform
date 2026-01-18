@@ -52,14 +52,12 @@ function Metrics() {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const [podMetrics, clusterMetrics] = await Promise.all([
-        metricsService.getPodMetrics(),
-        metricsService.getClusterMetrics(),
-      ]);
+      const allMetrics = await metricsService.getAllMetrics();
 
       setMetrics({
-        pods: podMetrics,
-        cluster: clusterMetrics,
+        pods: allMetrics.pods,
+        cluster: allMetrics.cluster,
+        gpu: allMetrics.gpu,
       });
       setError(null);
     } catch (err) {
@@ -177,7 +175,7 @@ function Metrics() {
                       />
                       <YAxis tick={{ fontSize: 14 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: '14px' }} />
+                      <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }} />
                       <Bar dataKey="cpu" fill="#2196f3" name="CPU (m)" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -213,7 +211,7 @@ function Metrics() {
                       />
                       <YAxis tick={{ fontSize: 14 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: '14px' }} />
+                      <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }} />
                       <Bar dataKey="memory" fill="#4caf50" name="Memory (Mi)" />
                     </BarChart>
                   </ResponsiveContainer>

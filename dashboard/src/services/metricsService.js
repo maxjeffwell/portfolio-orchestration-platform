@@ -20,6 +20,11 @@ export const metricsService = {
     const response = await api.get(`/metrics/pods/${name}`);
     return response.data.data;
   },
+
+  async getAllMetrics() {
+    const response = await api.get('/metrics');
+    return response.data;
+  },
 };
 
 export default metricsService;
