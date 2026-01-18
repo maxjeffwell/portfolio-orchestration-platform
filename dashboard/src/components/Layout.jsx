@@ -3,6 +3,7 @@ import {
   AppBar,
   Box,
   Button,
+  Divider,
   Drawer,
   IconButton,
   List,
@@ -10,6 +11,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   Toolbar,
   Typography,
 } from '@mui/material';
@@ -36,7 +38,7 @@ import NotificationBell from './NotificationBell';
 
 const drawerWidth = 240;
 
-const menuItems = [
+const navigationItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Pods', icon: <ViewListIcon />, path: '/pods' },
   { text: 'Deployments', icon: <DeployIcon />, path: '/deployments' },
@@ -44,9 +46,15 @@ const menuItems = [
   { text: 'Logs', icon: <LogsIcon />, path: '/logs' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'AI Chat', icon: <AIChatIcon />, path: '/ai-chat' },
+];
+
+const applicationItems = [
   { text: 'ArgoCD', icon: <ArgoIcon />, path: 'https://argocd.el-jefe.me', external: true },
   { text: 'PodRick', icon: <PodrickIcon />, path: 'https://podrick.el-jefe.me', external: true },
   { text: 'TenantFlow', icon: <TenantFlowIcon />, path: 'https://tenantflow.el-jefe.me', external: true },
+];
+
+const monitoringItems = [
   { text: 'Grafana', icon: <GrafanaIcon />, path: 'https://grafana.el-jefe.me', external: true },
   { text: 'Prometheus', icon: <PrometheusIcon />, path: 'https://prometheus.el-jefe.me', external: true },
 ];
@@ -66,6 +74,23 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
+  const renderMenuItems = (items) =>
+    items.map((item) => (
+      <ListItem key={item.text} disablePadding>
+        <ListItemButton
+          component={item.external ? 'a' : Link}
+          {...(item.external ? { href: item.path, target: '_blank', rel: 'noopener noreferrer' } : { to: item.path })}
+          selected={!item.external && location.pathname === item.path}
+          onClick={() => setMobileOpen(false)}
+        >
+          <ListItemIcon sx={{ color: !item.external && location.pathname === item.path ? 'primary.main' : 'inherit' }}>
+            {item.icon}
+          </ListItemIcon>
+          <ListItemText primary={item.text} />
+        </ListItemButton>
+      </ListItem>
+    ));
+
   const drawer = (
     <div>
       <Toolbar>
@@ -73,22 +98,16 @@ export default function Layout({ children }) {
           Pop!_Portfolio
         </Typography>
       </Toolbar>
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              component={item.external ? 'a' : Link}
-              {...(item.external ? { href: item.path, target: '_blank', rel: 'noopener noreferrer' } : { to: item.path })}
-              selected={!item.external && location.pathname === item.path}
-              onClick={() => setMobileOpen(false)}
-            >
-              <ListItemIcon sx={{ color: !item.external && location.pathname === item.path ? 'primary.main' : 'inherit' }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+      <List subheader={<ListSubheader>Navigation</ListSubheader>}>
+        {renderMenuItems(navigationItems)}
+      </List>
+      <Divider />
+      <List subheader={<ListSubheader>Applications</ListSubheader>}>
+        {renderMenuItems(applicationItems)}
+      </List>
+      <Divider />
+      <List subheader={<ListSubheader>Monitoring</ListSubheader>}>
+        {renderMenuItems(monitoringItems)}
       </List>
     </div>
   );

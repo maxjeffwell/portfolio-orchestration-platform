@@ -484,10 +484,10 @@ function Analytics() {
               Top Pods by Resource Usage
             </Typography>
             <Box sx={{ minWidth: { xs: 500, sm: 'auto' } }}>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={450}>
                 <BarChart
                   data={podResourceData}
-                  margin={{ top: 5, right: 5, left: 0, bottom: 80 }}
+                  margin={{ top: 5, right: 5, left: 0, bottom: 100 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
