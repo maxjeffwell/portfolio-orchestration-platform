@@ -103,10 +103,42 @@ function Metrics() {
   }
 
   const podMetricsData = metrics?.pods?.map((pod) => ({
-    name: pod.metadata?.name?.substring(0, 15) + '...',
+    name: pod.metadata?.name?.length > 20
+      ? pod.metadata?.name?.substring(0, 20) + '...'
+      : pod.metadata?.name,
+    fullName: pod.metadata?.name,
     cpu: parseFloat(pod.usage?.cpu || 0),
     memory: parseFloat(pod.usage?.memory || 0),
   })) || [];
+
+  // Custom tooltip to show full pod name
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Box
+          sx={{
+            backgroundColor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 1.5,
+            boxShadow: 2,
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5, wordBreak: 'break-all' }}>
+            {data.fullName}
+          </Typography>
+          {payload.map((entry, index) => (
+            <Typography key={index} variant="body2" sx={{ color: entry.color }}>
+              {entry.name}: {entry.value.toFixed(1)}
+            </Typography>
+          ))}
+        </Box>
+      );
+    }
+    return null;
+  };
 
   return (
     <Box>
@@ -130,19 +162,19 @@ function Metrics() {
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={podMetricsData} margin={{ top: 5, right: 5, left: -15, bottom: 50 }}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={podMetricsData} margin={{ top: 5, right: 10, left: -10, bottom: 80 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
                         angle={-45}
                         textAnchor="end"
-                        height={60}
-                        tick={{ fontSize: 10 }}
+                        height={90}
+                        tick={{ fontSize: 12 }}
                         interval={0}
                       />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
                       <Bar dataKey="cpu" fill="#2196f3" name="CPU (m)" />
                     </BarChart>
@@ -165,19 +197,19 @@ function Metrics() {
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <Box sx={{ minWidth: { xs: 400, sm: 'auto' } }}>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={podMetricsData} margin={{ top: 5, right: 5, left: -15, bottom: 50 }}>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={podMetricsData} margin={{ top: 5, right: 10, left: -10, bottom: 80 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
                         angle={-45}
                         textAnchor="end"
-                        height={60}
-                        tick={{ fontSize: 10 }}
+                        height={90}
+                        tick={{ fontSize: 12 }}
                         interval={0}
                       />
-                      <YAxis tick={{ fontSize: 10 }} />
-                      <Tooltip />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ fontSize: '12px' }} />
                       <Bar dataKey="memory" fill="#4caf50" name="Memory (Mi)" />
                     </BarChart>
