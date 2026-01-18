@@ -23,11 +23,15 @@ out/
 .env.production.local
 *.env
 
-# Kubernetes secrets
+# Kubernetes secrets (but allow ExternalSecret manifests)
 k8s/secrets/*.yaml
 k8s/secrets/*.yml
 *-secret.yaml
 *-secret.yml
+!*-external-secret.yaml
+!*-external-secret.yml
+!*-externalsecret.yaml
+!*-externalsecret.yml
 
 # Kubeconfig files (should not be committed)
 kubeconfig
