@@ -18,7 +18,7 @@ spec:
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
-        image: maxjeffwell/portfolio-api:20260115-gotify-client
+        image: maxjeffwell/portfolio-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
