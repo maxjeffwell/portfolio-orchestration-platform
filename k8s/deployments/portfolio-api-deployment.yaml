@@ -20,7 +20,7 @@ spec:
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
-        image: ghcr.io/maxjeffwell/portfolio-api:20260118-090051-d77b079
+        image: ghcr.io/maxjeffwell/portfolio-api:20260119-015603-5886ba1
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
