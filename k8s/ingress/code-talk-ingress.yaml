@@ -5,6 +5,7 @@ metadata:
   namespace: default
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
 spec:
   ingressClassName: traefik
   rules:
@@ -41,3 +42,7 @@ spec:
             name: code-talk-client
             port:
               number: 5000
+  tls:
+  - hosts:
+    - code-talk-k8s.el-jefe.me
+    secretName: code-talk-ingress-tls

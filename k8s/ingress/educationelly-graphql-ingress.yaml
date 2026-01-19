@@ -7,6 +7,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.priority: "10"
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
 spec:
   ingressClassName: traefik
   rules:
@@ -20,6 +21,10 @@ spec:
             name: educationelly-graphql-server
             port:
               number: 8000
+  tls:
+  - hosts:
+    - educationelly-graphql-k8s.el-jefe.me
+    secretName: educationelly-graphql-tls
 ---
 # Client Ingress (lower priority)
 apiVersion: networking.k8s.io/v1
@@ -43,3 +48,7 @@ spec:
             name: educationelly-graphql-client
             port:
               number: 80
+  tls:
+  - hosts:
+    - educationelly-graphql-k8s.el-jefe.me
+    secretName: educationelly-graphql-tls

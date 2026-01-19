@@ -6,6 +6,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.priority: "200"
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
 spec:
   ingressClassName: traefik
   rules:
@@ -28,3 +29,7 @@ spec:
             name: portfolio-api
             port:
               number: 5000
+  tls:
+  - hosts:
+    - pop-portfolio.el-jefe.me
+    secretName: pop-portfolio-tls

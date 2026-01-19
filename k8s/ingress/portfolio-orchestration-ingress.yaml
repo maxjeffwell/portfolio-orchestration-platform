@@ -4,10 +4,16 @@ metadata:
   name: portfolio-orchestration-ingress
   namespace: default
   annotations:
-    # Use both entrypoints - Cloudflare terminates SSL
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
 spec:
   ingressClassName: traefik
+  tls:
+  - hosts:
+    - pop-portfolio.el-jefe.me
+    - tenantflow.el-jefe.me
+    - vertex-platform.el-jefe.me
+    secretName: portfolio-orchestration-tls
   rules:
   # 1. Pop Portfolio (Dashboard + Consolidated Apps)
   - host: pop-portfolio.el-jefe.me
