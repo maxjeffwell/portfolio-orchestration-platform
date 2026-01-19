@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: dashboard
-        image: ghcr.io/maxjeffwell/portfolio-dashboard:20260119-015603-5886ba1
+        image: ghcr.io/maxjeffwell/portfolio-dashboard:20260119-021338-6ef775a
         imagePullPolicy: Always
         ports:
         - containerPort: 80
