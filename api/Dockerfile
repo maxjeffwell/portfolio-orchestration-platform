@@ -1,4 +1,4 @@
-# Build stage
+# Production stage
 FROM node:20-alpine AS production
 
 WORKDIR /app
@@ -6,12 +6,19 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies
-RUN npm install --omit=dev && \
-    npm cache clean --force
+# Install production dependencies (BuildKit cache speeds up repeated builds)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev
 
 # Copy application code
 COPY . .
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+
+USER nodejs
 
 # Expose port
 EXPOSE 5000
