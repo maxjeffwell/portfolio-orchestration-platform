@@ -1,0 +1,72 @@
+---
+# Probe for internal cluster DNS resolution
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dns-cluster-probe
+  namespace: monitoring
+  labels:
+    app: blackbox-exporter
+    probe-type: dns
+    release: prometheus
+spec:
+  jobName: dns-cluster
+  interval: 30s
+  scrapeTimeout: 10s
+  module: dns_cluster
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        # CoreDNS service IP - queries kubernetes.default.svc.cluster.local
+        - kube-dns.kube-system.svc.cluster.local:53
+      labels:
+        probe_target: coredns
+        probe_type: dns_internal
+
+---
+# Probe for external DNS resolution (tests forwarding)
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: dns-external-probe
+  namespace: monitoring
+  labels:
+    app: blackbox-exporter
+    probe-type: dns
+    release: prometheus
+spec:
+  jobName: dns-external
+  interval: 60s
+  scrapeTimeout: 10s
+  module: dns_external
+  prober:
+    url: blackbox-exporter.monitoring.svc.cluster.local:9115
+  targets:
+    staticConfig:
+      static:
+        # Test external DNS resolution through CoreDNS
+        - kube-dns.kube-system.svc.cluster.local:53
+      labels:
+        probe_target: coredns-forwarding
+        probe_type: dns_external
+
+---
+# ServiceMonitor for blackbox exporter's own metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+  labels:
+    app: blackbox-exporter
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: blackbox-exporter
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics

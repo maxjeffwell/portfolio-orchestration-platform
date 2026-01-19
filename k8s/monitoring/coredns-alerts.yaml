@@ -1,0 +1,134 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: coredns-health-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    app.kubernetes.io/instance: prometheus
+    app.kubernetes.io/part-of: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+  - name: coredns-health
+    rules:
+    # Alert if CoreDNS is down (scrape target unreachable)
+    - alert: CoreDNSDown
+      annotations:
+        description: CoreDNS instance {{ $labels.instance }} has been down for more than 2 minutes.
+        summary: CoreDNS is not responding to scrapes.
+        runbook: Check CoreDNS pod status with kubectl get pods -n kube-system -l k8s-app=kube-dns
+      expr: up{job="coredns"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: dns
+
+    # Alert if no CoreDNS instances are up
+    - alert: CoreDNSAllInstancesDown
+      annotations:
+        description: All CoreDNS instances are down. Cluster DNS resolution is unavailable.
+        summary: All CoreDNS instances are down - cluster DNS is broken.
+        runbook: Immediately check kube-system namespace for CoreDNS pods and node health.
+      expr: absent(up{job="coredns"} == 1)
+      for: 1m
+      labels:
+        severity: critical
+        component: dns
+
+    # Alert on high DNS error rate
+    - alert: CoreDNSHighErrorRate
+      annotations:
+        description: CoreDNS is returning errors for {{ $value | humanizePercentage }} of requests.
+        summary: CoreDNS error rate is above 5%.
+      expr: |
+        sum(rate(coredns_dns_responses_total{rcode=~"SERVFAIL|REFUSED|NOTIMP"}[5m])) by (instance)
+        /
+        sum(rate(coredns_dns_responses_total[5m])) by (instance)
+        > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        component: dns
+
+    # Alert on high DNS latency
+    - alert: CoreDNSHighLatency
+      annotations:
+        description: CoreDNS 99th percentile latency is {{ $value | humanizeDuration }}.
+        summary: CoreDNS latency is above 100ms.
+      expr: |
+        histogram_quantile(0.99, sum(rate(coredns_dns_request_duration_seconds_bucket[5m])) by (le, instance))
+        > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: dns
+
+    # Alert if CoreDNS has restarted recently (potential instability)
+    - alert: CoreDNSRestarted
+      annotations:
+        description: CoreDNS pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour.
+        summary: CoreDNS is restarting frequently.
+      expr: |
+        increase(kube_pod_container_status_restarts_total{namespace="kube-system", container="coredns"}[1h]) > 2
+      for: 0m
+      labels:
+        severity: warning
+        component: dns
+
+    # Alert on CoreDNS forward errors (upstream DNS issues)
+    - alert: CoreDNSForwardErrors
+      annotations:
+        description: CoreDNS is experiencing errors forwarding to upstream DNS servers.
+        summary: CoreDNS forward plugin errors detected.
+      expr: |
+        sum(rate(coredns_forward_responses_total{rcode=~"SERVFAIL|REFUSED"}[5m])) by (to)
+        /
+        sum(rate(coredns_forward_responses_total[5m])) by (to)
+        > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        component: dns
+
+    # Alert if CoreDNS cache hit ratio drops (potential issue or attack)
+    - alert: CoreDNSLowCacheHitRatio
+      annotations:
+        description: CoreDNS cache hit ratio is {{ $value | humanizePercentage }}, which is below expected.
+        summary: CoreDNS cache efficiency is degraded.
+      expr: |
+        sum(rate(coredns_cache_hits_total[5m]))
+        /
+        (sum(rate(coredns_cache_hits_total[5m])) + sum(rate(coredns_cache_misses_total[5m])))
+        < 0.5
+      for: 15m
+      labels:
+        severity: info
+        component: dns
+
+    # Alert on DNS request spike (potential DNS amplification or misconfiguration)
+    - alert: CoreDNSRequestSpike
+      annotations:
+        description: CoreDNS requests have increased by more than 300% compared to the hourly average.
+        summary: Unusual spike in DNS requests detected.
+      expr: |
+        sum(rate(coredns_dns_requests_total[5m]))
+        /
+        sum(avg_over_time(rate(coredns_dns_requests_total[5m])[1h:5m]))
+        > 3
+      for: 5m
+      labels:
+        severity: warning
+        component: dns
+
+    # Alert on panic recovery (indicates bugs or severe issues)
+    - alert: CoreDNSPanicRecovery
+      annotations:
+        description: CoreDNS has recovered from {{ $value }} panics.
+        summary: CoreDNS experienced a panic - check logs immediately.
+      expr: |
+        increase(coredns_panics_total[5m]) > 0
+      for: 0m
+      labels:
+        severity: critical
+        component: dns

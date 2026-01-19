@@ -1,0 +1,91 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: dns-probe-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    app.kubernetes.io/instance: prometheus
+    app.kubernetes.io/part-of: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+  - name: dns-probes
+    rules:
+    # Alert if internal DNS probe fails
+    - alert: DNSProbeInternalFailed
+      annotations:
+        description: DNS probe for internal cluster resolution (kubernetes.default.svc.cluster.local) has been failing for 2 minutes. CoreDNS may be unable to resolve internal services.
+        summary: Internal DNS resolution is failing.
+        runbook: |
+          1. Check CoreDNS pods: kubectl get pods -n kube-system -l k8s-app=kube-dns
+          2. Check CoreDNS logs: kubectl logs -n kube-system -l k8s-app=kube-dns
+          3. Test manually: kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup kubernetes.default
+      expr: probe_success{job="dns-cluster"} == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: dns
+        probe_type: internal
+
+    # Alert if external DNS probe fails
+    - alert: DNSProbeExternalFailed
+      annotations:
+        description: DNS probe for external resolution (google.com) has been failing for 5 minutes. CoreDNS forwarding to upstream DNS may be broken.
+        summary: External DNS resolution is failing.
+        runbook: |
+          1. Check CoreDNS forward plugin config
+          2. Check network connectivity to upstream DNS
+          3. Test manually: kubectl run -it --rm debug --image=busybox --restart=Never -- nslookup google.com
+      expr: probe_success{job="dns-external"} == 0
+      for: 5m
+      labels:
+        severity: warning
+        component: dns
+        probe_type: external
+
+    # Alert on high DNS probe latency
+    - alert: DNSProbeHighLatency
+      annotations:
+        description: DNS probe latency is {{ $value | humanizeDuration }}, which exceeds the 500ms threshold.
+        summary: DNS resolution latency is high.
+      expr: probe_duration_seconds{job=~"dns-.*"} > 0.5
+      for: 5m
+      labels:
+        severity: warning
+        component: dns
+
+    # Alert if blackbox exporter itself is down
+    - alert: BlackboxExporterDown
+      annotations:
+        description: Blackbox exporter is down - DNS synthetic probes are not running.
+        summary: Blackbox exporter is not responding.
+      expr: up{job="blackbox-exporter"} == 0
+      for: 2m
+      labels:
+        severity: warning
+        component: monitoring
+
+    # Alert if DNS probe returns wrong response code
+    - alert: DNSProbeWrongRcode
+      annotations:
+        description: DNS probe received unexpected response code. Expected NOERROR but got a different code.
+        summary: DNS probe received unexpected response.
+      expr: |
+        probe_dns_lookup_time_seconds{job=~"dns-.*"} > 0
+        and probe_success{job=~"dns-.*"} == 0
+      for: 2m
+      labels:
+        severity: warning
+        component: dns
+
+    # Meta-alert: No DNS probe data (probe not running or misconfigured)
+    - alert: DNSProbeNoData
+      annotations:
+        description: No data from DNS probes for 5 minutes. Check blackbox exporter and probe configuration.
+        summary: DNS probe metrics are missing.
+      expr: absent(probe_success{job="dns-cluster"})
+      for: 5m
+      labels:
+        severity: warning
+        component: monitoring
