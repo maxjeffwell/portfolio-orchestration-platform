@@ -34,6 +34,6 @@ spec:
     component: server
   ports:
   - name: http
-    port: 3001
-    targetPort: 3001
+    port: 8000
+    targetPort: 8000
     protocol: TCP
