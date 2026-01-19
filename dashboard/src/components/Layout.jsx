@@ -30,6 +30,7 @@ import {
   Apartment as TenantFlowIcon,
   Speed as GrafanaIcon,
   QueryStats as PrometheusIcon,
+  AltRoute as TraefikIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,6 +58,7 @@ const applicationItems = [
 const monitoringItems = [
   { text: 'Grafana', icon: <GrafanaIcon />, path: 'https://grafana.el-jefe.me', external: true },
   { text: 'Prometheus', icon: <PrometheusIcon />, path: 'https://prometheus.el-jefe.me', external: true },
+  { text: 'Traefik', icon: <TraefikIcon />, path: 'https://traefik.el-jefe.me/dashboard/', external: true },
 ];
 
 export default function Layout({ children }) {
