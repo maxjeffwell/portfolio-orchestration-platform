@@ -8,7 +8,7 @@ COPY package*.json ./
 
 # Install production dependencies (BuildKit cache speeds up repeated builds)
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+    npm install --omit=dev
 
 # Copy application code
 COPY . .
