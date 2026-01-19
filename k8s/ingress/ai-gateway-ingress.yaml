@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shared-ai-gateway-ingress
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod-dns
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: ai-gateway.el-jefe.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: shared-ai-gateway-service
+            port:
+              number: 8002
+  tls:
+  - hosts:
+    - ai-gateway.el-jefe.me
+    secretName: ai-gateway-tls
