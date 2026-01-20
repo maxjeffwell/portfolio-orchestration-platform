@@ -1,0 +1,49 @@
+# CoreDNS Optimized Configuration
+# Applies to: kube-system namespace
+# Purpose: Improve DNS performance with caching and prefetching
+#
+# Changes from default:
+# - cache 30 -> cache 300 (5 min TTL)
+# - Added prefetch for popular names
+#
+# Apply with: kubectl apply -f coredns-config.yaml
+# Then restart: kubectl rollout restart deployment coredns -n kube-system
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: coredns
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+        ready
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+          pods insecure
+          fallthrough in-addr.arpa ip6.arpa
+        }
+        hosts /etc/coredns/NodeHosts {
+          ttl 60
+          reload 15s
+          fallthrough
+        }
+        prometheus :9153
+        cache 300 {
+          prefetch 10 60s 25%
+        }
+        loop
+        reload
+        loadbalance
+        import /etc/coredns/custom/*.override
+        forward . /etc/resolv.conf
+    }
+    import /etc/coredns/custom/*.server
+  NodeHosts: |
+    10.0.0.1 vmi2951245
+    10.0.0.2 marmoset
