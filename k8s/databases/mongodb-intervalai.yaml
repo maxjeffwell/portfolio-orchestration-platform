@@ -125,6 +125,26 @@ spec:
   selector:
     app: mongodb-intervalai
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-intervalai-nodeport
+  namespace: default
+  labels:
+    app: mongodb-intervalai
+  annotations:
+    description: "NodePort for external access (testing/development)"
+spec:
+  type: NodePort
+  ports:
+  - port: 27017
+    targetPort: 27017
+    nodePort: 30027
+    protocol: TCP
+    name: mongodb
+  selector:
+    app: mongodb-intervalai
+---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
