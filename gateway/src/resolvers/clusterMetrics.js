@@ -3,7 +3,7 @@ import k8sClient from '../lib/k8sClient.js';
 
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ||
-  'http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090';
+  'http://prometheus-kube-prometheus-prometheus.monitoring:9090';
 
 function queryPrometheus(query) {
   const url = `${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(query)}`;
