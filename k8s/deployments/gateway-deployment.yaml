@@ -20,7 +20,7 @@ spec:
       serviceAccountName: gateway-sa
       containers:
       - name: graphql-gateway
-        image: maxjeffwell/graphql-gateway:20260206-174942-ce0c17a
+        image: maxjeffwell/graphql-gateway:20260206-205414-db9d88e
         imagePullPolicy: Always
         ports:
         - containerPort: 4000
