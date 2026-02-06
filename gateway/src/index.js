@@ -21,7 +21,14 @@ const yoga = createYoga({
   landingPage: false,
 });
 
-const server = createServer(yoga);
+const server = createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
+  yoga(req, res);
+});
 
 server.listen(PORT, () => {
   console.log(`GraphQL Gateway running at http://localhost:${PORT}/graphql`);
