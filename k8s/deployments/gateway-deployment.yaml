@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphql-gateway
+  namespace: default
+  labels:
+    app: graphql-gateway
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: graphql-gateway
+  template:
+    metadata:
+      labels:
+        app: graphql-gateway
+    spec:
+      serviceAccountName: gateway-sa
+      containers:
+      - name: graphql-gateway
+        image: maxjeffwell/graphql-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4000
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "25m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        env:
+        - name: PORT
+          value: "4000"
+        - name: NODE_ENV
+          value: "production"
+        - name: CORS_ORIGIN
+          value: "https://el-jefe.me"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
