@@ -32,6 +32,7 @@ import {
   QueryStats as PrometheusIcon,
   AltRoute as TraefikIcon,
   Timeline as LangfuseIcon,
+  AutoStories as StorybookIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,6 +55,7 @@ const applicationItems = [
   { text: 'ArgoCD', icon: <ArgoIcon />, path: 'https://argocd.el-jefe.me', external: true },
   { text: 'PodRick', icon: <PodrickIcon />, path: 'https://podrick.el-jefe.me', external: true },
   { text: 'TenantFlow', icon: <TenantFlowIcon />, path: 'https://tenantflow.el-jefe.me', external: true },
+  { text: 'React Storybook', icon: <StorybookIcon />, path: 'https://showcase.el-jefe.me', external: true },
 ];
 
 const monitoringItems = [
