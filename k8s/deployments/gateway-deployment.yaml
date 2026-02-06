@@ -40,6 +40,8 @@ spec:
           value: "production"
         - name: CORS_ORIGIN
           value: "https://el-jefe.me"
+        - name: PROMETHEUS_URL
+          value: "http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090"
         livenessProbe:
           httpGet:
             path: /health

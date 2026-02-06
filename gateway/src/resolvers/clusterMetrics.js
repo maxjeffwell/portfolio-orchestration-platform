@@ -1,38 +1,30 @@
 import k8sClient from '../lib/k8sClient.js';
-import { parseCpu, parseMemory } from '../lib/parsers.js';
+
+const PROMETHEUS_URL =
+  process.env.PROMETHEUS_URL ||
+  'http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090';
+
+async function queryPrometheus(query) {
+  const url = `${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return data.data?.result?.[0]?.value?.[1] ?? null;
+}
 
 export const clusterMetricsResolvers = {
   Query: {
     clusterMetrics: async () => {
       const api = k8sClient.getCoreV1Api();
 
-      const [nodesRes, podsRes, nsRes] = await Promise.all([
+      const [nodesRes, podsRes, nsRes, cpuVal, memVal] = await Promise.all([
         api.listNode(),
         api.listPodForAllNamespaces(),
         api.listNamespace(),
+        queryPrometheus('sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))').catch(() => null),
+        queryPrometheus('sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)').catch(() => null),
       ]);
 
       const pods = podsRes.body.items;
-
-      let cpuUsageCores = null;
-      let memoryUsageBytes = null;
-
-      try {
-        const metrics = k8sClient.getMetricsClient();
-        const podMetrics = await metrics.getPodMetrics();
-        let totalCpu = 0;
-        let totalMemory = 0;
-        for (const item of podMetrics.items) {
-          for (const c of item.containers) {
-            totalCpu += parseCpu(c.usage.cpu);
-            totalMemory += parseMemory(c.usage.memory);
-          }
-        }
-        cpuUsageCores = totalCpu;
-        memoryUsageBytes = totalMemory;
-      } catch {
-        // metrics-server may not be available
-      }
 
       return {
         nodeCount: nodesRes.body.items.length,
@@ -41,8 +33,8 @@ export const clusterMetricsResolvers = {
         pendingPods: pods.filter((p) => p.status?.phase === 'Pending').length,
         failedPods: pods.filter((p) => p.status?.phase === 'Failed').length,
         namespaceCount: nsRes.body.items.length,
-        cpuUsageCores,
-        memoryUsageBytes,
+        cpuUsageCores: cpuVal !== null ? parseFloat(cpuVal) : null,
+        memoryUsageBytes: memVal !== null ? parseFloat(memVal) : null,
       };
     },
   },
