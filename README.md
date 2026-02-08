@@ -195,7 +195,7 @@ See [API.md](docs/API.md) for complete API documentation.
 
 This platform runs on a **K3s cluster** alongside the portfolio applications it manages:
 
-- **Live Dashboard:** [el-jefe.me/cluster](https://el-jefe.me/cluster/)
+- **Live Dashboard:** [pop-portfolio.el-jefe.me/portfolio](https://pop-portfolio.el-jefe.me/portfolio)
 - **GitOps:** ArgoCD auto-syncs all 9 portfolio applications
 - **Ingress:** Traefik with Cloudflare DNS proxy and cert-manager TLS
 - **Monitoring:** Prometheus + Grafana + Mimir (90-day retention)
