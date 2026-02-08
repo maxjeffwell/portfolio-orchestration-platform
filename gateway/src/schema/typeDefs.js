@@ -175,7 +175,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type GitHubRun {
-    runId: Int!
+    runId: String!
     name: String!
     repo: String!
     repoDisplayName: String!

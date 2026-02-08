@@ -45,7 +45,7 @@ export async function fetchRecentRuns() {
         `/repos/${GITHUB_OWNER}/${repo.name}/actions/runs?per_page=5`,
       );
       return (data.workflow_runs || []).map((run) => ({
-        runId: run.id,
+        runId: String(run.id),
         name: run.name,
         repo: repo.name,
         repoDisplayName: repo.displayName,
