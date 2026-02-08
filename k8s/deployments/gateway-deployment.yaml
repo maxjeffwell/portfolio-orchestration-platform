@@ -52,6 +52,25 @@ spec:
           value: "graphql-gateway-group"
         - name: KAFKA_AI_EVENTS_TOPIC
           value: "ai.gateway.events"
+        - name: ARGOCD_SERVER
+          value: "argocd-server.argocd.svc:443"
+        - name: ARGOCD_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: gateway-credentials
+              key: argocd-username
+        - name: ARGOCD_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: gateway-credentials
+              key: argocd-password
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: gateway-credentials
+              key: github-token
+        - name: GITHUB_OWNER
+          value: "maxjeffwell"
         livenessProbe:
           httpGet:
             path: /health

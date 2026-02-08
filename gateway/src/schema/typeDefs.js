@@ -18,6 +18,9 @@ export const typeDefs = /* GraphQL */ `
 
     clusterMetrics: ClusterMetrics!
     recentAIEvents: [AIEvent!]!
+
+    argoCDApplications: [ArgoCDApplication!]!
+    recentGitHubRuns: [GitHubRun!]!
   }
 
   type Pod {
@@ -157,6 +160,28 @@ export const typeDefs = /* GraphQL */ `
   type Subscription {
     aiEventStream: AIEvent!
     clusterMetricsStream: ClusterMetrics!
+    argoCDAppsStream: [ArgoCDApplication!]!
+    githubRunsStream: [GitHubRun!]!
+  }
+
+  type ArgoCDApplication {
+    name: String!
+    namespace: String!
+    healthStatus: String!
+    syncStatus: String!
+    syncRevision: String!
+    repoURL: String!
+    path: String!
+  }
+
+  type GitHubRun {
+    runId: Int!
+    name: String!
+    repo: String!
+    repoDisplayName: String!
+    conclusion: String!
+    htmlUrl: String!
+    createdAt: String!
   }
 
   type AIEvent {
