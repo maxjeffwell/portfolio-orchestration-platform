@@ -191,16 +191,25 @@ See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed production deployment instr
 
 See [API.md](docs/API.md) for complete API documentation.
 
+## Production Deployment
+
+This platform runs on a **K3s cluster** alongside the portfolio applications it manages:
+
+- **Live Dashboard:** [el-jefe.me/cluster](https://el-jefe.me/cluster/)
+- **GitOps:** ArgoCD auto-syncs all 9 portfolio applications
+- **Ingress:** Traefik with Cloudflare DNS proxy and cert-manager TLS
+- **Monitoring:** Prometheus + Grafana + Mimir (90-day retention)
+
 ## Features Roadmap
 
 - [x] Basic Kubernetes pod management
 - [x] Real-time status monitoring
 - [x] Log aggregation and viewing
-- [ ] Resource metrics visualization
-- [ ] Automated deployment workflows
+- [x] Resource metrics visualization
+- [x] Automated deployment workflows (ArgoCD GitOps)
+- [x] Integration with CI/CD pipelines (GitHub Actions)
 - [ ] Multi-cluster support
 - [ ] Role-based access control
-- [ ] Integration with CI/CD pipelines
 - [ ] Custom resource definitions
 - [ ] Backup and disaster recovery
 
