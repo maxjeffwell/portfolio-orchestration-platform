@@ -6,6 +6,8 @@ let eventHandlers = [];
 
 /**
  * Start Kafka consumer for AI gateway events.
+ * Uses an ephemeral consumer group so each pod restart re-reads all
+ * retained events and populates the in-memory buffer.
  */
 export async function startConsumer() {
   if (isRunning) return;
@@ -14,7 +16,7 @@ export async function startConsumer() {
     ? process.env.KAFKA_BROKERS.split(',')
     : ['vertex-kafka-kafka-bootstrap.microservices.svc:9092'];
   const clientId = process.env.KAFKA_CLIENT_ID || 'graphql-gateway';
-  const groupId = process.env.KAFKA_GROUP_ID || 'graphql-gateway-group';
+  const groupId = `graphql-gateway-${Date.now()}`;
   const topic = process.env.KAFKA_AI_EVENTS_TOPIC || 'ai.gateway.events';
 
   const kafka = new Kafka({
@@ -31,7 +33,7 @@ export async function startConsumer() {
   });
 
   await consumer.connect();
-  await consumer.subscribe({ topic, fromBeginning: false });
+  await consumer.subscribe({ topic, fromBeginning: true });
 
   console.log('[Kafka] Consumer subscribed to', topic);
   isRunning = true;

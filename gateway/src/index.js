@@ -19,8 +19,8 @@ const kafkaEnabled = process.env.KAFKA_ENABLED !== 'false';
 let kafkaConnected = false;
 if (kafkaEnabled) {
   try {
-    await startConsumer();
     onAIEvent((event) => eventBuffer.add(event));
+    await startConsumer();
     kafkaConnected = true;
     console.log('[Kafka] Consumer started, buffering events');
   } catch (err) {
