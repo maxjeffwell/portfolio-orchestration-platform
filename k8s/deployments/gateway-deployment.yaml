@@ -28,11 +28,11 @@ spec:
           protocol: TCP
         resources:
           requests:
-            memory: "64Mi"
-            cpu: "25m"
+            memory: "128Mi"
+            cpu: "50m"
           limits:
-            memory: "256Mi"
-            cpu: "250m"
+            memory: "512Mi"
+            cpu: "500m"
         env:
         - name: PORT
           value: "4000"
@@ -42,6 +42,16 @@ spec:
           value: "https://el-jefe.me"
         - name: PROMETHEUS_URL
           value: "http://prometheus-kube-prometheus-prometheus.monitoring:9090"
+        - name: KAFKA_ENABLED
+          value: "true"
+        - name: KAFKA_BROKERS
+          value: "vertex-kafka-kafka-bootstrap.microservices.svc:9092"
+        - name: KAFKA_CLIENT_ID
+          value: "graphql-gateway"
+        - name: KAFKA_GROUP_ID
+          value: "graphql-gateway-group"
+        - name: KAFKA_AI_EVENTS_TOPIC
+          value: "ai.gateway.events"
         livenessProbe:
           httpGet:
             path: /health

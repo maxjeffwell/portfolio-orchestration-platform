@@ -17,6 +17,7 @@ export const typeDefs = /* GraphQL */ `
     namespaces: [Namespace!]!
 
     clusterMetrics: ClusterMetrics!
+    recentAIEvents: [AIEvent!]!
   }
 
   type Pod {
@@ -151,5 +152,28 @@ export const typeDefs = /* GraphQL */ `
     namespaceCount: Int!
     cpuUsageCores: Float
     memoryUsageBytes: Float
+  }
+
+  type Subscription {
+    aiEventStream: AIEvent!
+    clusterMetricsStream: ClusterMetrics!
+  }
+
+  type AIEvent {
+    eventId: String!
+    timestamp: Float!
+    endpoint: String!
+    app: String!
+    backend: String!
+    model: String
+    status: String!
+    latencyMs: Float!
+    usage: AIEventUsage!
+    fromCache: Boolean!
+  }
+
+  type AIEventUsage {
+    promptTokens: Int!
+    completionTokens: Int!
   }
 `;

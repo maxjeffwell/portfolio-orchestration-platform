@@ -1,7 +1,11 @@
 import { createServer } from 'node:http';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
 import { createYoga } from 'graphql-yoga';
 import { schema } from './schema/index.js';
 import k8sClient from './lib/k8sClient.js';
+import { startConsumer, stopConsumer, onAIEvent } from './kafka/consumer.js';
+import { eventBuffer } from './kafka/eventBuffer.js';
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
 const CORS_ORIGINS = (process.env.CORS_ORIGIN || 'http://localhost:8000')
@@ -10,6 +14,20 @@ const CORS_ORIGINS = (process.env.CORS_ORIGIN || 'http://localhost:8000')
 
 k8sClient.initialize();
 
+// Start Kafka consumer (graceful degradation)
+const kafkaEnabled = process.env.KAFKA_ENABLED !== 'false';
+let kafkaConnected = false;
+if (kafkaEnabled) {
+  try {
+    await startConsumer();
+    onAIEvent((event) => eventBuffer.add(event));
+    kafkaConnected = true;
+    console.log('[Kafka] Consumer started, buffering events');
+  } catch (err) {
+    console.warn('[Kafka] Consumer unavailable:', err.message);
+  }
+}
+
 const yoga = createYoga({
   schema,
   cors: {
@@ -17,31 +35,69 @@ const yoga = createYoga({
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
   },
-  graphiql: process.env.NODE_ENV !== 'production',
+  graphiql: {
+    subscriptionsProtocol: 'WS',
+  },
   landingPage: false,
 });
 
 const server = createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok' }));
+    res.end(JSON.stringify({
+      status: 'ok',
+      kafka: { enabled: kafkaEnabled, connected: kafkaConnected },
+    }));
     return;
   }
   yoga(req, res);
 });
 
+// WebSocket server for GraphQL subscriptions
+const wsServer = new WebSocketServer({ server, path: '/graphql' });
+
+useServer(
+  {
+    execute: (args) => args.rootValue.execute(args),
+    subscribe: (args) => args.rootValue.subscribe(args),
+    onSubscribe: async (ctx, msg) => {
+      const { schema, execute, subscribe, contextFactory, parse, validate } =
+        yoga.getEnveloped({
+          ...ctx,
+          req: ctx.extra.request,
+          socket: ctx.extra.socket,
+          params: msg.payload,
+        });
+
+      const args = {
+        schema,
+        operationName: msg.payload.operationName,
+        document: parse(msg.payload.query),
+        variableValues: msg.payload.variables,
+        contextValue: await contextFactory(),
+        rootValue: { execute, subscribe },
+      };
+
+      const errors = validate(args.schema, args.document);
+      if (errors.length) return errors;
+      return args;
+    },
+  },
+  wsServer,
+);
+
 server.listen(PORT, () => {
   console.log(`GraphQL Gateway running at http://localhost:${PORT}/graphql`);
+  console.log(`WebSocket subscriptions at ws://localhost:${PORT}/graphql`);
   console.log(`Health check at http://localhost:${PORT}/health`);
   console.log(`K8s context: ${k8sClient.getCurrentContext()}`);
 });
 
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down...');
+async function shutdown() {
+  console.log('Shutting down...');
+  await stopConsumer();
   server.close(() => process.exit(0));
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down...');
-  server.close(() => process.exit(0));
-});
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
