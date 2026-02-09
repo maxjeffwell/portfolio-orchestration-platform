@@ -155,6 +155,8 @@ export const typeDefs = /* GraphQL */ `
     namespaceCount: Int!
     cpuUsageCores: Float
     memoryUsageBytes: Float
+    totalCpuCores: Float
+    totalMemoryBytes: Float
   }
 
   type Mutation {

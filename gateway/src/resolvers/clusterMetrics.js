@@ -31,12 +31,14 @@ function queryPrometheus(query) {
 async function fetchClusterMetrics() {
   const api = k8sClient.getCoreV1Api();
 
-  const [nodesRes, podsRes, nsRes, cpuVal, memVal] = await Promise.all([
+  const [nodesRes, podsRes, nsRes, cpuVal, memVal, cpuTotalVal, memTotalVal] = await Promise.all([
     api.listNode(),
     api.listPodForAllNamespaces(),
     api.listNamespace(),
     queryPrometheus('sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))').catch(() => null),
     queryPrometheus('sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)').catch(() => null),
+    queryPrometheus('count(node_cpu_seconds_total{mode="idle"})').catch(() => null),
+    queryPrometheus('sum(node_memory_MemTotal_bytes)').catch(() => null),
   ]);
 
   const pods = podsRes.body.items;
@@ -50,6 +52,8 @@ async function fetchClusterMetrics() {
     namespaceCount: nsRes.body.items.length,
     cpuUsageCores: cpuVal !== null ? parseFloat(cpuVal) : null,
     memoryUsageBytes: memVal !== null ? parseFloat(memVal) : null,
+    totalCpuCores: cpuTotalVal !== null ? parseFloat(cpuTotalVal) : null,
+    totalMemoryBytes: memTotalVal !== null ? parseFloat(memTotalVal) : null,
   };
 }
 
