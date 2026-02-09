@@ -157,6 +157,21 @@ export const typeDefs = /* GraphQL */ `
     memoryUsageBytes: Float
   }
 
+  type Mutation {
+    submitContactForm(input: ContactFormInput!): ContactFormResult!
+  }
+
+  input ContactFormInput {
+    name: String!
+    email: String!
+    message: String!
+  }
+
+  type ContactFormResult {
+    success: Boolean!
+    message: String!
+  }
+
   type Subscription {
     aiEventStream: AIEvent!
     clusterMetricsStream: ClusterMetrics!

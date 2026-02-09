@@ -71,6 +71,13 @@ spec:
               key: github-token
         - name: GITHUB_OWNER
           value: "maxjeffwell"
+        - name: GOTIFY_URL
+          value: "http://gotify.monitoring.svc:80"
+        - name: GOTIFY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: gateway-credentials
+              key: gotify-token
         livenessProbe:
           httpGet:
             path: /health

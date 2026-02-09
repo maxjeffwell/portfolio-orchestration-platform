@@ -7,6 +7,7 @@ import { clusterMetricsResolvers } from './clusterMetrics.js';
 import { aiEventResolvers } from './aiEvents.js';
 import { argocdResolvers } from './argocdApps.js';
 import { githubResolvers } from './githubRuns.js';
+import { contactFormResolvers } from './contactForm.js';
 
 export const resolvers = {
   Query: {
@@ -19,6 +20,9 @@ export const resolvers = {
     ...aiEventResolvers.Query,
     ...argocdResolvers.Query,
     ...githubResolvers.Query,
+  },
+  Mutation: {
+    ...contactFormResolvers.Mutation,
   },
   Subscription: {
     ...clusterMetricsResolvers.Subscription,
