@@ -4,6 +4,7 @@ import logger from '../utils/logger.js';
 const GOTIFY_URL = process.env.GOTIFY_URL || 'http://gotify.monitoring:80';
 const GOTIFY_APP_TOKEN = process.env.GOTIFY_APP_TOKEN;
 const GOTIFY_CLIENT_TOKEN = process.env.GOTIFY_CLIENT_TOKEN;
+const GOTIFY_KEEL_APP_ID = process.env.GOTIFY_KEEL_APP_ID;
 
 class GotifyService {
   constructor() {
@@ -62,7 +63,11 @@ class GotifyService {
         throw new Error('GOTIFY_CLIENT_TOKEN is not configured');
       }
 
-      const response = await this.client.get('/message', {
+      const endpoint = GOTIFY_KEEL_APP_ID
+        ? `/application/${GOTIFY_KEEL_APP_ID}/message`
+        : '/message';
+
+      const response = await this.client.get(endpoint, {
         params: { limit },
         headers: {
           'X-Gotify-Key': GOTIFY_CLIENT_TOKEN,

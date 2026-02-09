@@ -64,6 +64,8 @@ spec:
           value: "http://prometheus-kube-prometheus-prometheus.monitoring:9090"
         - name: GOTIFY_URL
           value: "http://gotify.monitoring:80"
+        - name: GOTIFY_KEEL_APP_ID
+          value: "1"
         - name: GOTIFY_APP_TOKEN
           valueFrom:
             secretKeyRef:
