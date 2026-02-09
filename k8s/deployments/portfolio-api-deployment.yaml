@@ -20,7 +20,7 @@ spec:
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
-        image: maxjeffwell/portfolio-api:20260206-042659-577fd25
+        image: maxjeffwell/portfolio-api:20260209-033717-f7955d8
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
