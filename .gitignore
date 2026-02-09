@@ -64,6 +64,9 @@ pids
 # ArtiForge
 .artiforge/
 
+# Serena
+.serena/
+
 # Claude Code
 .claude/
 
