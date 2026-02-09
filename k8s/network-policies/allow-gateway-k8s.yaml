@@ -6,7 +6,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app: graphql-gateway
+      app: gateway-server
   policyTypes:
   - Egress
   egress:
