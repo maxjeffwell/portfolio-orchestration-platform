@@ -14,18 +14,15 @@ const CORS_ORIGINS = (process.env.CORS_ORIGIN || 'http://localhost:8000')
 
 k8sClient.initialize();
 
-// Start Kafka consumer (graceful degradation)
+// Start Kafka consumer in background — retries indefinitely until connected
 const kafkaEnabled = process.env.KAFKA_ENABLED !== 'false';
 let kafkaConnected = false;
 if (kafkaEnabled) {
-  try {
-    onAIEvent((event) => eventBuffer.add(event));
-    await startConsumer();
+  onAIEvent((event) => eventBuffer.add(event));
+  startConsumer().then(() => {
     kafkaConnected = true;
     console.log('[Kafka] Consumer started, buffering events');
-  } catch (err) {
-    console.warn('[Kafka] Consumer unavailable:', err.message);
-  }
+  });
 }
 
 const yoga = createYoga({
