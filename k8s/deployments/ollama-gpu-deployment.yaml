@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-gpu
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-gpu
+  template:
+    metadata:
+      labels:
+        app: ollama-gpu
+    spec:
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: gpu
+          effect: NoSchedule
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          imagePullPolicy: Always
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: GPU-8060da56-7daf-3ffb-07ad-102325b750f5
+            - name: OLLAMA_HOST
+              value: 0.0.0.0:11434
+          ports:
+            - containerPort: 11434
+              hostPort: 11434
+              name: http
+              protocol: TCP
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-data
+          hostPath:
+            path: /home/maxjeffwell/.ollama
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-gpu
+  namespace: default
+spec:
+  selector:
+    app: ollama-gpu
+  ports:
+    - name: http
+      port: 11434
+      targetPort: 11434
