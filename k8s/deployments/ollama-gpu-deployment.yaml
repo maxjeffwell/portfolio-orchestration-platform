@@ -29,6 +29,8 @@ spec:
               value: GPU-8060da56-7daf-3ffb-07ad-102325b750f5
             - name: OLLAMA_HOST
               value: 0.0.0.0:11434
+            - name: OLLAMA_MAX_LOADED_MODELS
+              value: "1"
           ports:
             - containerPort: 11434
               hostPort: 11434
