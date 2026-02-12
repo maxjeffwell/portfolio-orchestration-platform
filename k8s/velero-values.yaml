@@ -1,0 +1,38 @@
+configuration:
+  backupStorageLocation:
+    - name: default
+      provider: aws
+      bucket: Marmoset
+      prefix: velero
+      config:
+        region: us-east-005
+        s3ForcePathStyle: true
+        s3Url: https://s3.us-east-005.backblazeb2.com
+  defaultVolumesToFsBackup: true
+  volumeSnapshotLocation:
+    - name: default
+      provider: aws
+      config:
+        region: us-east-005
+  repositoryMaintenanceJob:
+    repositoryConfigData:
+      global:
+        keepLatestMaintenanceJobs: 1
+
+credentials:
+  existingSecret: cloud-credentials
+
+initContainers:
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.8.0
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+deployNodeAgent: true
+nodeAgent:
+  podVolumePath: /var/lib/kubelet/pods
+
+snapshotsEnabled: false
+
+upgradeCRDs: false
