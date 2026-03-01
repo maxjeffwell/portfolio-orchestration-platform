@@ -1,0 +1,16 @@
+# ArgoCD node placement override
+# ArgoCD was installed via manifests (not Helm).
+# After reinstalling, apply this patch to move all components to the data node:
+#
+#   PATCH='{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"vmi3115606"}}}}}'
+#   kubectl patch statefulset argocd-application-controller -n argocd --type=merge -p "$PATCH"
+#   for d in argocd-applicationset-controller argocd-dex-server argocd-notifications-controller \
+#            argocd-redis argocd-repo-server argocd-server; do
+#     kubectl patch deployment $d -n argocd --type=merge -p "$PATCH"
+#   done
+#
+# If migrating to Helm install (argo/argo-cd), use these values:
+
+global:
+  nodeSelector:
+    kubernetes.io/hostname: vmi3115606

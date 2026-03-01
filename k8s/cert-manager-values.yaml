@@ -1,0 +1,21 @@
+# cert-manager node placement override
+# cert-manager v1.13.3 was installed via manifests (not Helm).
+# After reinstalling, apply this patch to move all components to the data node:
+#
+#   PATCH='{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"vmi3115606"}}}}}'
+#   for d in cert-manager cert-manager-cainjector cert-manager-webhook; do
+#     kubectl patch deployment $d -n cert-manager --type=merge -p "$PATCH"
+#   done
+#
+# If migrating to Helm install (jetstack/cert-manager), use these values:
+
+nodeSelector:
+  kubernetes.io/hostname: vmi3115606
+
+cainjector:
+  nodeSelector:
+    kubernetes.io/hostname: vmi3115606
+
+webhook:
+  nodeSelector:
+    kubernetes.io/hostname: vmi3115606
