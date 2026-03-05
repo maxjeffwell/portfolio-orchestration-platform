@@ -1,10 +1,11 @@
 # CoreDNS Optimized Configuration
 # Applies to: kube-system namespace
-# Purpose: Improve DNS performance with caching and prefetching
+# Purpose: Improve DNS performance with caching, prefetching, and fast upstreams
 #
 # Changes from default:
-# - cache 30 -> cache 300 (5 min TTL)
-# - Added prefetch for popular names
+# - cache 30 -> cache 300 (5 min TTL) with prefetch
+# - forward to Cloudflare/Google instead of Contabo resolvers (76ms avg -> 5ms)
+# - Replicas: 2 (one per server node) - managed via deployment scale
 #
 # Apply with: kubectl apply -f coredns-config.yaml
 # Then restart: kubectl rollout restart deployment coredns -n kube-system
@@ -41,7 +42,9 @@ data:
         reload
         loadbalance
         import /etc/coredns/custom/*.override
-        forward . /etc/resolv.conf
+        forward . 1.1.1.1 8.8.8.8 {
+          policy sequential
+        }
     }
     import /etc/coredns/custom/*.server
   NodeHosts: |
