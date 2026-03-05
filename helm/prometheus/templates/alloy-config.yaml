@@ -1,0 +1,120 @@
+{{- if .Values.alloy.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy-config
+  namespace: {{ .Release.Namespace }}
+data:
+  config.alloy: |
+    // Discover all Kubernetes pods
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    // Relabel to extract useful metadata
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      // Keep only running pods
+      rule {
+        source_labels = ["__meta_kubernetes_pod_phase"]
+        regex         = "Pending|Succeeded|Failed|Unknown"
+        action        = "drop"
+      }
+
+      // Set namespace label
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+
+      // Set pod label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+
+      // Set container label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+
+      // Set app label from pod label app or app.kubernetes.io/name
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "app"
+        regex         = "(.+)"
+      }
+
+      // Set node label
+      rule {
+        source_labels = ["__meta_kubernetes_pod_node_name"]
+        target_label  = "node"
+      }
+    }
+
+    // Collect logs from Kubernetes pods
+    loki.source.kubernetes "pod_logs" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.write.default.receiver]
+    }
+
+    // Push logs to Loki
+    loki.write "default" {
+      endpoint {
+        url = "http://prometheus-loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+      }
+    }
+
+    // --- Traefik Access Log Collection ---
+    local.file_match "traefik_access_log" {
+      path_targets = [{ "__path__" = "/var/log/traefik/access.log" }]
+      sync_period  = "5s"
+    }
+
+    loki.source.file "traefik_access_log" {
+      targets    = local.file_match.traefik_access_log.targets
+      forward_to = [loki.process.traefik.receiver]
+    }
+
+    loki.process "traefik" {
+      // Parse Traefik common log format:
+      // <ip> - - [<ts>] "<method> <path> <proto>" <status> <size> "<referer>" "<ua>" <count> "<router>" "<backend>" <duration>
+      stage.regex {
+        expression = "^(?P<client_ip>[\\d.]+) - - \\[(?P<timestamp>[^\\]]+)\\] \"(?P<method>\\S+) (?P<path>\\S+) [^\"]+\" (?P<status>\\d+) \\d+ \"(?P<referer>[^\"]*)\" \"(?P<user_agent>[^\"]*)\" \\d+ \"(?P<router>[^\"]*)\" \"[^\"]*\" (?P<duration>\\S+)"
+      }
+
+      // GeoIP enrichment from MaxMind database
+      stage.geoip {
+        db      = "/usr/share/GeoIP/GeoLite2-City.mmdb"
+        source  = "client_ip"
+        db_type = "city"
+      }
+
+      // Promote to labels for Grafana queries
+      stage.labels {
+        values = {
+          status     = "",
+          method     = "",
+          path       = "",
+          referer    = "",
+          user_agent = "",
+          router     = "",
+          geoip_country_name = "",
+          geoip_city_name    = "",
+        }
+      }
+
+      // Static label to identify these as traefik access logs
+      stage.static_labels {
+        values = { job = "traefik-access-log", source = "traefik" }
+      }
+
+      forward_to = [loki.write.default.receiver]
+    }
+{{- end }}

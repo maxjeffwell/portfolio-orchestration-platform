@@ -1,8 +1,17 @@
-# Prometheus monitoring stack values
-# Managed by ArgoCD - do not modify directly in cluster
+# Monitoring stack values
+# Umbrella chart: kube-prometheus-stack + Loki + Mimir + MinIO + Alloy
+#
+# Deployed as Helm release "prometheus" in the monitoring namespace.
+# NOT managed by ArgoCD — apply manually:
+#   cd helm/prometheus && helm dependency update
+#   helm upgrade prometheus . -n monitoring -f values.yaml
+#
+# Mimir is intentionally scaled to 0 replicas (death spiral under resource
+# pressure). Re-enable by setting replicas back to 1 per component.
+
+# ─── kube-prometheus-stack ───────────────────────────────────────────────────
 
 kube-prometheus-stack:
-  # Prometheus configuration
   prometheus:
     prometheusSpec:
       retention: 15d
@@ -15,7 +24,7 @@ kube-prometheus-stack:
           memory: 512Mi
         limits:
           cpu: 1000m
-          memory: 2Gi
+          memory: 4Gi
       storageSpec:
         volumeClaimTemplate:
           spec:
@@ -25,21 +34,19 @@ kube-prometheus-stack:
             resources:
               requests:
                 storage: 50Gi
-      # Enable all ServiceMonitors and PodMonitors
       serviceMonitorSelectorNilUsesHelmValues: false
       podMonitorSelectorNilUsesHelmValues: false
+      remoteWrite:
+        - name: mimir
+          url: http://prometheus-mimir-gateway.monitoring.svc.cluster.local/api/v1/push
+          remoteTimeout: 30s
+          writeRelabelConfigs:
+            - sourceLabels: [__name__]
+              regex: "apiserver_request_duration_seconds_bucket|apiserver_request_body_size_bytes_bucket|apiserver_response_body_size_bytes_bucket|apiserver_watch_events_sizes_bucket"
+              action: drop
     ingress:
-      enabled: true
-      ingressClassName: nginx
-      pathType: ImplementationSpecific
-      paths:
-        - /prometheus(/|$)(.*)
-      hosts:
-        - ""
-      annotations:
-        nginx.ingress.kubernetes.io/rewrite-target: /$2
+      enabled: false
 
-  # Alertmanager configuration
   alertmanager:
     enabled: true
     alertmanagerSpec:
@@ -66,29 +73,27 @@ kube-prometheus-stack:
             - severity = critical
           target_matchers:
             - severity =~ warning|info
-          equal:
-            - namespace
-            - alertname
+          equal: [namespace, alertname]
         - source_matchers:
             - severity = warning
           target_matchers:
             - severity = info
-          equal:
-            - namespace
-            - alertname
+          equal: [namespace, alertname]
         - source_matchers:
             - alertname = InfoInhibitor
           target_matchers:
             - severity = info
-          equal:
-            - namespace
+          equal: [namespace]
         - target_matchers:
             - alertname = InfoInhibitor
       receivers:
         - name: "null"
+        - name: gotify
+          webhook_configs:
+            - url: http://alertmanager-gotify-bridge.monitoring.svc.cluster.local:8080/gotify_webhook
+              send_resolved: true
       route:
-        group_by:
-          - namespace
+        group_by: [namespace]
         group_wait: 30s
         group_interval: 5m
         repeat_interval: 12h
@@ -104,21 +109,18 @@ kube-prometheus-stack:
           - matchers:
               - alertname =~ "KubeControllerManagerDown|KubeSchedulerDown|KubeProxyDown"
             receiver: "null"
+          - matchers:
+              - severity = "critical"
+            receiver: gotify
+          - matchers:
+              - severity = "warning"
+            receiver: gotify
     ingress:
-      enabled: true
-      ingressClassName: nginx
-      pathType: ImplementationSpecific
-      paths:
-        - /alertmanager(/|$)(.*)
-      hosts:
-        - ""
-      annotations:
-        nginx.ingress.kubernetes.io/rewrite-target: /$2
+      enabled: false
 
-  # Grafana configuration
   grafana:
     enabled: true
-    # Use existing secret from ExternalSecret (prometheus-grafana-external-secret.yaml)
+    # Credentials from Doppler via ExternalSecret (prometheus-grafana-external-secret.yaml)
     admin:
       existingSecret: prometheus-grafana
       userKey: admin-user
@@ -132,27 +134,31 @@ kube-prometheus-stack:
         memory: 512Mi
     grafana.ini:
       server:
-        root_url: http://86.48.29.183/grafana
-        serve_from_sub_path: true
+        domain: grafana.el-jefe.me
+        root_url: https://grafana.el-jefe.me/
+        serve_from_sub_path: false
     defaultDashboardsEnabled: true
     defaultDashboardsTimezone: UTC
-    # Let kube-prometheus-stack manage datasources via sidecar
     sidecar:
       datasources:
         enabled: true
         defaultDatasourceEnabled: false
-    additionalDataSources: []
+    additionalDataSources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://prometheus-loki.monitoring.svc.cluster.local:3100
+        uid: loki
+        editable: true
+      - name: Mimir
+        type: prometheus
+        access: proxy
+        url: http://prometheus-mimir-gateway.monitoring.svc.cluster.local/prometheus
+        uid: mimir
+        editable: true
     ingress:
-      enabled: true
-      ingressClassName: nginx
-      pathType: ImplementationSpecific
-      path: /grafana(/|$)(.*)
-      hosts:
-        - ""
-      annotations:
-        nginx.ingress.kubernetes.io/rewrite-target: /$2
+      enabled: false
 
-  # Prometheus Operator
   prometheusOperator:
     enabled: true
     resources:
@@ -163,13 +169,13 @@ kube-prometheus-stack:
         cpu: 200m
         memory: 256Mi
 
-  # Enable node exporter and kube-state-metrics
   nodeExporter:
     enabled: true
   kubeStateMetrics:
     enabled: true
 
-# Custom ingress for Traefik (in addition to nginx ingresses above)
+# ─── Traefik ingress (custom template) ──────────────────────────────────────
+
 ingress:
   enabled: true
   prometheusHost: prometheus.el-jefe.me
@@ -178,3 +184,379 @@ ingress:
   grafanaHost: grafana.el-jefe.me
   grafanaService: prometheus-grafana
   grafanaPort: 80
+
+# ─── Gotify alert bridge (custom template) ──────────────────────────────────
+
+gotifyBridge:
+  enabled: true
+  image:
+    repository: ghcr.io/druggeri/alertmanager_gotify_bridge
+    tag: 2.3.2
+  gotifyEndpoint: http://gotify.monitoring.svc.cluster.local
+  defaultPriority: "5"
+  tokenSecret:
+    name: gotify-alertmanager-token
+    key: gotify-token
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+  serviceMonitor:
+    enabled: true
+
+# ─── MinIO (S3 backend for Loki + Mimir) ────────────────────────────────────
+
+minio:
+  enabled: true
+  mode: standalone
+  replicas: 1
+  existingSecret: minio-credentials
+  nodeSelector:
+    kubernetes.io/hostname: vmi2951245
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: local-path
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  buckets:
+    - name: loki-chunks
+      policy: none
+      purge: false
+    - name: loki-ruler
+      policy: none
+      purge: false
+    - name: mimir-blocks
+      policy: none
+      purge: false
+    - name: mimir-ruler
+      policy: none
+      purge: false
+    - name: mimir-alertmanager
+      policy: none
+      purge: false
+  metrics:
+    serviceMonitor:
+      enabled: true
+
+# ─── Loki (single binary mode) ──────────────────────────────────────────────
+
+loki:
+  enabled: true
+  deploymentMode: SingleBinary
+  singleBinary:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    persistence:
+      size: 5Gi
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    extraArgs:
+      - -config.expand-env=true
+    extraEnvFrom:
+      - secretRef:
+          name: minio-credentials
+  # Disable multi-component modes (using SingleBinary)
+  read:
+    replicas: 0
+  write:
+    replicas: 0
+  backend:
+    replicas: 0
+  gateway:
+    enabled: false
+  loki:
+    auth_enabled: false
+    commonConfig:
+      replication_factor: 1
+    schemaConfig:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: s3
+          schema: v13
+          index:
+            prefix: loki_index_
+            period: 24h
+    storage:
+      type: s3
+      bucketNames:
+        chunks: loki-chunks
+        ruler: loki-ruler
+      s3:
+        endpoint: http://prometheus-minio.monitoring.svc.cluster.local:9000
+        region: us-east-1
+        s3forcepathstyle: true
+        insecure: true
+        bucketnames: loki-chunks
+        access_key_id: ${rootUser}
+        secret_access_key: ${rootPassword}
+    limits_config:
+      retention_period: 360h
+    compactor:
+      working_directory: /var/loki/compactor
+      delete_request_store: filesystem
+      retention_enabled: true
+    rulerConfig:
+      storage:
+        type: s3
+        s3:
+          endpoint: http://prometheus-minio.monitoring.svc.cluster.local:9000
+          region: us-east-1
+          s3forcepathstyle: true
+          insecure: true
+          bucketnames: loki-ruler
+          access_key_id: ${MINIO_ROOT_USER}
+          secret_access_key: ${MINIO_ROOT_PASSWORD}
+  chunksCache:
+    allocatedMemory: 256
+    resources:
+      requests:
+        cpu: 50m
+        memory: 384Mi
+      limits:
+        cpu: 200m
+        memory: 512Mi
+  resultsCache:
+    allocatedMemory: 128
+    resources:
+      requests:
+        cpu: 50m
+        memory: 192Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  monitoring:
+    lokiCanary:
+      enabled: false
+    selfMonitoring:
+      enabled: false
+      grafanaAgent:
+        installOperator: false
+
+# ─── Alloy (log collection agent) ───────────────────────────────────────────
+
+alloy:
+  enabled: true
+  controller:
+    type: daemonset
+    volumes:
+      extra:
+        - name: geoip-db
+          hostPath:
+            path: /usr/share/GeoIP
+            type: Directory
+  alloy:
+    configMap:
+      create: false
+      name: alloy-config
+      key: config.alloy
+    mounts:
+      varlog: true
+      dockercontainers: true
+      extra:
+        - name: geoip-db
+          mountPath: /usr/share/GeoIP
+          readOnly: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ─── Mimir (long-term metrics storage) ──────────────────────────────────────
+
+mimir-distributed:
+  enabled: true
+  minio:
+    enabled: false  # Uses shared MinIO above
+  rollout_operator:
+    enabled: false
+  global:
+    extraEnvFrom:
+      - secretRef:
+          name: minio-credentials
+  mimir:
+    structuredConfig:
+      common:
+        storage:
+          backend: s3
+          s3:
+            endpoint: prometheus-minio.monitoring.svc.cluster.local:9000
+            insecure: true
+            access_key_id: ${rootUser}
+            secret_access_key: ${rootPassword}
+      blocks_storage:
+        s3:
+          bucket_name: mimir-blocks
+        tsdb:
+          dir: /data/tsdb
+        bucket_store:
+          sync_dir: /data/tsdb-sync
+      ruler_storage:
+        s3:
+          bucket_name: mimir-ruler
+      alertmanager_storage:
+        s3:
+          bucket_name: mimir-alertmanager
+      compactor:
+        data_dir: /data/compactor
+        compaction_interval: 30m
+      ingester:
+        ring:
+          replication_factor: 1
+      store_gateway:
+        sharding_ring:
+          replication_factor: 1
+      alertmanager:
+        sharding_ring:
+          replication_factor: 1
+      limits:
+        ingestion_rate: 100000
+        ingestion_burst_size: 2000000
+        max_global_series_per_user: 500000
+        compactor_blocks_retention_period: 2160h
+  distributor:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 2Gi
+  ingester:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    persistentVolume:
+      size: 10Gi
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+    zoneAwareReplication:
+      enabled: false
+  querier:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  query_frontend:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+  query_scheduler:
+    replicas: 0
+  compactor:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    persistentVolume:
+      size: 10Gi
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  store_gateway:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    persistentVolume:
+      size: 10Gi
+      storageClass: local-path
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    zoneAwareReplication:
+      enabled: false
+  ruler:
+    replicas: 0
+  alertmanager:
+    replicas: 0
+  overrides_exporter:
+    replicas: 1
+  kafka:
+    replicas: 1
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
+    resources:
+      requests:
+        cpu: 200m
+        memory: 384Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    podAnnotations:
+      backup.velero.io/backup-volumes-excludes: kafka-data
+    extraEnv:
+      - name: KAFKA_MESSAGE_MAX_BYTES
+        value: "16777216"
+      - name: KAFKA_REPLICA_FETCH_MAX_BYTES
+        value: "16777216"
+
+# ─── Velero backup schedules (custom templates) ─────────────────────────────
+
+veleroSchedules:
+  enabled: true
+  namespace: velero
+  excludedNamespaces:
+    - gpu-operator
+  daily:
+    schedule: "0 2 * * *"
+    ttl: 168h0m0s
+  weekly:
+    schedule: "0 3 * * 0"
+    ttl: 720h0m0s
+
+veleroAlerts:
+  enabled: true
+  namespace: velero
+
+veleroBackupVerify:
+  enabled: true
+  schedule: "0 4 * * 0"
