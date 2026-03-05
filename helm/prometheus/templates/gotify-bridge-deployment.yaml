@@ -48,10 +48,12 @@ spec:
             port: http
           initialDelaySeconds: 5
           periodSeconds: 30
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /metrics
             port: http
           initialDelaySeconds: 3
           periodSeconds: 10
+          timeoutSeconds: 5
 {{- end }}
