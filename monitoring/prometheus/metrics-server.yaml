@@ -147,6 +147,7 @@ spec:
             port: https
             scheme: HTTPS
           periodSeconds: 10
+          timeoutSeconds: 5
         name: metrics-server
         ports:
         - containerPort: 10250
@@ -160,6 +161,7 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 20
           periodSeconds: 10
+          timeoutSeconds: 5
         resources:
           requests:
             cpu: 100m
