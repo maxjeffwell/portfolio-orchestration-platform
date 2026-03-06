@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triton-embeddings
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: triton-embeddings
+  template:
+    metadata:
+      labels:
+        app: triton-embeddings
+        component: inference
+        portfolio: "true"
+    spec:
+      containers:
+        - name: embeddings
+          image: maxjeffwell/triton-embeddings-cpu:latest
+          ports:
+            - containerPort: 8000
+            - containerPort: 8001
+            - containerPort: 8002
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: 500m
+              memory: 2Gi
+          volumeMounts:
+            - name: models
+              mountPath: /models
+              readOnly: true
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: triton-models-pvc
