@@ -130,10 +130,11 @@ spec:
       labels:
         k8s-app: metrics-server
     spec:
+      hostNetwork: true
       containers:
       - args:
         - --cert-dir=/tmp
-        - --secure-port=10250
+        - --secure-port=4443
         - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
         - --kubelet-use-node-status-port
         - --metric-resolution=30s
@@ -151,7 +152,7 @@ spec:
           timeoutSeconds: 5
         name: metrics-server
         ports:
-        - containerPort: 10250
+        - containerPort: 4443
           name: https
           protocol: TCP
         readinessProbe:
@@ -182,6 +183,7 @@ spec:
           name: tmp-dir
       nodeSelector:
         kubernetes.io/os: linux
+        kubernetes.io/hostname: vmi2951245
       priorityClassName: system-cluster-critical
       serviceAccountName: metrics-server
       volumes:
