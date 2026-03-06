@@ -1,0 +1,25 @@
+# CoreDNS Custom Overrides
+# Applies to: kube-system namespace
+# Purpose: K3s imports files from this ConfigMap into the main Corefile
+#          via `import /etc/coredns/custom/*.override`
+#
+# disable-ipv6.override:
+#   Strips AAAA (IPv6) records from external DNS responses.
+#   Flannel VXLAN overlay is IPv4-only, so pods can't reach IPv6 addresses.
+#   Without this, Go's Happy Eyeballs tries IPv6 first, hangs until timeout,
+#   then falls back to IPv4 — causing "context deadline exceeded" errors
+#   in external-secrets operator (Doppler API calls).
+#
+# Apply with: kubectl apply -f coredns-custom.yaml
+# Then restart: kubectl rollout restart deployment coredns -n kube-system
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  disable-ipv6.override: |
+    template IN AAAA . {
+      rcode NOERROR
+    }
