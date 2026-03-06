@@ -101,8 +101,8 @@ spec:
               - --eval
               - "db.adminCommand('ping')"
           initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 10
       volumes:
       - name: mongodb-storage
         persistentVolumeClaim:
