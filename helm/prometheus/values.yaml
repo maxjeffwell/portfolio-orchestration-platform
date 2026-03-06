@@ -275,8 +275,6 @@ loki:
     extraEnvFrom:
       - secretRef:
           name: minio-credentials
-    readinessProbe:
-      timeoutSeconds: 5
   # Disable multi-component modes (using SingleBinary)
   read:
     replicas: 0
@@ -379,8 +377,6 @@ alloy:
         - name: geoip-db
           mountPath: /usr/share/GeoIP
           readOnly: true
-  readinessProbe:
-    timeoutSeconds: 5
   resources:
     requests:
       cpu: 50m

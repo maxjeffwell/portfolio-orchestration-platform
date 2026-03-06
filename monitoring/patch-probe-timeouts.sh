@@ -50,7 +50,9 @@ for deploy in prometheus-mimir-distributor prometheus-mimir-query-frontend prome
   patch_probe deployment monitoring "$deploy" "$container" readinessProbe
 done
 
+patch_probe deployment monitoring prometheus-mimir-overrides-exporter overrides-exporter livenessProbe
 patch_probe deployment monitoring prometheus-mimir-querier querier readinessProbe
+patch_probe deployment monitoring prometheus-mimir-gateway gateway readinessProbe
 
 for sts in prometheus-mimir-ingester prometheus-mimir-store-gateway prometheus-mimir-compactor; do
   container="${sts#prometheus-mimir-}"
@@ -70,6 +72,19 @@ patch_probe deployment monitoring prometheus-kube-state-metrics kube-state-metri
 patch_probe daemonset monitoring prometheus-prometheus-node-exporter node-exporter livenessProbe
 patch_probe daemonset monitoring prometheus-prometheus-node-exporter node-exporter readinessProbe
 
+# Alloy (DaemonSet) — chart doesn't expose probe config via values
+patch_probe daemonset monitoring prometheus-alloy alloy readinessProbe
+
+# Loki (StatefulSet) — chart doesn't expose probe config via values
+patch_probe statefulset monitoring prometheus-loki loki readinessProbe
+
+# Blackbox exporter
+patch_probe deployment monitoring blackbox-exporter blackbox-exporter livenessProbe
+patch_probe deployment monitoring blackbox-exporter blackbox-exporter readinessProbe
+
+# Loki canary (DaemonSet)
+patch_probe daemonset monitoring loki-canary loki-canary readinessProbe
+
 # ─── ArgoCD namespace ──────────────────────────────────────────────────────
 
 echo ""
@@ -86,6 +101,37 @@ echo "=== kube-system namespace ==="
 
 patch_probe deployment kube-system coredns coredns livenessProbe
 patch_probe deployment kube-system coredns coredns readinessProbe
+
+# ─── cert-manager namespace ──────────────────────────────────────────────────
+
+echo ""
+echo "=== cert-manager namespace ==="
+
+patch_probe deployment cert-manager cert-manager-webhook cert-manager-webhook livenessProbe
+patch_probe deployment cert-manager cert-manager-webhook cert-manager-webhook readinessProbe
+
+# ─── external-secrets namespace ──────────────────────────────────────────────
+
+echo ""
+echo "=== external-secrets namespace ==="
+
+patch_probe deployment external-secrets external-secrets-webhook webhook readinessProbe
+patch_probe deployment external-secrets external-secrets-cert-controller cert-controller readinessProbe
+
+# ─── microservices namespace ─────────────────────────────────────────────────
+
+echo ""
+echo "=== microservices namespace ==="
+
+patch_probe deployment microservices strimzi-cluster-operator strimzi-cluster-operator livenessProbe
+patch_probe deployment microservices strimzi-cluster-operator strimzi-cluster-operator readinessProbe
+
+# ─── gpu-operator namespace ──────────────────────────────────────────────────
+
+echo ""
+echo "=== gpu-operator namespace ==="
+
+patch_probe deployment gpu-operator gpu-operator-node-feature-discovery-master master startupProbe
 
 # ─── Summary ───────────────────────────────────────────────────────────────
 
