@@ -23,22 +23,10 @@ spec:
         - name: triton
           image: nvcr.io/nvidia/tritonserver:24.01-py3
           imagePullPolicy: IfNotPresent
-          env:
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-secrets
-                  key: redis-password
           args:
             - tritonserver
             - --model-repository=/models
             - --allow-gpu-metrics=false
-            - --cache-config
-            - redis,host=redis.default.svc.cluster.local
-            - --cache-config
-            - redis,port=6379
-            - --cache-config
-            - redis,password=$(REDIS_PASSWORD)
             - --model-control-mode=explicit
             - --load-model=interval_ai
           ports:
