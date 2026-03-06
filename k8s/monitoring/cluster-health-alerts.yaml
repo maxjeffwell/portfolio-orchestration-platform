@@ -1,0 +1,134 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cluster-health-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    app.kubernetes.io/instance: prometheus
+    app.kubernetes.io/part-of: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+    - name: pod-restarts
+      rules:
+        - alert: PodRestartingFrequently
+          expr: |
+            increase(kube_pod_container_status_restarts_total[1h]) > 3
+          for: 0m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is restarting frequently"
+            description: "Container {{ $labels.container }} has restarted {{ $value | humanize }} times in the last hour."
+            runbook: "Check pod logs: kubectl logs {{ $labels.pod }} -n {{ $labels.namespace }} --previous"
+
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+            description: "Container {{ $labels.container }} is restarting more than 5 times per 15 minutes."
+
+    - name: node-health
+      rules:
+        - alert: NodeNotReady
+          expr: |
+            kube_node_status_condition{condition="Ready", status="true"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.node }} is NotReady"
+            description: "Node has been NotReady for more than 3 minutes. Check kubelet and network connectivity."
+            runbook: "SSH to the node and check: systemctl status k3s / k3s-agent"
+
+        - alert: NodeMemoryPressure
+          expr: |
+            kube_node_status_condition{condition="MemoryPressure", status="true"} == 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} has memory pressure"
+            description: "Node is under memory pressure. Pods may be evicted."
+
+        - alert: NodeDiskPressure
+          expr: |
+            kube_node_status_condition{condition="DiskPressure", status="true"} == 1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} has disk pressure"
+            description: "Node is under disk pressure. Check disk usage and clean up images."
+
+        - alert: NodeHighMemoryUsage
+          expr: |
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} memory usage above 85%"
+            description: "Memory usage is {{ $value | humanizePercentage }}. Consider draining workloads or adding swap."
+
+        - alert: NodeHighCPU
+          expr: |
+            100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} CPU usage above 85%"
+            description: "CPU usage is {{ $value | humanize }}% for more than 15 minutes."
+
+    - name: api-server-health
+      rules:
+        - alert: APIServerHighLatency
+          expr: |
+            histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!="WATCH"}[5m])) by (le, verb)) > 3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "API server p99 latency is high for {{ $labels.verb }} requests"
+            description: "99th percentile latency is {{ $value | humanizeDuration }}. Cross-node WireGuard latency or API server contention may be the cause."
+
+        - alert: APIServerErrorRateHigh
+          expr: |
+            sum(rate(apiserver_request_total{code=~"5.."}[5m]))
+            /
+            sum(rate(apiserver_request_total[5m]))
+            > 0.03
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "API server error rate above 3%"
+            description: "{{ $value | humanizePercentage }} of API server requests are returning 5xx errors."
+
+    - name: portfolio-apps
+      rules:
+        - alert: PortfolioAppDown
+          expr: |
+            kube_deployment_status_available_replicas{namespace="default", deployment=~".*-server|.*-client|graphql-gateway.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Portfolio app {{ $labels.deployment }} has 0 available replicas"
+            description: "No pods are running for {{ $labels.deployment }}. The application is completely unavailable."
+
+        - alert: PortfolioPodPending
+          expr: |
+            kube_pod_status_phase{namespace="default", phase="Pending"} == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} has been Pending for 10+ minutes"
+            description: "Check for resource constraints, node affinity issues, or missing PVCs."
