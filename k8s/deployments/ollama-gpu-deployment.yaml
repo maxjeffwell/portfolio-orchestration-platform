@@ -39,7 +39,12 @@ spec:
               name: http
               protocol: TCP
           resources:
+            requests:
+              cpu: "100m"
+              memory: "1Gi"
             limits:
+              cpu: "4"
+              memory: "8Gi"
               nvidia.com/gpu: "1"
           volumeMounts:
             - name: ollama-data
