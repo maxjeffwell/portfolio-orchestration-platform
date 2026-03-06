@@ -17,6 +17,7 @@ spec:
       labels:
         app: portfolio-api
     spec:
+      priorityClassName: portfolio-app
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api

@@ -23,6 +23,7 @@ spec:
         app: llama-cpu
         portfolio: "true"
     spec:
+      priorityClassName: ai-workload
       containers:
       - args:
         - -m

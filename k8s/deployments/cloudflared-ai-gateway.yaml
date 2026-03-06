@@ -13,6 +13,7 @@ spec:
       labels:
         app: cloudflared-ai-gateway
     spec:
+      priorityClassName: portfolio-app
       containers:
       - name: cloudflared
         image: cloudflare/cloudflared:latest

@@ -15,6 +15,7 @@ spec:
         component: inference
         portfolio: "true"
     spec:
+      priorityClassName: ai-workload
       containers:
         - name: embeddings
           image: maxjeffwell/triton-embeddings-cpu:latest

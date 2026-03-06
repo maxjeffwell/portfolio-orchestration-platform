@@ -15,6 +15,7 @@ spec:
       labels:
         app: ollama-gpu
     spec:
+      priorityClassName: ai-workload
       nodeSelector:
         nvidia.com/gpu.present: "true"
       tolerations:

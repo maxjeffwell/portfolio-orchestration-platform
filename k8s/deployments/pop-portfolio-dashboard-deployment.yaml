@@ -21,6 +21,7 @@ spec:
         component: dashboard
         tier: frontend
     spec:
+      priorityClassName: portfolio-app
       containers:
       - name: dashboard
         image: maxjeffwell/portfolio-dashboard:20260211-051213-6c94db7
