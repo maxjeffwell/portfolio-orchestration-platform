@@ -22,6 +22,20 @@ spec:
             - containerPort: 8000
             - containerPort: 8001
             - containerPort: 8002
+          livenessProbe:
+            httpGet:
+              path: /v2/health/live
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /v2/health/ready
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
           resources:
             requests:
               cpu: 250m
