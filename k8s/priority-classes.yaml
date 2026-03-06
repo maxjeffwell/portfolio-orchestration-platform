@@ -1,0 +1,35 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: portfolio-critical
+value: 1000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Portfolio website and databases - highest user-facing priority"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: portfolio-app
+value: 500
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Default for portfolio applications"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: monitoring
+value: 300
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Monitoring and observability stack"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: ai-workload
+value: 200
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "AI inference workloads - lowest priority, preemptable"
