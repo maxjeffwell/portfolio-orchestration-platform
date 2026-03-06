@@ -7,8 +7,13 @@
 #   Strips AAAA (IPv6) records from external DNS responses.
 #   Flannel VXLAN overlay is IPv4-only, so pods can't reach IPv6 addresses.
 #   Without this, Go's Happy Eyeballs tries IPv6 first, hangs until timeout,
-#   then falls back to IPv4 — causing "context deadline exceeded" errors
-#   in external-secrets operator (Doppler API calls).
+#   then falls back to IPv4.
+#
+# doppler-proxy.override:
+#   Rewrites api.doppler.com DNS to the in-cluster haproxy proxy.
+#   Mitigates Contabo-Cloudflare peering issues (10-20% TCP SYN drops).
+#   HAProxy retries on a different Cloudflare IP within 2s.
+#   TLS passes through end-to-end (Layer 4 proxy).
 #
 # Apply with: kubectl apply -f coredns-custom.yaml
 # Then restart: kubectl rollout restart deployment coredns -n kube-system
@@ -22,4 +27,9 @@ data:
   disable-ipv6.override: |
     template IN AAAA . {
       rcode NOERROR
+    }
+  doppler-proxy.override: |
+    rewrite stop {
+      name exact api.doppler.com doppler-proxy.external-secrets.svc.cluster.local
+      answer name doppler-proxy.external-secrets.svc.cluster.local api.doppler.com
     }
