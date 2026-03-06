@@ -41,7 +41,7 @@ async function fetchClusterMetrics() {
     queryPrometheus('count(kube_pod_status_phase{phase="Running"} == 1)').catch(() => null),
     queryPrometheus('count(kube_pod_status_phase{phase="Pending"} == 1)').catch(() => null),
     queryPrometheus('count(kube_pod_status_phase{phase="Failed"} == 1)').catch(() => null),
-    queryPrometheus('count(kube_namespace_labels)').catch(() => null),
+    queryPrometheus('count(kube_namespace_created)').catch(() => null),
     queryPrometheus('sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))').catch(() => null),
     queryPrometheus('sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)').catch(() => null),
     queryPrometheus('count(node_cpu_seconds_total{mode="idle"})').catch(() => null),

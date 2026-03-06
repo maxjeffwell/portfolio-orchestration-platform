@@ -1,11 +1,18 @@
-# cert-manager node placement override
+# cert-manager node placement + leader election override
 # cert-manager v1.13.3 was installed via manifests (not Helm).
-# After reinstalling, apply this patch to move all components to the data node:
+# After reinstalling, apply these patches:
 #
+# 1. Move all components to the data node:
 #   PATCH='{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"vmi3115606"}}}}}'
 #   for d in cert-manager cert-manager-cainjector cert-manager-webhook; do
 #     kubectl patch deployment $d -n cert-manager --type=merge -p "$PATCH"
 #   done
+#
+# 2. Extend leader election timeouts (API server latency causes lease loss):
+#   kubectl patch deployment cert-manager -n cert-manager --type=json \
+#     -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["--v=2","--cluster-resource-namespace=$(POD_NAMESPACE)","--leader-election-namespace=kube-system","--acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:v1.13.3","--max-concurrent-challenges=60","--leader-election-lease-duration=120s","--leader-election-renew-deadline=90s"]}]'
+#   kubectl patch deployment cert-manager-cainjector -n cert-manager --type=json \
+#     -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["--v=2","--leader-election-namespace=kube-system","--leader-election-lease-duration=120s","--leader-election-renew-deadline=90s"]}]'
 #
 # If migrating to Helm install (jetstack/cert-manager), use these values:
 
@@ -15,7 +22,14 @@ nodeSelector:
 cainjector:
   nodeSelector:
     kubernetes.io/hostname: vmi3115606
+  extraArgs:
+    - --leader-election-lease-duration=120s
+    - --leader-election-renew-deadline=90s
 
 webhook:
   nodeSelector:
     kubernetes.io/hostname: vmi3115606
+
+extraArgs:
+  - --leader-election-lease-duration=120s
+  - --leader-election-renew-deadline=90s
