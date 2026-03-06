@@ -31,25 +31,30 @@ function queryPrometheus(query) {
 async function fetchClusterMetrics() {
   const api = k8sClient.getCoreV1Api();
 
-  const [nodesRes, podsRes, nsRes, cpuVal, memVal, cpuTotalVal, memTotalVal] = await Promise.all([
+  const [
+    nodesRes,
+    totalPods, runningPods, pendingPods, failedPods, namespaceCount,
+    cpuVal, memVal, cpuTotalVal, memTotalVal,
+  ] = await Promise.all([
     api.listNode(),
-    api.listPodForAllNamespaces(),
-    api.listNamespace(),
+    queryPrometheus('sum(kube_pod_status_phase)').catch(() => null),
+    queryPrometheus('sum(kube_pod_status_phase{phase="Running"})').catch(() => null),
+    queryPrometheus('sum(kube_pod_status_phase{phase="Pending"})').catch(() => null),
+    queryPrometheus('sum(kube_pod_status_phase{phase="Failed"})').catch(() => null),
+    queryPrometheus('count(kube_namespace_created)').catch(() => null),
     queryPrometheus('sum(rate(node_cpu_seconds_total{mode!="idle"}[5m]))').catch(() => null),
     queryPrometheus('sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)').catch(() => null),
     queryPrometheus('count(node_cpu_seconds_total{mode="idle"})').catch(() => null),
     queryPrometheus('sum(node_memory_MemTotal_bytes)').catch(() => null),
   ]);
 
-  const pods = podsRes.body.items;
-
   return {
     nodeCount: nodesRes.body.items.length,
-    totalPods: pods.length,
-    runningPods: pods.filter((p) => p.status?.phase === 'Running').length,
-    pendingPods: pods.filter((p) => p.status?.phase === 'Pending').length,
-    failedPods: pods.filter((p) => p.status?.phase === 'Failed').length,
-    namespaceCount: nsRes.body.items.length,
+    totalPods: totalPods !== null ? parseInt(totalPods, 10) : 0,
+    runningPods: runningPods !== null ? parseInt(runningPods, 10) : 0,
+    pendingPods: pendingPods !== null ? parseInt(pendingPods, 10) : 0,
+    failedPods: failedPods !== null ? parseInt(failedPods, 10) : 0,
+    namespaceCount: namespaceCount !== null ? parseInt(namespaceCount, 10) : 0,
     cpuUsageCores: cpuVal !== null ? parseFloat(cpuVal) : null,
     memoryUsageBytes: memVal !== null ? parseFloat(memVal) : null,
     totalCpuCores: cpuTotalVal !== null ? parseFloat(cpuTotalVal) : null,
