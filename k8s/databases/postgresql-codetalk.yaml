@@ -58,6 +58,7 @@ spec:
         app: postgresql-codetalk
         tier: database
     spec:
+      priorityClassName: portfolio-critical
       terminationGracePeriodSeconds: 60
       containers:
       - name: postgresql

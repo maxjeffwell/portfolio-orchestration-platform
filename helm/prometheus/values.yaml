@@ -14,6 +14,7 @@
 kube-prometheus-stack:
   prometheus:
     prometheusSpec:
+      priorityClassName: monitoring
       retention: 15d
       replicas: 1
       nodeSelector:
@@ -50,6 +51,7 @@ kube-prometheus-stack:
   alertmanager:
     enabled: true
     alertmanagerSpec:
+      priorityClassName: monitoring
       resources:
         requests:
           cpu: 50m
@@ -120,6 +122,7 @@ kube-prometheus-stack:
 
   grafana:
     enabled: true
+    priorityClassName: monitoring
     # Credentials from Doppler via ExternalSecret (prometheus-grafana-external-secret.yaml)
     admin:
       existingSecret: prometheus-grafana
@@ -218,6 +221,7 @@ gotifyBridge:
 
 minio:
   enabled: true
+  priorityClassName: monitoring
   mode: standalone
   replicas: 1
   existingSecret: minio-credentials
@@ -261,6 +265,7 @@ loki:
   deploymentMode: SingleBinary
   singleBinary:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     persistence:
@@ -362,6 +367,7 @@ alloy:
   enabled: true
   controller:
     type: daemonset
+    priorityClassName: monitoring
     volumes:
       extra:
         - name: geoip-db
@@ -442,6 +448,7 @@ mimir-distributed:
         compactor_blocks_retention_period: 2160h
   distributor:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     resources:
@@ -453,6 +460,7 @@ mimir-distributed:
         memory: 2Gi
   ingester:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     persistentVolume:
@@ -469,6 +477,7 @@ mimir-distributed:
       enabled: false
   querier:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     resources:
@@ -480,6 +489,7 @@ mimir-distributed:
         memory: 512Mi
   query_frontend:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     resources:
@@ -493,6 +503,7 @@ mimir-distributed:
     replicas: 0
   compactor:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     persistentVolume:
@@ -507,6 +518,7 @@ mimir-distributed:
         memory: 512Mi
   store_gateway:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     persistentVolume:
@@ -529,6 +541,7 @@ mimir-distributed:
     replicas: 1
   kafka:
     replicas: 1
+    priorityClassName: monitoring
     nodeSelector:
       kubernetes.io/hostname: vmi2951245
     resources:

@@ -57,6 +57,7 @@ spec:
         app: redis
         tier: database
     spec:
+      priorityClassName: portfolio-critical
       terminationGracePeriodSeconds: 30
       containers:
       - name: redis
