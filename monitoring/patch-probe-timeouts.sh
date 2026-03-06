@@ -33,10 +33,10 @@ EOF
 
   echo -n "  ${kind}/${name} (${container}) ${probe_type}... "
   if $KUBECTL patch "${kind}" "${name}" -n "${ns}" --type=strategic -p "${patch}" ${DRY_RUN} 2>/dev/null; then
-    ((patched++))
+    patched=$((patched + 1))
   else
     echo "FAILED"
-    ((failed++))
+    failed=$((failed + 1))
   fi
 }
 
