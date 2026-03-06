@@ -177,6 +177,9 @@ kube-prometheus-stack:
     enabled: true
   kubeStateMetrics:
     enabled: true
+  kube-state-metrics:
+    nodeSelector:
+      kubernetes.io/hostname: vmi2951245
 
 # ─── Traefik ingress (custom template) ──────────────────────────────────────
 
