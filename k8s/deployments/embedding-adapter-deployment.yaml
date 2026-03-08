@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embedding-adapter
+  namespace: default
+  labels:
+    app: embedding-adapter
+    component: inference
+    portfolio: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embedding-adapter
+  template:
+    metadata:
+      labels:
+        app: embedding-adapter
+        component: inference
+        portfolio: "true"
+    spec:
+      priorityClassName: ai-workload
+      containers:
+        - name: embedding-adapter
+          image: maxjeffwell/embedding-adapter:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: TRITON_PRIMARY_URL
+              value: https://embeddings.el-jefe.me
+            - name: TRITON_FALLBACK_URL
+              value: http://triton-embeddings:8000
+            - name: MODEL_NAME
+              value: bge_embeddings
+            - name: PORT
+              value: "8080"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 30
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
