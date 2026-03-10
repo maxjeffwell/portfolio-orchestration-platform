@@ -24,7 +24,7 @@ spec:
       priorityClassName: portfolio-app
       containers:
       - name: dashboard
-        image: maxjeffwell/portfolio-dashboard:20260211-051213-6c94db7
+        image: maxjeffwell/portfolio-dashboard:20260310-171644-13dd270
         imagePullPolicy: Always
         ports:
         - containerPort: 80
