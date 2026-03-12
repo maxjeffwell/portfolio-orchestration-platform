@@ -26,7 +26,7 @@ spec:
       containers:
         - name: ollama
           image: ollama/ollama:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: NVIDIA_VISIBLE_DEVICES
               value: GPU-8060da56-7daf-3ffb-07ad-102325b750f5
