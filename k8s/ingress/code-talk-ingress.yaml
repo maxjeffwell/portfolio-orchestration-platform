@@ -71,7 +71,6 @@ spec:
     match: Host(`code-talk-k8s.el-jefe.me`) && PathPrefix(`/api`)
     middlewares:
     - name: crowdsec-bouncer
-      namespace: kube-system
     - name: strip-api-prefix-codetalk
     services:
     - name: code-talk-server

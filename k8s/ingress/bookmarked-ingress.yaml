@@ -38,7 +38,6 @@ spec:
     match: Host(`bookmarked-k8s.el-jefe.me`) && PathPrefix(`/api`)
     middlewares:
     - name: crowdsec-bouncer
-      namespace: kube-system
     - name: bookmarked-strip-api
     services:
     - name: bookmarked-server

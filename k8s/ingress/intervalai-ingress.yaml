@@ -55,7 +55,6 @@ spec:
     match: Host(`intervalai-k8s.el-jefe.me`) && PathPrefix(`/api`)
     middlewares:
     - name: crowdsec-bouncer
-      namespace: kube-system
     - name: strip-api-prefix
     services:
     - name: intervalai-server
