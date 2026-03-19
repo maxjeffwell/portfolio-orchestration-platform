@@ -10,6 +10,7 @@ metadata:
 spec:
   plugin:
     crowdsec-bouncer:
+      enabled: true
       crowdsecLapiHost: "10.0.0.4:8080"
       crowdsecLapiKey: "yuX8Qvlb+Ut2MrpskDc1C2HEg6p9nl/f5aC5Uw4u13g"
       crowdsecLapiScheme: "http"
