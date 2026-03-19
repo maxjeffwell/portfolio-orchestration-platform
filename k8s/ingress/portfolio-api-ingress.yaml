@@ -5,6 +5,7 @@ metadata:
   namespace: default
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-crowdsec-bouncer@kubernetescrd
     traefik.ingress.kubernetes.io/router.priority: "200"
     cert-manager.io/cluster-issuer: letsencrypt-prod-dns
 spec:

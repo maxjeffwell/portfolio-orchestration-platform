@@ -5,6 +5,7 @@ metadata:
   namespace: default
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: kube-system-crowdsec-bouncer@kubernetescrd
     cert-manager.io/cluster-issuer: letsencrypt-prod-dns
 spec:
   ingressClassName: traefik
@@ -36,6 +37,8 @@ spec:
   - kind: Rule
     match: Host(`bookmarked-k8s.el-jefe.me`) && PathPrefix(`/api`)
     middlewares:
+    - name: crowdsec-bouncer
+      namespace: kube-system
     - name: bookmarked-strip-api
     services:
     - name: bookmarked-server
