@@ -9,8 +9,30 @@
 #     kubectl patch deployment $d -n argocd --type=merge -p "$PATCH"
 #   done
 #
+# Resource customization: treat suspended CronJobs as Healthy (not Degraded)
+#
+#   kubectl patch configmap argocd-cm -n argocd --type merge -p '{
+#     "data": {
+#       "resource.customizations.health.batch_CronJob": "hs = {}\nif obj.spec.suspend ~= nil and obj.spec.suspend then\n  hs.status = \"Healthy\"\n  hs.message = \"CronJob is suspended\"\nelse\n  hs.status = \"Healthy\"\n  hs.message = \"CronJob is active\"\nend\nreturn hs\n"
+#     }
+#   }'
+#   kubectl rollout restart statefulset argocd-application-controller -n argocd
+#
 # If migrating to Helm install (argo/argo-cd), use these values:
 
 global:
   nodeSelector:
     kubernetes.io/hostname: vmi3115606
+
+configs:
+  cm:
+    resource.customizations.health.batch_CronJob: |
+      hs = {}
+      if obj.spec.suspend ~= nil and obj.spec.suspend then
+        hs.status = "Healthy"
+        hs.message = "CronJob is suspended"
+      else
+        hs.status = "Healthy"
+        hs.message = "CronJob is active"
+      end
+      return hs
