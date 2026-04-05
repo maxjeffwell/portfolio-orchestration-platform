@@ -8,6 +8,16 @@ configuration:
         region: us-east-005
         s3ForcePathStyle: true
         s3Url: https://s3.us-east-005.backblazeb2.com
+    - name: local
+      provider: aws
+      bucket: velero
+      credential:
+        name: velero-garage-credentials
+        key: cloud
+      config:
+        region: garage
+        s3ForcePathStyle: true
+        s3Url: http://garage.monitoring.svc.cluster.local:3900
   defaultVolumesToFsBackup: true
   volumeSnapshotLocation:
     - name: default
