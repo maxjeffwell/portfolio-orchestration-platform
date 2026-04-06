@@ -21,6 +21,7 @@ export const typeDefs = /* GraphQL */ `
 
     argoCDApplications: [ArgoCDApplication!]!
     recentGitHubRuns: [GitHubRun!]!
+    networkTopology: NetworkTopology!
   }
 
   type Pod {
@@ -179,6 +180,7 @@ export const typeDefs = /* GraphQL */ `
     clusterMetricsStream: ClusterMetrics!
     argoCDAppsStream: [ArgoCDApplication!]!
     githubRunsStream: [GitHubRun!]!
+    networkTopologyStream: NetworkTopology!
   }
 
   type ArgoCDApplication {
@@ -217,5 +219,85 @@ export const typeDefs = /* GraphQL */ `
   type AIEventUsage {
     promptTokens: Int!
     completionTokens: Int!
+  }
+
+  enum NodeType {
+    K8S_NODE
+    NAS
+    ROUTER
+  }
+
+  enum ZoneType {
+    CLOUD
+    HOME_NETWORK
+    STORAGE
+  }
+
+  enum LinkType {
+    WIREGUARD
+    ISCSI
+    GARAGE_REPLICATION
+    LOKI
+    NFS
+  }
+
+  enum HealthStatus {
+    HEALTHY
+    DEGRADED
+    OFFLINE
+  }
+
+  type NetworkTopology {
+    nodes: [NetworkNode!]!
+    links: [NetworkLink!]!
+    lastUpdated: String!
+  }
+
+  type NetworkNode {
+    id: String!
+    hostname: String!
+    displayName: String!
+    type: NodeType!
+    zone: ZoneType!
+    wireguardIp: String
+    health: HealthStatus!
+    services: [ServiceBadge!]!
+    metrics: NodeMetrics
+  }
+
+  type NodeMetrics {
+    cpuPercent: Float
+    memoryPercent: Float
+    memoryUsedMb: Float
+    memoryTotalMb: Float
+    storageUsedGb: Float
+    storageTotalGb: Float
+    uptime: String
+  }
+
+  type ServiceBadge {
+    name: String!
+    status: HealthStatus!
+    port: Int
+  }
+
+  type NetworkLink {
+    source: String!
+    target: String!
+    type: LinkType!
+    status: HealthStatus!
+    bandwidthBps: Float
+    latencyMs: Float
+    metadata: LinkMetadata
+  }
+
+  type LinkMetadata {
+    lastHandshake: String
+    transferRxBytes: Float
+    transferTxBytes: Float
+    targetIqn: String
+    partitionsShared: Int
+    exportPath: String
+    mountPoint: String
   }
 `;
