@@ -8,6 +8,7 @@ import { aiEventResolvers } from './aiEvents.js';
 import { argocdResolvers } from './argocdApps.js';
 import { githubResolvers } from './githubRuns.js';
 import { contactFormResolvers } from './contactForm.js';
+import { networkTopologyResolvers } from './networkTopology.js';
 
 export const resolvers = {
   Query: {
@@ -20,6 +21,7 @@ export const resolvers = {
     ...aiEventResolvers.Query,
     ...argocdResolvers.Query,
     ...githubResolvers.Query,
+    ...networkTopologyResolvers.Query,
   },
   Mutation: {
     ...contactFormResolvers.Mutation,
@@ -29,5 +31,6 @@ export const resolvers = {
     ...aiEventResolvers.Subscription,
     ...argocdResolvers.Subscription,
     ...githubResolvers.Subscription,
+    ...networkTopologyResolvers.Subscription,
   },
 };
