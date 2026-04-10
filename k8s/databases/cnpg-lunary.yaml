@@ -1,0 +1,36 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cnpg-lunary
+  namespace: default
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  instances: 2
+  priorityClassName: portfolio-critical
+  inheritedMetadata:
+    labels:
+      portfolio: "true"
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  bootstrap:
+    initdb:
+      database: lunary
+      owner: neondb_owner
+      secret:
+        name: cnpg-lunary-app
+  storage:
+    size: 5Gi
+    storageClass: synology-iscsi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  monitoring:
+    enablePodMonitor: true
+  backup:
+    volumeSnapshot:
+      className: synology-snapshotclass
