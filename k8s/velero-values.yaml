@@ -2,14 +2,6 @@ configuration:
   backupStorageLocation:
     - name: default
       provider: aws
-      bucket: Marmoset
-      prefix: velero
-      config:
-        region: us-east-005
-        s3ForcePathStyle: true
-        s3Url: https://s3.us-east-005.backblazeb2.com
-    - name: local
-      provider: aws
       bucket: velero
       credential:
         name: velero-garage-credentials
@@ -18,12 +10,20 @@ configuration:
         region: garage
         s3ForcePathStyle: true
         s3Url: http://garage.monitoring.svc.cluster.local:3900
+    - name: backblaze
+      provider: aws
+      bucket: k3s-velero-eljefe-backups
+      config:
+        region: us-east-005
+        s3ForcePathStyle: true
+        s3Url: https://s3.us-east-005.backblazeb2.com
   defaultVolumesToFsBackup: true
+  features: EnableCSI
   volumeSnapshotLocation:
     - name: default
       provider: aws
       config:
-        region: us-east-005
+        region: garage
   repositoryMaintenanceJob:
     repositoryConfigData:
       global:
@@ -43,6 +43,6 @@ deployNodeAgent: true
 nodeAgent:
   podVolumePath: /var/lib/kubelet/pods
 
-snapshotsEnabled: false
+snapshotsEnabled: true
 
 upgradeCRDs: false
