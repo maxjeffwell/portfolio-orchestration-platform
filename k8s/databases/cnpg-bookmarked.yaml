@@ -1,0 +1,52 @@
+# CNPG cluster for Bookmarked (migrated from Neon Cloud 2026-04-25).
+# Mirrors Lunary/Auth/Code-Talk pattern: 2-instance HA, Postgres 17, synology-iscsi storage.
+# pgvector + uuid-ossp extensions enabled at init.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cnpg-bookmarked-app
+  namespace: default
+type: kubernetes.io/basic-auth
+stringData:
+  username: neondb_owner
+  password: REPLACE_AT_DEPLOY_TIME
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cnpg-bookmarked
+  namespace: default
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  instances: 2
+  priorityClassName: portfolio-critical
+  inheritedMetadata:
+    labels:
+      portfolio: "true"
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  bootstrap:
+    initdb:
+      database: neondb
+      owner: neondb_owner
+      secret:
+        name: cnpg-bookmarked-app
+      postInitTemplateSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector;
+        - CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+  storage:
+    size: 5Gi
+    storageClass: synology-iscsi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  monitoring:
+    enablePodMonitor: true
+  backup:
+    volumeSnapshot:
+      className: synology-snapshotclass
