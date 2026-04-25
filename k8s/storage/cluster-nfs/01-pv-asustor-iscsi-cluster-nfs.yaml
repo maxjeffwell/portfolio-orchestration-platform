@@ -1,0 +1,41 @@
+# Static PV for the ASUSTOR iSCSI LUN that backs the in-cluster NFS server.
+# Created via ADM Storage Manager UI on Volume2 (internal SSD), 250GiB thin,
+# block-level LUN named `cluster-backing` in target alias `cluster`.
+# CRC32C header + data digest enabled at iSCSI level.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: asustor-iscsi-cluster-nfs
+  labels:
+    location: asustor
+    tier: ssd
+    type: cluster-nfs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 250Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: nfs-backing
+    namespace: cluster-nfs
+  iscsi:
+    fsType: ext4
+    iqn: iqn.2011-08.com.asustor:as5402t-43a7f3.cluster
+    iscsiInterface: default
+    lun: 0
+    targetPortal: 10.0.0.4:3260
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - vmi2951245
+                - vmi3115606
+                - marmoset
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: iscsi-local
+  volumeMode: Filesystem

@@ -1,0 +1,88 @@
+# In-cluster NFS server backed by ASUSTOR iSCSI LUN.
+# Replaces the broken asustor-k8s NFS subdir provisioner.
+# Architecture: ASUSTOR iSCSI block -> ext4 on cluster node -> kernel NFS export -> Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server
+  namespace: cluster-nfs
+  labels:
+    app: nfs-server
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # iSCSI RWO can only attach to one node at a time
+  selector:
+    matchLabels:
+      app: nfs-server
+  template:
+    metadata:
+      labels:
+        app: nfs-server
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - vmi3115606  # colocate with backrest
+      containers:
+        - name: nfs-server
+          # Image's default entrypoint disables NFSv3; we override CMD to enable v3+v4.
+          image: itsthenetwork/nfs-server-alpine:12
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              mkdir -p /export
+              echo '/export *(rw,fsid=0,async,no_subtree_check,no_auth_nlm,insecure,no_root_squash)' > /etc/exports
+              /sbin/rpcbind -w
+              /usr/sbin/rpc.mountd --debug all --no-udp
+              /usr/sbin/exportfs -ar
+              /usr/sbin/rpc.nfsd -G 10 -V 3 -V 4
+              echo "NFS server started with v3 and v4 enabled"
+              while true; do sleep 60; done
+          ports:
+            - { name: nfs,         containerPort: 2049,  protocol: TCP }
+            - { name: rpcbind-tcp, containerPort: 111,   protocol: TCP }
+            - { name: rpcbind-udp, containerPort: 111,   protocol: UDP }
+            - { name: mountd,      containerPort: 20048, protocol: TCP }
+          securityContext:
+            privileged: true  # required for kernel NFS modules
+          volumeMounts:
+            - name: nfs-data
+              mountPath: /export
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: nfs-data
+          persistentVolumeClaim:
+            claimName: nfs-backing
+---
+# ClusterIP pinned to 10.43.67.16 because kubelet's NFS mount runs in host
+# network namespace (no cluster DNS); pinning keeps the IP stable so the
+# nfs-subdir-external-provisioner config doesn't drift.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server
+  namespace: cluster-nfs
+  labels:
+    app: nfs-server
+spec:
+  type: ClusterIP
+  clusterIP: 10.43.67.16
+  selector:
+    app: nfs-server
+  ports:
+    - { name: nfs,         port: 2049, protocol: TCP }
+    - { name: rpcbind-tcp, port: 111,  protocol: TCP }
+    - { name: rpcbind-udp, port: 111,  protocol: UDP }
