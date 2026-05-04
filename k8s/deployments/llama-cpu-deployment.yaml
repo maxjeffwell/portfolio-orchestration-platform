@@ -7,7 +7,9 @@ metadata:
     portfolio: "true"
 spec:
   progressDeadlineSeconds: 600
-  replicas: 1
+  # Scaled to 0 on 2026-05-04: replaced by Ollama on debian-marmoset (Iris Xe SYCL).
+  # Manifest retained in case rollback needed; full removal in a later commit after soak.
+  replicas: 0
   revisionHistoryLimit: 10
   selector:
     matchLabels:

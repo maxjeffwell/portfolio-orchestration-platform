@@ -1,0 +1,25 @@
+# Same fix as cnpg-auth-operator and cnpg-operator: adds same-cluster pods
+# to allowed sources for port 8000 so replica failsafe liveness checks work
+# across nodes. Without this, cross-node replicas get restart-looped.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cnpg-lunary-operator
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: cnpg-lunary
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cnpg-lunary
+      ports:
+        - port: 8000
+          protocol: TCP

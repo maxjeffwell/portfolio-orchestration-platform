@@ -1,0 +1,27 @@
+# Allows port 8000 ingress to cnpg-auth pods from:
+#   1. cnpg-system namespace (the operator)
+#   2. Other cnpg-auth pods (replicas need this for failsafe liveness checks
+#      across nodes — without it, replicas can't verify primary is alive,
+#      liveness probe returns HTTP 500, pod gets restart-looped)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cnpg-auth-operator
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: cnpg-auth
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cnpg-auth
+      ports:
+        - port: 8000
+          protocol: TCP
