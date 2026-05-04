@@ -1,0 +1,139 @@
+---
+# CNPG Cluster: cnpg-jellyfin
+# Single-instance PostgreSQL backing the K8s Jellyfin instance's library/state DB.
+# Pinned to debian-marmoset (gpu-node=true) so openebs-lvmpv storage is co-located
+# with the Jellyfin pod, which also runs on debian-marmoset.
+# Backup: continuous WAL archive + base backups to Garage S3 (cnpg-jellyfin-backups bucket).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cnpg-jellyfin
+  namespace: default
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  instances: 1
+  priorityClassName: portfolio-critical
+  enableSuperuserAccess: false
+
+  inheritedMetadata:
+    labels:
+      portfolio: "true"
+
+  affinity:
+    nodeSelector:
+      gpu-node: "true"
+
+  bootstrap:
+    initdb:
+      database: jellyfin
+      owner: jellyfin
+      secret:
+        name: cnpg-jellyfin-app
+      encoding: UTF8
+
+  storage:
+    size: 10Gi
+    storageClass: openebs-lvmpv
+    resizeInUseVolumes: true
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+  monitoring:
+    enablePodMonitor: true
+
+  postgresql:
+    parameters:
+      shared_buffers: 256MB
+      effective_cache_size: 768MB
+      work_mem: 4MB
+      max_wal_size: 1GB
+      min_wal_size: 80MB
+
+  backup:
+    retentionPolicy: "30d"
+    barmanObjectStore:
+      destinationPath: s3://cnpg-jellyfin-backups/
+      endpointURL: http://garage.monitoring.svc.cluster.local:3900
+      s3Credentials:
+        accessKeyId:
+          name: cnpg-jellyfin-s3
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: cnpg-jellyfin-s3
+          key: ACCESS_SECRET_KEY
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+---
+# Daily base backup at 04:00 (CNPG cron is 6 fields: sec min hr day mon dow)
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: cnpg-jellyfin-daily
+  namespace: default
+spec:
+  cluster:
+    name: cnpg-jellyfin
+  schedule: "0 0 4 * * *"
+  backupOwnerReference: self
+  immediate: true
+---
+# ExternalSecret materializing cnpg-jellyfin-app (PG bootstrap credentials)
+# Sourced from Doppler ClusterSecretStore: JELLYFIN_PG_USER + JELLYFIN_PG_PASSWORD.
+# CNPG's bootstrap.initdb.secret expects type kubernetes.io/basic-auth with
+# username/password keys — materialized via the template block.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cnpg-jellyfin-app-external-secret
+  namespace: default
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: doppler-secret-store
+  target:
+    name: cnpg-jellyfin-app
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      type: kubernetes.io/basic-auth
+      data:
+        username: "{{ .username }}"
+        password: "{{ .password }}"
+  data:
+    - remoteRef:
+        key: JELLYFIN_PG_USER
+      secretKey: username
+    - remoteRef:
+        key: JELLYFIN_PG_PASSWORD
+      secretKey: password
+---
+# ExternalSecret materializing cnpg-jellyfin-s3 (Garage S3 credentials for barman backup)
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cnpg-jellyfin-s3-external-secret
+  namespace: default
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: doppler-secret-store
+  target:
+    name: cnpg-jellyfin-s3
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - remoteRef:
+        key: CNPG_JELLYFIN_S3_ACCESS_KEY
+      secretKey: ACCESS_KEY_ID
+    - remoteRef:
+        key: CNPG_JELLYFIN_S3_SECRET_KEY
+      secretKey: ACCESS_SECRET_KEY
