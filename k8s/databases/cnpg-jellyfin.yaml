@@ -58,7 +58,9 @@ spec:
     retentionPolicy: "30d"
     barmanObjectStore:
       destinationPath: s3://cnpg-jellyfin-backups/
-      endpointURL: http://garage.monitoring.svc.cluster.local:3900
+      # Garage S3 reached via existing Traefik ingress (in-cluster Garage's
+      # native :3900 is not directly reachable; routing goes through s3.el-jefe.me)
+      endpointURL: https://s3.el-jefe.me
       s3Credentials:
         accessKeyId:
           name: cnpg-jellyfin-s3
@@ -66,6 +68,9 @@ spec:
         secretAccessKey:
           name: cnpg-jellyfin-s3
           key: ACCESS_SECRET_KEY
+        region:
+          name: cnpg-jellyfin-s3
+          key: REGION
       wal:
         compression: gzip
       data:
@@ -116,6 +121,7 @@ spec:
       secretKey: password
 ---
 # ExternalSecret materializing cnpg-jellyfin-s3 (Garage S3 credentials for barman backup)
+# REGION is required by boto3/barman — Garage rejects requests with mismatched region.
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
@@ -130,6 +136,14 @@ spec:
     name: cnpg-jellyfin-s3
     creationPolicy: Owner
     deletionPolicy: Retain
+    # REGION must match the Garage cluster's configured s3_region.
+    # In-cluster Garage (s3.el-jefe.me) uses default "garage";
+    # ASUSTOR Garage uses "us-east-1". Don't confuse the two.
+    template:
+      data:
+        ACCESS_KEY_ID: "{{ .ACCESS_KEY_ID }}"
+        ACCESS_SECRET_KEY: "{{ .ACCESS_SECRET_KEY }}"
+        REGION: "garage"
   data:
     - remoteRef:
         key: CNPG_JELLYFIN_S3_ACCESS_KEY
