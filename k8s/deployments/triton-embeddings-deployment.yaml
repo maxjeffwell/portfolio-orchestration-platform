@@ -15,6 +15,9 @@ spec:
         component: inference
         portfolio: "true"
     spec:
+      # Pinned to worker to relieve CP memory pressure (~1.6 GiB freed on vmi2951245).
+      nodeSelector:
+        kubernetes.io/hostname: vmi3115606
       priorityClassName: ai-workload
       containers:
         - name: embeddings
