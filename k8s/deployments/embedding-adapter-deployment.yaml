@@ -19,9 +19,9 @@ spec:
         component: inference
         portfolio: "true"
     spec:
-      # Pinned to worker (colocated with triton-embeddings — adapter calls Triton).
+      # Pinned to debian-marmoset (colocated with triton-embeddings).
       nodeSelector:
-        kubernetes.io/hostname: vmi3115606
+        kubernetes.io/hostname: debian-marmoset
       priorityClassName: ai-workload
       containers:
         - name: embedding-adapter

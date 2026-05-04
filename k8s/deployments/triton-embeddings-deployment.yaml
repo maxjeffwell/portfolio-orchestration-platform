@@ -15,9 +15,11 @@ spec:
         component: inference
         portfolio: "true"
     spec:
-      # Pinned to worker to relieve CP memory pressure (~1.6 GiB freed on vmi2951245).
+      # Pinned to debian-marmoset (NOT worker — worker is disk-constrained at 88%).
+      # CP unload + AI-workloads colocation. Triton-embeddings is CPU-only, no GPU
+      # waste on debian-marmoset's iGPU.
       nodeSelector:
-        kubernetes.io/hostname: vmi3115606
+        kubernetes.io/hostname: debian-marmoset
       priorityClassName: ai-workload
       containers:
         - name: embeddings
