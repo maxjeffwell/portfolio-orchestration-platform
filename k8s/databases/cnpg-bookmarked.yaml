@@ -18,7 +18,7 @@ metadata:
   namespace: default
 spec:
   imageName: ghcr.io/cloudnative-pg/postgresql:17
-  instances: 2
+  instances: 3
   priorityClassName: portfolio-critical
   inheritedMetadata:
     labels:
@@ -27,6 +27,16 @@ spec:
     enablePodAntiAffinity: true
     podAntiAffinityType: required
     topologyKey: kubernetes.io/hostname
+    tolerations:
+      - key: nfs
+        value: broken
+        effect: NoSchedule
+  probes:
+    liveness:
+      isolationCheck:
+        enabled: true
+        connectionTimeout: 5000
+        requestTimeout: 5000
   bootstrap:
     initdb:
       database: neondb
