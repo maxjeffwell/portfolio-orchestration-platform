@@ -1,0 +1,26 @@
+# Note: name is "allow-cnpg-operator" but selects only cnpg-codetalk
+# (legacy naming, kept to avoid live-rename gap). Same fix as cnpg-auth:
+# adds same-cluster pods to the allowed sources for port 8000 so replica
+# failsafe liveness checks work across nodes.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cnpg-operator
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: cnpg-codetalk
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cnpg-codetalk
+      ports:
+        - port: 8000
+          protocol: TCP
