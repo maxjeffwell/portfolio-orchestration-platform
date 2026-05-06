@@ -21,6 +21,12 @@ spec:
         connectionTimeout: 5000
         requestTimeout: 5000
   bootstrap:
+    # NOTE: bootstrap only runs on initial cluster creation. The current live cluster
+    # was rebuilt 2026-05-06 from VolumeSnapshot cnpg-lunary-daily-20260504030000
+    # after both PVs entered I/O-error state following Synology iSCSI snapshot-quota
+    # exhaustion. The ~62h of data between May 4 03:00 UTC and recovery time is gone.
+    # If this cluster is ever destroyed and re-created, change `initdb` to
+    # `recovery.volumeSnapshots.storage.name: <latest-good-snapshot>` BEFORE re-applying.
     initdb:
       database: lunary
       owner: neondb_owner
