@@ -1,0 +1,8 @@
+# iSCSI interface bound to Synology USB NIC path (192.168.50.109).
+# Custom iface with its own InitiatorName so DSM can distinguish path 1 from path 2.
+# Install location: /var/lib/iscsi/ifaces/synology-mp109
+iface.iscsi_ifacename = synology-mp109
+iface.prefix_len = 0
+iface.transport_name = tcp
+iface.initiatorname = iqn.1993-08.org.debian:01:multipath-mp109
+iface.vlan_id = 0

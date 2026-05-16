@@ -1,0 +1,8 @@
+# iSCSI interface bound to Synology BE88U-LAN path (192.168.50.129).
+# Custom iface with its own InitiatorName so DSM can distinguish path 1 from path 2.
+# Install location: /var/lib/iscsi/ifaces/synology-mp129
+iface.iscsi_ifacename = synology-mp129
+iface.prefix_len = 0
+iface.transport_name = tcp
+iface.initiatorname = iqn.1993-08.org.debian:01:multipath-mp129
+iface.vlan_id = 0
