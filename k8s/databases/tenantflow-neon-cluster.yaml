@@ -1,0 +1,70 @@
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: tenantflow-neon
+  namespace: neon
+  labels:
+    portfolio: "true"
+    app: tenantflow
+spec:
+  clusterDef: neon
+  topology: default
+  # Delete: removes Cluster resources INCLUDING PVCs on Cluster deletion.
+  # Once data matters, flip to DoNotTerminate (prevents accidental deletion).
+  # v1 API removed `Halt`; choices are DoNotTerminate, Delete, WipeOut.
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: neon-broker
+      replicas: 1
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            storageClassName: openebs-lvmpv
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 5Gi
+    - name: neon-safekeeper
+      replicas: 3
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      volumeClaimTemplates:
+        - name: neon-safekeeper
+          spec:
+            storageClassName: openebs-lvmpv
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 10Gi
+    - name: neon-pageserver
+      replicas: 1
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 4Gi
+      volumeClaimTemplates:
+        - name: neon-pageserver
+          spec:
+            # NVMe-oF/TCP via Mayastor — pageserver does hot page reads on
+            # branch access; the lowest-latency block transport pays off here.
+            # Mayastor pool currently lives only on debian-marmoset (30 GiB).
+            storageClassName: mayastor-1
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 25Gi
