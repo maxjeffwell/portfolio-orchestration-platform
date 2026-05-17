@@ -33,6 +33,21 @@ spec:
                 storage: 5Gi
     - name: neon-safekeeper
       replicas: 3
+      # Prefer one safekeeper per node — quorum is most resilient when WAL
+      # replicas don't share a failure domain. `preferred` (not `required`)
+      # avoids a scheduling deadlock when openebs-lvmpv PVs node-pin the
+      # safekeepers and a node is otherwise unavailable.
+      schedulingPolicy:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/instance: tenantflow-neon
+                      apps.kubeblocks.io/component-name: neon-safekeeper
+                  topologyKey: kubernetes.io/hostname
       resources:
         requests:
           cpu: 200m
