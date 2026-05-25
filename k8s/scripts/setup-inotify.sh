@@ -55,6 +55,52 @@ check_legacy_file() {
     fi
 }
 
+# Pre-check: refuse to install if any OTHER inotify setting exists anywhere
+# that could win against /etc/sysctl.d/99-inotify-k8s.conf at load time.
+#
+# systemd-sysctl load order (later overrides earlier):
+#   /usr/lib/sysctl.d/*.conf      (lexical, ignored - loses to /etc/sysctl.d)
+#   /run/sysctl.d/*.conf          (lexical)
+#   /etc/sysctl.d/*.conf          (lexical)
+#   /etc/sysctl.conf              (LAST - beats everything in .d)
+#
+# So we check /run/sysctl.d, /etc/sysctl.d (excluding our own file), and
+# /etc/sysctl.conf for any inotify mention. /usr/lib/sysctl.d is skipped
+# because it always loses to /etc/sysctl.d/99-inotify-k8s.conf.
+#
+# This catches:
+#   - /etc/sysctl.conf with stale inotify lines (the vmi2951245 2026-05-25 case)
+#   - misnamed siblings like 99-bbr.conf that secretly hold inotify lines
+#   - any /etc/sysctl.d file lexically after 99-inotify-k8s.conf (e.g. 99-k3s.conf)
+check_no_other_inotify_configs() {
+    local conflicts=""
+    local self="/etc/sysctl.d/99-inotify-k8s.conf"
+    # /etc/sysctl.d/* excluding our own file and any .bak* siblings
+    while IFS= read -r -d '' f; do
+        case "$f" in
+            "$self"|*.bak.*) continue ;;
+        esac
+        if grep -qE '^[[:space:]]*fs\.inotify\.' "$f" 2>/dev/null; then
+            conflicts+="    $f"$'\n'
+            conflicts+="$(grep -nE 'inotify' "$f" 2>/dev/null | sed 's/^/      /')"$'\n'
+        fi
+    done < <(find /etc/sysctl.d /run/sysctl.d -maxdepth 1 -type f -name '*.conf' -print0 2>/dev/null)
+    # /etc/sysctl.conf (loads LAST - any inotify line here overrides everything)
+    if [ -f /etc/sysctl.conf ] && grep -qE '^[[:space:]]*fs\.inotify\.' /etc/sysctl.conf 2>/dev/null; then
+        conflicts+="    /etc/sysctl.conf  <-- loads LAST, overrides ALL drop-ins"$'\n'
+        conflicts+="$(grep -nE 'inotify' /etc/sysctl.conf | sed 's/^/      /')"$'\n'
+    fi
+    if [ -n "$conflicts" ]; then
+        echo "ERROR: other inotify config will override $self:" >&2
+        printf '%s' "$conflicts" >&2
+        echo "" >&2
+        echo "  Remove these conflicts before installing (backup first):" >&2
+        echo "    sudo sed -i '/^fs\\.inotify/d' /etc/sysctl.conf   # if /etc/sysctl.conf was the source" >&2
+        echo "    sudo mv <conflicting-file> <conflicting-file>.bak.\$(date +%Y-%m-%d-%H%M%S)" >&2
+        exit 1
+    fi
+}
+
 install_sysctl() {
     local src="$CONFIGS_DIR/inotify/99-inotify-k8s.conf"
     if [ ! -f "$src" ]; then
@@ -102,6 +148,7 @@ main() {
     case "$HOSTNAME" in
         vmi2951245|vmi3115606|debian-marmoset|marmoset)
             check_legacy_file
+            check_no_other_inotify_configs
             install_sysctl
             apply_and_verify
             ;;
