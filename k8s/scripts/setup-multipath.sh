@@ -83,6 +83,22 @@ install_iscsi_digest_defaults() {
     echo ""
 }
 
+install_iscsi_replacement_timeout() {
+    # Default is 120s — too long for multipath setups where a flapping path
+    # (e.g. the RTL8156 USB NIC on .109) should fail FAST so multipath routes
+    # around it. 5s is the standard "multipath-aware" value.
+    # Updates the default in iscsid.conf AND existing per-target session records.
+    # See memory: rtl8156-unreliable-for-iscsi
+    echo "=== Ensure iSCSI replacement_timeout=5 (multipath-friendly) ==="
+    require_pkg iscsiadm open-iscsi
+    local conf=/etc/iscsi/iscsid.conf
+    sed -i 's|^#\?node.session.timeo.replacement_timeout = .*|node.session.timeo.replacement_timeout = 5|' "$conf"
+    iscsiadm -m node -o update -n node.session.timeo.replacement_timeout -v 5 2>/dev/null || true
+    systemctl restart iscsid
+    echo "  iscsid.conf + existing nodes updated; iscsid restarted"
+    echo ""
+}
+
 install_iscsi_ifaces() {
     echo "=== Install custom iSCSI ifaces (synology-mp109, synology-mp129) ==="
     require_pkg iscsiadm open-iscsi
@@ -117,6 +133,7 @@ main() {
         debian-marmoset)
             install_multipath_debian_marmoset
             install_iscsi_digest_defaults
+            install_iscsi_replacement_timeout
             install_iscsi_ifaces
             ;;
         *)

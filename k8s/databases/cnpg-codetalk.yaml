@@ -14,6 +14,11 @@ spec:
     enablePodAntiAffinity: true
     podAntiAffinityType: required
     topologyKey: kubernetes.io/hostname
+    # PVC uses democratic-csi-mp; that driver's node DaemonSet is pinned
+    # to debian-marmoset, so the consumer must be too.
+    # See memory: democratic-csi-consumers-pinned-2026-05-21
+    nodeSelector:
+      kubernetes.io/hostname: debian-marmoset
     tolerations:
       - key: nfs
         value: broken
