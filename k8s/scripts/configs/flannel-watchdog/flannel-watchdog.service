@@ -1,0 +1,7 @@
+[Unit]
+Description=flannel.1 watchdog (detect missing iface and recover)
+ConditionPathExists=/usr/local/sbin/flannel-watchdog.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/flannel-watchdog.sh
