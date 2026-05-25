@@ -77,8 +77,12 @@ spec:
           spec:
             # NVMe-oF/TCP via Mayastor — pageserver does hot page reads on
             # branch access; the lowest-latency block transport pays off here.
-            # Mayastor pool currently lives only on debian-marmoset (30 GiB).
-            storageClassName: mayastor-1
+            # Mayastor pools live on both debian-marmoset and marmoset
+            # (~60 GiB each, expanded 2026-05-25). mayastor-2 SC replicates
+            # synchronously via NVMe-oF/TCP on port 4420 — survives
+            # single-node failure. See k8s/storage/mayastor/ in
+            # devops-portfolio-manager for the SC + DiskPool manifests.
+            storageClassName: mayastor-2
             accessModes: [ReadWriteOnce]
             resources:
               requests:
