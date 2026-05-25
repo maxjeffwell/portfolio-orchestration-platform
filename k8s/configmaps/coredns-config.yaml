@@ -5,7 +5,9 @@
 # Changes from default:
 # - cache 30 -> cache 300 (5 min TTL) with prefetch
 # - forward to Cloudflare/Google instead of Contabo resolvers (76ms avg -> 5ms)
-# - Replicas: 2 (one per server node) - managed via deployment scale
+# - Replicas: 3 (one per eligible node: debian-marmoset, vmi3115606, vmi2951245) - managed via deployment scale
+#   Marmoset excluded by design (workload=gpu:NoSchedule, untolerated). Topology spread
+#   (maxSkew=1, hostname, DoNotSchedule) in the bundled K3s manifest distributes pods 1-per-node.
 #
 # Apply with: kubectl apply -f coredns-config.yaml
 # Then restart: kubectl rollout restart deployment coredns -n kube-system
