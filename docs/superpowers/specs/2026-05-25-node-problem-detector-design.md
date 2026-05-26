@@ -28,20 +28,30 @@ NPD only detects; remediation is out of scope for this project.
 
 ## Repo Layout
 
+**Correction discovered during plan-writing:** All ArgoCD Applications source from `devops-portfolio-manager`, not `portfolio-orchestration-platform`. The latter holds databases + this spec/plan; the former holds Application CRs + per-app manifests. The `gpu-operator.yaml` Application is the exact precedent for the multi-source helm-chart-plus-values pattern.
+
 ```
-portfolio-orchestration-platform/
-├── argocd-apps/
-│   └── node-problem-detector.yaml            # NEW — Application CR
-└── k8s/
-    └── node-problem-detector/                # NEW
-        ├── namespace.yaml                     # ns: node-problem-detector
-        ├── helm-values.yaml                   # chart values (referenced by Application)
-        ├── custom-rules-configmap.yaml        # SystemLogMonitor JSON
-        ├── servicemonitor.yaml                # scrape :20257/metrics
-        └── prometheusrule.yaml                # 8 alerts
+devops-portfolio-manager/                                # ← NPD lives here
+├── gitops/applications/
+│   └── node-problem-detector.yaml                       # NEW — Application CR (multi-source)
+├── helm-charts/node-problem-detector/
+│   └── values-override.yaml                             # NEW — chart values
+└── k8s/node-problem-detector/                           # NEW
+    ├── namespace.yaml                                   # ns: node-problem-detector
+    ├── custom-rules-configmap.yaml                      # SystemLogMonitor JSON
+    ├── servicemonitor.yaml                              # scrape :20257/metrics
+    └── prometheusrule.yaml                              # 8 alerts
+
+portfolio-orchestration-platform/                        # ← Spec/plan only
+└── docs/superpowers/{specs,plans}/                      # this design + implementation plan
 ```
 
-Helm chart: `deliveryhero/node-problem-detector`, pinned to a specific chart version at implementation time. ArgoCD Application uses **multi-source** (helm chart from the deliveryhero repo + raw manifests from this repo's `k8s/node-problem-detector/` directory for the ConfigMap, ServiceMonitor, and PrometheusRule). This avoids cramming everything into Helm `extraObjects` and keeps custom rules diff-friendly in git.
+Helm chart: `deliveryhero/node-problem-detector`, pinned at implementation time. ArgoCD Application uses **multi-source** mirroring `gpu-operator.yaml`:
+
+- Source 1: `https://charts.deliveryhero.io/` helm chart with `valueFiles: [$values/helm-charts/node-problem-detector/values-override.yaml]`
+- Source 2: `devops-portfolio-manager` repo with `ref: values` providing the override values
+
+The ConfigMap / ServiceMonitor / PrometheusRule live in `k8s/node-problem-detector/` and sync via a **second** Application (matching the `network-policies` pattern) OR via the same Application's helm `extraObjects`. Plan will choose based on whether the chart's `extraObjects` cleanly accepts ConfigMap-style data.
 
 ## Custom Rules (SystemLogMonitor)
 
@@ -106,8 +116,8 @@ Total cluster footprint: ~150Mi memory, negligible CPU steady-state.
 
 ## Rollout Plan
 
-1. Branch `feat/node-problem-detector` in `portfolio-orchestration-platform`
-2. Create the 5 manifest files + the Application CR
+1. Branch `feat/node-problem-detector` in **`devops-portfolio-manager`** (where the files actually go)
+2. Create the 4 manifest files + the values-override + the Application CR
 3. Commit (no Claude attribution per user preference)
 4. Push → ArgoCD auto-sync OR manual sync first for safety
 5. Validate:
