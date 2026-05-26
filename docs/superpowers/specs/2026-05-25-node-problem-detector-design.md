@@ -1,7 +1,15 @@
 # Node Problem Detector — Design Spec
 
 **Date:** 2026-05-25
-**Status:** Approved (pending implementation plan)
+**Status:** Implemented 2026-05-26 (devops-portfolio-manager PR #1)
+
+**Deviations from spec during implementation:**
+- 5 custom rules → 4. Dropped `MayastorIoEngineCrash`: io-engine logs go to pod stdout via k3s log driver, not systemd journal; SystemLogMonitor can't see them.
+- 8 alerts → 9. Added free upstream-condition alerts `FrequentKubeletRestart` + `FrequentContainerdRestart`.
+- Custom rules inline in chart values via `settings.custom_monitor_definitions` (chart's first-class support), not separate ConfigMap.
+- Several regex patterns evidence-tuned against 30d of real journald samples — see commit `2cb8d12` for rationale.
+
+**Out-of-scope discovery:** validating NPD alerts surfaced that the cluster's Alertmanager had been broken for ~127 days (init-config-reloader misplaced in containers[]). Fixed in same session — devops-portfolio-manager PR #2. Without that fix, all 9 NPD alerts would have been dead-letter.
 **Scope:** Single ArgoCD Application deploying upstream Node Problem Detector (NPD) DaemonSet across 3 of 4 K3s nodes, with custom rules tuned to recurring homelab failure patterns, ServiceMonitor scraping, and Alertmanager-routed alerts.
 
 ## Goal
