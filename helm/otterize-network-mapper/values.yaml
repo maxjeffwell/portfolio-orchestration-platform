@@ -1,0 +1,61 @@
+#
+# Otterize Network Mapper - Self-hosted, no cloud account, no enforcement.
+# Just observes inter-service traffic and exposes a graph via the otterize CLI.
+#
+# Deploy:
+#   helm install network-mapper otterize/network-mapper -n otterize-system \
+#     --create-namespace -f values.yaml
+#
+
+# Disable cloud telemetry entirely - self-hosted only.
+global:
+  telemetry:
+    enabled: false
+    usage:
+      enabled: false
+
+# Don't try to report internet-facing traffic to Otterize Cloud (we have no cloud).
+enableInternetFacingTrafficReporting: false
+
+# No Istio in this cluster.
+enableIstioCollection: false
+
+# Central mapper deployment - aggregates sniffer reports, serves the CLI query API.
+mapper:
+  priorityClassName: monitoring
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  excludeNamespaces:
+    - istio-system
+    - linkerd
+    # Skip our own pods - reduces noise in the graph.
+    - otterize-system
+    # kube-system is high-volume and not actionable for app-level mapping.
+    - kube-system
+    # Velero backup pods are ephemeral and produce churn.
+    - velero
+    # Mayastor control plane pods chatter constantly between themselves.
+    - mayastor
+
+# Per-node sniffer DaemonSet - tcpdump-equivalent via raw sockets (NET_RAW + SYS_PTRACE).
+sniffer:
+  enable: true
+  priorityClassName: monitoring
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# eBPF node agent - more accurate but more invasive. Leave off; sniffer is enough for mapping.
+nodeagent:
+  enable: false
+
+# Kafka topic-level mapping. Not running Kafka workloads under Otterize - leave off.
+kafkawatcher:
+  enable: false
