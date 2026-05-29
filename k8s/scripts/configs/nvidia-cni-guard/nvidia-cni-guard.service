@@ -1,0 +1,10 @@
+[Unit]
+Description=Repair nvidia container-toolkit CNI paths for k3s containerd
+Documentation=https://github.com/maxjeffwell/devops-portfolio-manager
+# Don't fight a flapping toolkit: cap restarts triggered by this guard.
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/nvidia-cni-guard.sh

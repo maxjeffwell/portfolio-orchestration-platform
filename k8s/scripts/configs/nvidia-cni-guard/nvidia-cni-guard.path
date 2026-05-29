@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch nvidia container-toolkit drop-in for k3s CNI-path clobber
+Documentation=https://github.com/maxjeffwell/devops-portfolio-manager
+
+[Path]
+# Fires when the gpu-operator toolkit (re)writes the drop-in. If the file is
+# absent, systemd watches the parent dir and arms when it is created.
+PathChanged=/etc/containerd/conf.d/99-nvidia.toml
+Unit=nvidia-cni-guard.service
+
+[Install]
+WantedBy=multi-user.target
