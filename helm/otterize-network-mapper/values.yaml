@@ -26,9 +26,14 @@ mapper:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      # Bumped 128Mi->256Mi + 512Mi->1Gi: in self-hosted mode the mapper
+      # retains the full discovered-intent graph in memory (the CLI queries it),
+      # so memory is a working set that grows with cumulative connections.
+      # 512Mi OOMKilled it every ~10min on this cluster (exit 137). If 1Gi still
+      # OOMs, go to 2Gi. See memory: otterize-network-mapper-oom-2026-05-29.
+      memory: 256Mi
     limits:
-      memory: 512Mi
+      memory: 1Gi
   excludeNamespaces:
     - istio-system
     - linkerd
