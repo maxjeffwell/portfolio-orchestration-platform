@@ -59,7 +59,44 @@ helm upgrade --install cluster-nfs-provisioner \
   --set storageClass.defaultClass=false \
   --set storageClass.reclaimPolicy=Retain \
   --set storageClass.archiveOnDelete=false \
-  --set storageClass.allowVolumeExpansion=true
+  --set storageClass.allowVolumeExpansion=true \
+  --set 'nodeSelector.kubernetes\.io/hostname=debian-marmoset'   # pin to same node as nfs-server backend pod
+```
+
+## Why pin the provisioner to `debian-marmoset`
+
+The `nfs-server` pod runs on `debian-marmoset` (single replica). Without pinning, the
+provisioner can schedule on any worker — including the cloud nodes (vmi3115606,
+vmi2951245) which reach the in-cluster NFS service over the WireGuard/Tailscale
+tunnel. That cross-host NFS-via-WG path is *extremely* sensitive to network blips:
+any tunnel flap leaves the kubelet with an orphaned NFS mount whose TCP socket
+stays ESTAB on the server side, holding the NFSv4 lease, blocking ALL future
+mount attempts to this nfs-server (even from other clients) until the server pod
+is bounced.
+
+Observed 2026-05-27: provisioner pod on vmi3115606 got stuck `ContainerCreating`
+for 3+ hours with the orphan-mount/stuck-lease pattern. Fix was 3-fold:
+1. `umount -l` the orphan mount on vmi3115606 (didn't kill the TCP socket; lazy detach only)
+2. `kubectl rollout restart deploy nfs-server -n cluster-nfs` (clears server state and forces all stale clients to reconnect)
+3. Add `nodeSelector: kubernetes.io/hostname=debian-marmoset` so the provisioner mount becomes same-node (CNI bridge, no tunnels)
+
+Pinning to debian-marmoset doesn't worsen failure independence: the nfs-server is
+on debian-marmoset already (single replica), so the provisioner has an implicit
+dependency on that node either way. Co-locating just removes the WG/Tailscale link
+from the dependency chain.
+
+## Anti-affinity gotcha
+
+There was a manual `kubectl patch` at some point that added a `podAntiAffinity`
+rule preventing co-location with `app: nfs-server`. That rule isn't in the chart
+or helm values, so a `helm upgrade` won't render it — but kubernetes 3-way merge
+may have preserved it across upgrades. Check with:
+```bash
+kubectl -n nfs-provisioners get deploy cluster-nfs-provisioner-nfs-subdir-external-provisioner -o yaml | grep -A8 affinity
+```
+If `podAntiAffinity` appears, remove with:
+```bash
+kubectl -n nfs-provisioners patch deploy cluster-nfs-provisioner-nfs-subdir-external-provisioner --type=json -p='[{"op":"remove","path":"/spec/template/spec/affinity"}]'
 ```
 
 ## Why ClusterIP must be pinned
