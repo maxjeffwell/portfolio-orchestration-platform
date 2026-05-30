@@ -59,6 +59,23 @@ configMaps:
       node-agent-config.json: |
         {"loadConcurrency":{"globalConfig":3}}
 
+# Velero exposes Prometheus metrics on :8085 but NOTHING scraped them — no
+# ServiceMonitor existed, so velero_backup_* metrics were never collected and the
+# velero-backup-alerts PrometheusRule (PartiallyFailed/Unavailable, severity=critical)
+# could never fire. That is why weeks of failed backups never paged. Enable the
+# ServiceMonitor + node-agent PodMonitor; `release: prometheus` is the label the
+# kube-prometheus operator selects on (matches the scraped goldpinger ServiceMonitor).
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: prometheus
+  nodeAgentPodMonitor:
+    enabled: true
+    additionalLabels:
+      release: prometheus
+
 snapshotsEnabled: true
 
 upgradeCRDs: false
