@@ -10,15 +10,15 @@ configuration:
         region: garage
         s3ForcePathStyle: true
         s3Url: http://garage.monitoring.svc.cluster.local:3900
-    - name: backblaze
-      provider: aws
-      bucket: k3s-velero-eljefe-backups
-      config:
-        region: us-east-005
-        s3ForcePathStyle: true
-        s3Url: https://s3.us-east-005.backblazeb2.com
+  # backblaze BSL is owned by the devops-portfolio-manager `backups` ArgoCD app
+  # (k8s/backups/velero-backblaze-bsl.yaml) with prefix: velero. Kept out of the
+  # Helm install so the chart can't create a competing Helm-owned BSL.
   defaultVolumesToFsBackup: true
   features: EnableCSI
+  # Chart defaults are clientQPS:20 / clientBurst:30 — far too low for ~4871-item
+  # backups; the client-go rate limiter saturates and silently skips pod volumes.
+  clientQPS: 100
+  clientBurst: 200
   volumeSnapshotLocation:
     - name: default
       provider: aws
