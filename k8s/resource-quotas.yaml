@@ -18,7 +18,9 @@ spec:
   hard:
     requests.cpu: "8"
     requests.memory: 20Gi
-    limits.memory: 36Gi
+    # 36Gi → 38Gi: namespace was maxed (36762/36864Mi), blocking the Alertmanager
+    # pod (needs 306Mi) from scheduling for 29h → no alert delivery cluster-wide.
+    limits.memory: 38Gi
 ---
 apiVersion: v1
 kind: ResourceQuota
