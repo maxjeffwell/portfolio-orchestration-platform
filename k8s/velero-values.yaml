@@ -42,6 +42,22 @@ initContainers:
 deployNodeAgent: true
 nodeAgent:
   podVolumePath: /var/lib/kubelet/pods
+  # Wire the node-agent-config ConfigMap so loadConcurrency actually loads.
+  # Without this flag the default is 1 data-path/node — a single orphaned
+  # InProgress PVB (e.g. left by a node-agent restart during a WG/flannel flap)
+  # then starves ALL backups. 3 keeps backups flowing if one PVB wedges.
+  extraArgs:
+    # Chart prefixes configMaps names with the release name → velero-node-agent-config.
+    - --node-agent-configmap=velero-node-agent-config
+
+# Governed node-agent config (replaces the previously hand-applied, malformed
+# configmap whose data value was YAML — Velero json.Unmarshals it, so YAML
+# silently failed to parse and fell back to concurrency 1). Value MUST be JSON.
+configMaps:
+  node-agent-config:
+    data:
+      node-agent-config.json: |
+        {"loadConcurrency":{"globalConfig":3}}
 
 snapshotsEnabled: true
 
