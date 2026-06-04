@@ -1,0 +1,181 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stremio
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stremio-tailscale
+  namespace: stremio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: stremio-tailscale
+  namespace: stremio
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["stremio-tailscale-state"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: stremio-tailscale
+  namespace: stremio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: stremio-tailscale
+subjects:
+  - kind: ServiceAccount
+    name: stremio-tailscale
+    namespace: stremio
+---
+# Trusted cert for the tailnet MagicDNS name, issued by cert-manager via
+# Cloudflare DNS-01 (no public A record needed — only a TXT challenge in the
+# public el-jefe.me zone). Headscale can't issue node certs, so we bring our own.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: stremio-tls
+  namespace: stremio
+spec:
+  secretName: stremio-tls
+  issuerRef:
+    name: letsencrypt-prod-dns
+    kind: ClusterIssuer
+  dnsNames:
+    - stremio.tailnet.el-jefe.me
+---
+# tailscale serve: raw-TCP-forward tailnet :443 -> local nginx (TLS terminates at
+# nginx with the real cert), and keep :11470 plain-HTTP for tailnet http clients.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stremio-ts-serve
+  namespace: stremio
+data:
+  serve.json: |
+    {
+      "TCP": {
+        "443":   { "TCPForward": "127.0.0.1:8443" },
+        "11470": { "TCPForward": "127.0.0.1:11470" }
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stremio-nginx
+  namespace: stremio
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /dev/stderr warn;
+    events { worker_connections 1024; }
+    http {
+      access_log /dev/stdout;
+      server {
+        listen 8443 ssl;
+        http2 on;
+        server_name stremio.tailnet.el-jefe.me;
+        ssl_certificate     /certs/tls.crt;
+        ssl_certificate_key /certs/tls.key;
+        # streaming-friendly: no buffering, no body-size cap, long timeouts
+        proxy_buffering off;
+        proxy_request_buffering off;
+        client_max_body_size 0;
+        location / {
+          proxy_pass http://127.0.0.1:11470;
+          proxy_http_version 1.1;
+          proxy_set_header Host $host;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stremio
+  namespace: stremio
+  labels:
+    app: stremio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stremio
+  template:
+    metadata:
+      labels:
+        app: stremio
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: vmi2951245
+      serviceAccountName: stremio-tailscale
+      containers:
+        - name: server
+          image: stremio/server:latest
+          ports:
+            - containerPort: 11470
+          env:
+            - name: NO_CORS
+              value: "1"
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: "1", memory: 1Gi }
+        - name: tls-proxy
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - { name: nginx-conf, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf }
+            - { name: tls, mountPath: /certs, readOnly: true }
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
+        - name: tailscale
+          image: tailscale/tailscale:stable
+          env:
+            - { name: TS_USERSPACE, value: "true" }
+            - { name: TS_KUBE_SECRET, value: "stremio-tailscale-state" }
+            - { name: TS_HOSTNAME, value: "stremio" }
+            - { name: TS_EXTRA_ARGS, value: "--login-server=https://headscale.el-jefe.me" }
+            - { name: TS_SERVE_CONFIG, value: "/cfg/serve.json" }
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef: { name: stremio-tailscale-auth, key: TS_AUTHKEY, optional: true }
+          volumeMounts:
+            - { name: ts-serve, mountPath: /cfg }
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
+      volumes:
+        - name: ts-serve
+          configMap: { name: stremio-ts-serve }
+        - name: nginx-conf
+          configMap: { name: stremio-nginx }
+        - name: tls
+          secret: { secretName: stremio-tls }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stremio
+  namespace: stremio
+spec:
+  selector:
+    app: stremio
+  ports:
+    - { name: server, port: 11470, targetPort: 11470 }
