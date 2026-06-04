@@ -1,0 +1,89 @@
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: neon-cluster
+  namespace: default
+  labels:
+    clusterdefinition.kubeblocks.io/name: neon
+spec:
+  clusterDef: neon
+  topology: default
+  terminationPolicy: WipeOut
+  componentSpecs:
+  - name: neon-pageserver
+    componentDef: neon-pageserver-1.0.1
+    serviceVersion: 1.0.0
+    replicas: 1
+    podUpdatePolicy: PreferInPlace
+    schedulingPolicy:
+      nodeSelector:
+        kubernetes.io/hostname: debian-marmoset
+    env:
+    - name: NEON_S3_BUCKET
+      value: neon-storage
+    - name: NEON_S3_ENDPOINT
+      value: http://garage.monitoring.svc.cluster.local:3900
+    - name: NEON_S3_REGION
+      value: garage
+    - name: NEON_S3_PREFIX
+      value: pageserver/
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef: { name: neon-cluster-s3-creds, key: AWS_ACCESS_KEY_ID }
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef: { name: neon-cluster-s3-creds, key: AWS_SECRET_ACCESS_KEY }
+    resources:
+      limits: { memory: 512Mi }
+      requests: { cpu: 100m, memory: 256Mi }
+    volumeClaimTemplates:
+    - name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: mayastor-1
+        resources:
+          requests: { storage: 10Gi }
+  - name: neon-safekeeper
+    componentDef: neon-safekeeper-1.0.1
+    serviceVersion: 1.0.0
+    replicas: 1
+    podUpdatePolicy: PreferInPlace
+    schedulingPolicy:
+      nodeSelector:
+        kubernetes.io/hostname: debian-marmoset
+    annotations:
+      backup.velero.io/backup-volumes-excludes: data
+    resources:
+      limits: { memory: 256Mi }
+      requests: { cpu: 100m, memory: 128Mi }
+    volumeClaimTemplates:
+    - name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: mayastor-1
+        resources:
+          requests: { storage: 5Gi }
+  - name: neon-broker
+    componentDef: neon-broker-1.0.1
+    serviceVersion: 1.0.0
+    replicas: 1
+    podUpdatePolicy: PreferInPlace
+    schedulingPolicy:
+      nodeSelector:
+        kubernetes.io/hostname: debian-marmoset
+    annotations:
+      backup.velero.io/backup-volumes-excludes: data
+    resources:
+      limits: { memory: 128Mi }
+      requests: { cpu: 50m, memory: 64Mi }
+  - name: neon-compute
+    componentDef: neon-compute-1.0.1
+    serviceVersion: 1.0.0
+    replicas: 1
+    podUpdatePolicy: PreferInPlace
+    schedulingPolicy:
+      nodeSelector:
+        kubernetes.io/hostname: debian-marmoset
+    resources:
+      limits: { memory: 512Mi }
+      requests: { cpu: 250m, memory: 256Mi }
