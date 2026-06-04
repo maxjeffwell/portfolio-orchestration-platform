@@ -29,6 +29,21 @@ configuration:
       global:
         keepLatestMaintenanceJobs: 1
 
+# The chart shipped the server container with no resource requests, so the velero
+# server ran as QoS BestEffort — the kubelet's FIRST eviction target under node
+# memory pressure. On 2026-06-03 ~06:17 the BestEffort server was evicted off the
+# 30Gi worker (vmi3115606) mid-backup; on restart Velero marked every still-running
+# backup Failed ("found a backup with status InProgress during the server starting").
+# Two backups died together in that one restart (daily-backup-20260603020004 +
+# verify-nas-109-220933). A memory request lifts the server to Burstable so it is no
+# longer evicted first. No CPU limit on purpose — avoid throttling backup coordination.
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+
 credentials:
   existingSecret: cloud-credentials
 
