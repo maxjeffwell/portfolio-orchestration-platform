@@ -23,6 +23,15 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: debian-marmoset
       priorityClassName: ai-workload
+      # ndots:1 so a fully-qualified service name resolves in a single query
+      # instead of walking the default ndots:5 search list. The search-list walk
+      # was triggering intermittent 5-10s glibc A/AAAA resolution stalls (UDP
+      # conntrack race), which made /health exceed its probe timeouts and put the
+      # pod into a restart loop.
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
       containers:
         - name: embedding-adapter
           image: maxjeffwell/embedding-adapter:latest
@@ -32,10 +41,15 @@ spec:
               name: http
               protocol: TCP
           env:
+            # External primary https://embeddings.el-jefe.me is returning 403/502
+            # at the ingress (Traefik/CrowdSec) and added 4-6s of DNS+HTTP latency
+            # to every /health probe. Both legs point at the co-located in-cluster
+            # Triton (FQDN; resolves in one query thanks to dnsConfig ndots:1)
+            # until the external ingress is repaired.
             - name: TRITON_PRIMARY_URL
-              value: https://embeddings.el-jefe.me
+              value: http://triton-embeddings.default.svc.cluster.local:8000
             - name: TRITON_FALLBACK_URL
-              value: http://triton-embeddings:8000
+              value: http://triton-embeddings.default.svc.cluster.local:8000
             - name: MODEL_NAME
               value: bge_embeddings
             - name: PORT
