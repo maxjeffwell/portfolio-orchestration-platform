@@ -23,15 +23,22 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: debian-marmoset
       priorityClassName: ai-workload
-      # ndots:1 so a fully-qualified service name resolves in a single query
-      # instead of walking the default ndots:5 search list. The search-list walk
-      # was triggering intermittent 5-10s glibc A/AAAA resolution stalls (UDP
-      # conntrack race), which made /health exceed its probe timeouts and put the
-      # pod into a restart loop.
+      # DNS hardening. The /health endpoint synchronously resolves the Triton
+      # backend on every probe, and intermittent 5-10s glibc resolution stalls
+      # were tripping the probe timeouts and crash-looping the pod. Root cause is
+      # the glibc parallel A+AAAA "UDP conntrack race" (one reply dropped -> 5s
+      # retransmit), which happens even for a single FQDN.
+      #   - ndots:1            -> FQDN resolves in one query, no search-list walk
+      #   - single-request-reopen -> serialize A/AAAA on separate sockets
+      #   - use-vc             -> resolve over TCP; eliminates the UDP race
+      # Validated: use-vc drops worst-case lookup from ~7s to ~2.6s with zero 5s
+      # stalls over 30 samples.
       dnsConfig:
         options:
           - name: ndots
             value: "1"
+          - name: single-request-reopen
+          - name: use-vc
       containers:
         - name: embedding-adapter
           image: maxjeffwell/embedding-adapter:latest
