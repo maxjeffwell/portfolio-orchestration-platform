@@ -46,6 +46,8 @@ async function rescan() {
     console.log(`scan ok: ${index.movies.length} movies, ${index.series.length} series`);
   } catch (err) {
     console.error('scan failed, keeping previous index:', err.message);
+  } finally {
+    setTimeout(rescan, RESCAN_MS).unref();
   }
 }
 
@@ -64,7 +66,7 @@ function streamsFor(entry) {
 
 function json(res, body, code = 200) {
   res.writeHead(code, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(body));
+  res.end(res.req.method === 'HEAD' ? undefined : JSON.stringify(body));
 }
 
 function searchFilter(items, extra) {
@@ -162,5 +164,4 @@ const server = http.createServer(async (req, res) => {
   if (persisted) setIndex(persisted);
   server.listen(PORT, () => console.log(`nas-addon listening on :${PORT}`));
   await rescan();
-  setInterval(rescan, RESCAN_MS);
 })();
