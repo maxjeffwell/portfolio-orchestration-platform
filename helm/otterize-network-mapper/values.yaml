@@ -1,4 +1,12 @@
 #
+# ⚠ UNINSTALLED 2026-06-10 — this is a dormant reinstall recipe, NOT a live deployment.
+# Removed (`helm uninstall network-mapper -n otterize-system`) + namespace deleted to
+# reclaim ~3.6 cores / ~800Mi of continuous usage (the sniffer DaemonSet was burning ~1
+# core per node and OOM-restarting 592x on debian-marmoset against a 256Mi limit). It was
+# observe-only (no enforcement), and its traffic graph was not in active use.
+# To bring it back, run the Deploy command below. If you do, raise the sniffer memory
+# limit (was 256Mi → use ~512Mi) so it stops OOMing on the densest node.
+#
 # Otterize Network Mapper - Self-hosted, no cloud account, no enforcement.
 # Just observes inter-service traffic and exposes a graph via the otterize CLI.
 #
