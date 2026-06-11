@@ -46,3 +46,10 @@ test('non-OK response throws', async () => {
   const badFetch = async () => ({ ok: false, status: 502 });
   await assert.rejects(() => matchCinemeta('movie', 'X', 2000, badFetch));
 });
+
+test('unparseable body -> null, and missing metas key -> null', async () => {
+  const htmlFetch = async () => ({ ok: true, json: async () => { throw new SyntaxError('bad json'); } });
+  assert.strictEqual(await matchCinemeta('movie', 'X', 2000, htmlFetch), null);
+  const emptyFetch = async () => ({ ok: true, json: async () => ({}) });
+  assert.strictEqual(await matchCinemeta('movie', 'X', 2000, emptyFetch), null);
+});

@@ -12,9 +12,10 @@ function metaYear(meta) {
 // Strict: normalized-title equality required; if we have a year, it must be within ±1.
 async function matchCinemeta(type, title, year, fetchFn = fetch) {
   const url = `https://v3-cinemeta.strem.io/catalog/${type}/top/search=${encodeURIComponent(title)}.json`;
-  const res = await fetchFn(url);
+  const res = await fetchFn(url, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`cinemeta ${res.status}`);
-  const body = await res.json();
+  let body;
+  try { body = await res.json(); } catch { return null; }
   const want = norm(title);
   const candidates = (body.metas || []).filter((m) => norm(m.name || '') === want);
   if (candidates.length === 0) return null;
