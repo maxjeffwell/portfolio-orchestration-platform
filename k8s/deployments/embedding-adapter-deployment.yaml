@@ -23,22 +23,10 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: debian-marmoset
       priorityClassName: ai-workload
-      # DNS hardening. The /health endpoint synchronously resolves the Triton
-      # backend on every probe, and intermittent 5-10s glibc resolution stalls
-      # were tripping the probe timeouts and crash-looping the pod. Root cause is
-      # the glibc parallel A+AAAA "UDP conntrack race" (one reply dropped -> 5s
-      # retransmit), which happens even for a single FQDN.
-      #   - ndots:1            -> FQDN resolves in one query, no search-list walk
-      #   - single-request-reopen -> serialize A/AAAA on separate sockets
-      #   - use-vc             -> resolve over TCP; eliminates the UDP race
-      # Validated: use-vc drops worst-case lookup from ~7s to ~2.6s with zero 5s
-      # stalls over 30 samples.
-      dnsConfig:
-        options:
-          - name: ndots
-            value: "1"
-          - name: single-request-reopen
-          - name: use-vc
+      # 2026-06-10 — DNS race fixed cluster-wide by NodeLocal DNSCache
+      # (devops-portfolio-manager k8s/nodelocaldns): the on-node cache forwards
+      # misses to CoreDNS over TCP, so the per-pod use-vc/single-request-reopen
+      # workaround is no longer needed. /health uses the in-cluster FQDN (kept).
       containers:
         - name: embedding-adapter
           image: maxjeffwell/embedding-adapter:latest
