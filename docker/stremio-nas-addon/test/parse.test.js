@@ -27,6 +27,10 @@ test('parseMovieName: no year falls back to cleaned title', () => {
     { title: 'Some Home Video', year: null });
 });
 
+test('parseMovieName: filename that is only a year keeps it as the title', () => {
+  assert.deepStrictEqual(parseMovieName('1984.mp4'), { title: '1984', year: null });
+});
+
 test('parseShowDirName: "Show (Year)" and bare', () => {
   assert.deepStrictEqual(parseShowDirName('Severance (2022)'), { title: 'Severance', year: 2022 });
   assert.deepStrictEqual(parseShowDirName('The Wire'), { title: 'The Wire', year: null });

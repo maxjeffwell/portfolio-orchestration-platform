@@ -12,7 +12,14 @@ function parseMovieName(filename) {
 
   // First try: parenthesized year "Title (1999)"
   let m = base.match(/^(.+?)\s*\(?((?:19|20)\d{2})\)?[\s._-]*$/);
-  if (m) return { title: clean(m[1]), year: Number(m[2]) };
+  if (m) {
+    const cleanedTitle = clean(m[1]);
+    // If extracting the year leaves no title, treat filename as the title with no year
+    if (!cleanedTitle) {
+      return { title: clean(base), year: null };
+    }
+    return { title: cleanedTitle, year: Number(m[2]) };
+  }
 
   // Second try: look for year followed by quality markers (scene-style)
   const years = [];
@@ -36,7 +43,14 @@ function parseMovieName(filename) {
   if (!selectedYear) selectedYear = years[years.length - 1];
 
   const title = base.substring(0, selectedYear.idx).replace(/[\s._-]+$/, '');
-  return { title: clean(title), year: Number(selectedYear.year) };
+  const cleanedTitle = clean(title);
+
+  // If extracting the year leaves no title, treat filename as the title with no year
+  if (!cleanedTitle) {
+    return { title: clean(base), year: null };
+  }
+
+  return { title: cleanedTitle, year: Number(selectedYear.year) };
 }
 
 // "Severance (2022)" -> { title, year }; bare name -> year null
