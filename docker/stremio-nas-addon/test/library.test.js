@@ -69,3 +69,13 @@ test('buildIndex: matcher throwing leaves items unmatched but index builds', asy
   assert.strictEqual(index.movies.length, 2);
   assert.ok(index.movies.every((m) => m.id.startsWith('nas:')));
 });
+
+test('buildIndex: empty scan does not clobber a previously good index', async () => {
+  const dataDir3 = path.join(base, 'data3');
+  await buildIndex({ moviesDir, tvDir, dataDir: dataDir3, match: stubMatch });
+  const emptyDir = path.join(base, 'does-not-exist');
+  const index = await buildIndex({ moviesDir: emptyDir, tvDir: emptyDir, dataDir: dataDir3, match: stubMatch });
+  assert.strictEqual(index.movies.length, 2, 'returns previous index');
+  const persisted = await loadPersistedIndex(dataDir3);
+  assert.strictEqual(persisted.movies.length, 2, 'index.json preserved');
+});

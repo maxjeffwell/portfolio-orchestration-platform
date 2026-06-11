@@ -84,8 +84,18 @@ async function buildIndex({ moviesDir, tvDir, dataDir, match }) {
     });
   }
 
-  const index = { builtAt: new Date().toISOString(), movies, series };
+  let index = { builtAt: new Date().toISOString(), movies, series };
   await fsp.mkdir(dataDir, { recursive: true });
+
+  // Guard against NFS blips: if scan came back completely empty, preserve the previous index.
+  if (movies.length === 0 && series.length === 0) {
+    const prevIndex = await loadPersistedIndex(dataDir);
+    if (prevIndex && (prevIndex.movies?.length > 0 || prevIndex.series?.length > 0)) {
+      await fsp.writeFile(cacheFile, JSON.stringify(cache));
+      return prevIndex;
+    }
+  }
+
   await fsp.writeFile(cacheFile, JSON.stringify(cache));
   await fsp.writeFile(path.join(dataDir, 'index.json'), JSON.stringify(index));
   return index;
