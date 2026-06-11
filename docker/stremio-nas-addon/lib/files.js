@@ -17,16 +17,19 @@ async function resolveFileId(roots, fileId) {
   const decoded = Buffer.from(fileId, 'base64url').toString('utf8');
   const slash = decoded.indexOf('/');
   if (slash < 1) return null;
-  const root = roots[decoded.slice(0, slash)];
-  if (!root) return null;
-  const abs = path.resolve(root, decoded.slice(slash + 1));
-  if (abs !== root && !abs.startsWith(root + path.sep)) return null;
+  const key = decoded.slice(0, slash);
+  const root = Object.prototype.hasOwnProperty.call(roots, key) ? roots[key] : null;
+  if (typeof root !== 'string') return null;
+  const rel = decoded.slice(slash + 1);
+  if (!rel) return null;
+  const abs = path.resolve(root, rel);
+  if (!abs.startsWith(root + path.sep)) return null;
   let real, realRoot;
   try {
     real = await fsp.realpath(abs);
     realRoot = await fsp.realpath(root);
   } catch { return null; }
-  if (real !== realRoot && !real.startsWith(realRoot + path.sep)) return null;
+  if (!real.startsWith(realRoot + path.sep)) return null;
   return real;
 }
 

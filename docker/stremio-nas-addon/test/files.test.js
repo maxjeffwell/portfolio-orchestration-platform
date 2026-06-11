@@ -48,6 +48,13 @@ test('rejects traversal, unknown root, junk, symlink escape', async () => {
   assert.strictEqual(await resolveFileId(roots, b64('movies/escape.mp4')), null);
 });
 
+test('rejects prototype-pollution root key and empty rel path', async () => {
+  const b64 = (s) => Buffer.from(s, 'utf8').toString('base64url');
+  assert.strictEqual(await resolveFileId(roots, b64('__proto__/x')), null);
+  assert.strictEqual(await resolveFileId(roots, b64('movies/')), null);
+  assert.strictEqual(await resolveFileId(roots, b64('movies')), null);
+});
+
 test('full GET returns 200 with size and type', async () => {
   const res = await fetch(`http://127.0.0.1:${port}/file/${makeFileId('movies', 'sub/movie.mp4')}`);
   assert.strictEqual(res.status, 200);
