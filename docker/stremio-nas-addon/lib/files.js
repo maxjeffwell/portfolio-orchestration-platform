@@ -36,6 +36,7 @@ async function resolveFileId(roots, fileId) {
 function serveFile(req, res, absPath, size) {
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Content-Type', MIME[path.extname(absPath).toLowerCase()] || 'application/octet-stream');
+  // Single-range only; multi-range requests intentionally fall through to a full 200 (RFC 7233 allows this).
   const m = (req.headers.range || '').match(/^bytes=(\d*)-(\d*)$/);
   if (m && (m[1] !== '' || m[2] !== '')) {
     let start = m[1] === '' ? size - Number(m[2]) : Number(m[1]);
@@ -51,11 +52,15 @@ function serveFile(req, res, absPath, size) {
       'Content-Length': end - start + 1,
     });
     if (req.method === 'HEAD') return res.end();
-    fs.createReadStream(absPath, { start, end }).pipe(res);
+    const stream = fs.createReadStream(absPath, { start, end });
+    stream.on('error', (err) => { if (!res.writableEnded) res.destroy(err); });
+    stream.pipe(res);
   } else {
     res.writeHead(200, { 'Content-Length': size });
     if (req.method === 'HEAD') return res.end();
-    fs.createReadStream(absPath).pipe(res);
+    const stream = fs.createReadStream(absPath);
+    stream.on('error', (err) => { if (!res.writableEnded) res.destroy(err); });
+    stream.pipe(res);
   }
 }
 

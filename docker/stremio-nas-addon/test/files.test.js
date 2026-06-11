@@ -86,3 +86,24 @@ test('unsatisfiable range returns 416', async () => {
   assert.strictEqual(res.status, 416);
   assert.strictEqual(res.headers.get('content-range'), 'bytes */10');
 });
+
+test('HEAD returns headers without body for 200 and 206', async () => {
+  const id = makeFileId('movies', 'sub/movie.mp4');
+  let res = await fetch(`http://127.0.0.1:${port}/file/${id}`, { method: 'HEAD' });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.headers.get('content-length'), '10');
+  assert.strictEqual(await res.text(), '');
+  res = await fetch(`http://127.0.0.1:${port}/file/${id}`,
+    { method: 'HEAD', headers: { Range: 'bytes=0-4' } });
+  assert.strictEqual(res.status, 206);
+  assert.strictEqual(res.headers.get('content-length'), '5');
+  assert.strictEqual(await res.text(), '');
+});
+
+test('suffix range larger than file returns whole file', async () => {
+  const res = await fetch(`http://127.0.0.1:${port}/file/${makeFileId('movies', 'sub/movie.mp4')}`,
+    { headers: { Range: 'bytes=-50' } });
+  assert.strictEqual(res.status, 206);
+  assert.strictEqual(res.headers.get('content-range'), 'bytes 0-9/10');
+  assert.strictEqual(await res.text(), '0123456789');
+});
