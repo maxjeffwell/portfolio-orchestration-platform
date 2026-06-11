@@ -104,6 +104,20 @@ data:
       }
     }
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: stremio-cache
+  namespace: stremio
+  labels:
+    app: stremio
+spec:
+  storageClassName: openebs-zfs
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -113,6 +127,8 @@ metadata:
     app: stremio
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: stremio
@@ -135,6 +151,8 @@ spec:
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits:   { cpu: "1", memory: 1Gi }
+          volumeMounts:
+            - { name: cache, mountPath: /root/.stremio-server }
         - name: tls-proxy
           image: nginx:1.27-alpine
           ports:
@@ -168,6 +186,9 @@ spec:
           configMap: { name: stremio-nginx }
         - name: tls
           secret: { secretName: stremio-tls }
+        - name: cache
+          persistentVolumeClaim:
+            claimName: stremio-cache
 ---
 apiVersion: v1
 kind: Service
