@@ -1,0 +1,226 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stremio-nas-addon
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nas-addon-tailscale
+  namespace: stremio-nas-addon
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nas-addon-tailscale
+  namespace: stremio-nas-addon
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resourceNames: ["nas-addon-tailscale-state"]
+    resources: ["secrets"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nas-addon-tailscale
+  namespace: stremio-nas-addon
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: nas-addon-tailscale
+subjects:
+  - kind: ServiceAccount
+    name: nas-addon-tailscale
+    namespace: stremio-nas-addon
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: nas-addon-tailscale-external-secret
+  namespace: stremio-nas-addon
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: doppler-secret-store
+  target:
+    name: nas-addon-tailscale-auth
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: TS_AUTHKEY
+      remoteRef:
+        key: STREMIO_TS_AUTHKEY
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nas-addon-tls
+  namespace: stremio-nas-addon
+spec:
+  secretName: nas-addon-tls
+  dnsNames:
+    - nas-addon.tailnet.el-jefe.me
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod-dns
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nas-addon-ts-serve
+  namespace: stremio-nas-addon
+data:
+  serve.json: |
+    {
+      "TCP": {
+        "443": { "TCPForward": "127.0.0.1:8443" }
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nas-addon-nginx
+  namespace: stremio-nas-addon
+data:
+  nginx.conf: |
+    events {}
+    http {
+      server {
+        listen 8443 ssl;
+        ssl_certificate /certs/tls.crt;
+        ssl_certificate_key /certs/tls.key;
+        location / {
+          proxy_pass http://127.0.0.1:7000;
+          proxy_http_version 1.1;
+          proxy_set_header Host $host;
+          proxy_read_timeout 3600s;
+          proxy_send_timeout 3600s;
+        }
+      }
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nas-addon-cache
+  namespace: stremio-nas-addon
+spec:
+  storageClassName: local-path
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nas-addon
+  namespace: stremio-nas-addon
+  labels:
+    app: nas-addon
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nas-addon
+  template:
+    metadata:
+      labels:
+        app: nas-addon
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: debian-marmoset
+      serviceAccountName: nas-addon-tailscale
+      containers:
+        - name: addon
+          image: maxjeffwell/stremio-nas-addon:1.0.0
+          ports:
+            - containerPort: 7000
+              hostPort: 7010
+          env:
+            - { name: PUBLIC_HTTPS_BASE, value: "https://nas-addon.tailnet.el-jefe.me" }
+            - { name: PUBLIC_LAN_BASE, value: "http://192.168.50.152:7010" }
+          volumeMounts:
+            - { name: movies, mountPath: /media/movies, readOnly: true }
+            - { name: tv, mountPath: /media/tv, readOnly: true }
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /health, port: 7000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+        - name: tls-proxy
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 8443
+          volumeMounts:
+            - { name: nginx-conf, mountPath: /etc/nginx/nginx.conf, subPath: nginx.conf }
+            - { name: tls, mountPath: /certs, readOnly: true }
+          resources:
+            requests: { cpu: 25m, memory: 32Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
+        - name: tailscale
+          image: tailscale/tailscale:stable
+          env:
+            - { name: TS_USERSPACE, value: "true" }
+            - { name: TS_KUBE_SECRET, value: "nas-addon-tailscale-state" }
+            - { name: TS_HOSTNAME, value: "nas-addon" }
+            - { name: TS_EXTRA_ARGS, value: "--login-server=https://headscale.el-jefe.me" }
+            - { name: TS_SERVE_CONFIG, value: "/cfg/serve.json" }
+            - name: TS_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: nas-addon-tailscale-auth
+                  key: TS_AUTHKEY
+                  optional: true
+          volumeMounts:
+            - { name: ts-serve, mountPath: /cfg }
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
+      volumes:
+        - name: movies
+          nfs:
+            server: 192.168.50.133
+            path: /volume1/Movies
+            readOnly: true
+        - name: tv
+          nfs:
+            server: 192.168.50.133
+            path: "/volume1/TV Shows"
+            readOnly: true
+        - name: data
+          persistentVolumeClaim:
+            claimName: nas-addon-cache
+        - name: ts-serve
+          configMap:
+            name: nas-addon-ts-serve
+        - name: nginx-conf
+          configMap:
+            name: nas-addon-nginx
+        - name: tls
+          secret:
+            secretName: nas-addon-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nas-addon
+  namespace: stremio-nas-addon
+spec:
+  selector:
+    app: nas-addon
+  ports:
+    - name: http
+      port: 7000
+      targetPort: 7000
