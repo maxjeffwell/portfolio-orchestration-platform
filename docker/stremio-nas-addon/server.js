@@ -16,15 +16,18 @@ const ROOTS = { movies: MOVIES_DIR, tv: TV_DIR };
 
 const MANIFEST = {
   id: 'me.el-jefe.nas-library',
-  version: '1.0.0',
+  version: '1.0.1',
   name: 'NAS Library',
   description: 'Movies and TV Shows from the ASUSTOR NAS',
   resources: ['catalog', 'meta', 'stream'],
   types: ['movie', 'series'],
   idPrefixes: ['tt', 'nas:'],
+  // Same catalog id for both types (like Cinemeta's 'top'): Discover keeps the
+  // catalog id when the user switches type, so distinct ids break the toggle
+  // with a misleading "Addon not installed".
   catalogs: [
-    { type: 'movie', id: 'nas-movies', name: 'NAS Movies', extra: [{ name: 'search' }] },
-    { type: 'series', id: 'nas-tv', name: 'NAS TV', extra: [{ name: 'search' }] },
+    { type: 'movie', id: 'nas', name: 'NAS Movies', extra: [{ name: 'search' }, { name: 'skip' }] },
+    { type: 'series', id: 'nas', name: 'NAS TV', extra: [{ name: 'search' }, { name: 'skip' }] },
   ],
 };
 
@@ -69,11 +72,28 @@ function json(res, body, code = 200) {
   res.end(res.req.method === 'HEAD' ? undefined : JSON.stringify(body));
 }
 
-function searchFilter(items, extra) {
-  const m = /^search=(.*)$/.exec(extra || '');
-  if (!m) return items;
-  const q = m[1].toLowerCase();
-  return items.filter((i) => i.name.toLowerCase().includes(q));
+// Extra segment is '&'-separated key=value pairs, already URL-decoded by the
+// router (so no URLSearchParams here — it would mangle '+' into spaces).
+function parseExtra(extra) {
+  const params = {};
+  for (const part of (extra || '').split('&')) {
+    const eq = part.indexOf('=');
+    if (eq > 0) params[part.slice(0, eq)] = part.slice(eq + 1);
+  }
+  return params;
+}
+
+const PAGE_SIZE = 100;
+
+function applyExtra(items, extra) {
+  const params = parseExtra(extra);
+  let out = items;
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    out = out.filter((i) => i.name.toLowerCase().includes(q));
+  }
+  const skip = Number(params.skip) || 0;
+  return out.slice(skip, skip + PAGE_SIZE);
 }
 
 const server = http.createServer(async (req, res) => {
@@ -95,11 +115,12 @@ const server = http.createServer(async (req, res) => {
       const [, type, rawId] = segs;
       const catalogId = rawId.replace(/\.json$/, '');
       const extra = segs.length === 4 ? segs[3].replace(/\.json$/, '') : null;
-      if (type === 'movie' && catalogId === 'nas-movies') {
-        return json(res, { metas: searchFilter(index.movies, extra).map((m) => toMeta('movie', m)) });
+      // 'nas-movies'/'nas-tv' kept for clients holding the 1.0.0 manifest.
+      if (type === 'movie' && (catalogId === 'nas' || catalogId === 'nas-movies')) {
+        return json(res, { metas: applyExtra(index.movies, extra).map((m) => toMeta('movie', m)) });
       }
-      if (type === 'series' && catalogId === 'nas-tv') {
-        return json(res, { metas: searchFilter(index.series, extra).map((s) => toMeta('series', s)) });
+      if (type === 'series' && (catalogId === 'nas' || catalogId === 'nas-tv')) {
+        return json(res, { metas: applyExtra(index.series, extra).map((s) => toMeta('series', s)) });
       }
       return json(res, { metas: [] });
     }

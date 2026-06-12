@@ -141,7 +141,7 @@ spec:
       serviceAccountName: nas-addon-tailscale
       containers:
         - name: addon
-          image: maxjeffwell/stremio-nas-addon:1.0.0
+          image: maxjeffwell/stremio-nas-addon:1.0.1
           ports:
             - containerPort: 7000
               hostPort: 7010
