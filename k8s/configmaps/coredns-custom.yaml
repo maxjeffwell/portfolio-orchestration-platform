@@ -21,6 +21,9 @@
 #   StorageClass. Addressed by name because csi-driver-smb bakes `source` into
 #   each PV immutably; repointing to .142/.133 must not require PV rebuilds.
 #   backrest.home.arpa -> traefik LoadBalancer IPs (Ingress host, not a backend).
+#   The `forward . /etc/resolv.conf` after `hosts` is required: node-local-dns routes the
+#   whole home.arpa zone here, so without a forward, any home.arpa name not in the hosts
+#   block (previously resolvable via each node's upstream resolver) now SERVFAILs from pods.
 #
 # Apply with: kubectl apply -f coredns-custom.yaml
 # Then restart: kubectl rollout restart deployment coredns -n kube-system
@@ -50,4 +53,5 @@ data:
         100.64.0.2 backrest.home.arpa
         fallthrough
       }
+      forward . /etc/resolv.conf
     }
