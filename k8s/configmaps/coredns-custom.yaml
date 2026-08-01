@@ -15,6 +15,13 @@
 #   HAProxy retries on a different Cloudflare IP within 2s.
 #   TLS passes through end-to-end (Layer 4 proxy).
 #
+# home-arpa.server:
+#   Serves the internal home.arpa zone.
+#   asustor-smb.home.arpa -> ASUSTOR eth2 (5G), the source for the smb-asustor
+#   StorageClass. Addressed by name because csi-driver-smb bakes `source` into
+#   each PV immutably; repointing to .142/.133 must not require PV rebuilds.
+#   backrest.home.arpa -> traefik LoadBalancer IPs (Ingress host, not a backend).
+#
 # Apply with: kubectl apply -f coredns-custom.yaml
 # Then restart: kubectl rollout restart deployment coredns -n kube-system
 
@@ -32,4 +39,15 @@ data:
     rewrite stop {
       name exact api.doppler.com doppler-proxy.external-secrets.svc.cluster.local
       answer name doppler-proxy.external-secrets.svc.cluster.local api.doppler.com
+    }
+  home-arpa.server: |
+    home.arpa:53 {
+      errors
+      cache 30
+      hosts {
+        192.168.50.149 asustor-smb.home.arpa
+        100.64.0.1 backrest.home.arpa
+        100.64.0.2 backrest.home.arpa
+        fallthrough
+      }
     }
