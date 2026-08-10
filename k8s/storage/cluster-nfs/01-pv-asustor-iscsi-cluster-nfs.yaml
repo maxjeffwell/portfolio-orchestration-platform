@@ -26,6 +26,22 @@ spec:
     iscsiInterface: default
     lun: 0
     targetPortal: 10.0.0.4:3260
+  # debian-marmoset ONLY. Was [vmi2951245, vmi3115606, marmoset] until
+  # 2026-08-10.
+  #
+  # The iSCSI target (10.0.0.4) is the ASUSTOR at home. Measured RTT to it:
+  # 0.388ms from debian-marmoset vs 52.8ms from the Contabo VPSes. iSCSI is
+  # synchronous -- one round trip per I/O -- so from a VPS throughput
+  # collapsed to ~1.2 MB/s (64KB / 0.053s). That made backing up this 16.1GB
+  # volume consume the ENTIRE 4h Velero ItemBlock window every night, and it
+  # also made the ext4 mount itself take ~8 minutes.
+  #
+  # The VPS nodes are excluded so this can never drift back onto a WAN-distant
+  # node. `marmoset` is excluded deliberately (user decision): it is at home
+  # and would be fast, but it is the GPU-tainted workstation, not a server.
+  #
+  # NOTE: nodeAffinity is IMMUTABLE on a bound PV -- changing it requires
+  # deleting and recreating the PV (reclaimPolicy Retain, so data survives).
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -33,9 +49,7 @@ spec:
             - key: kubernetes.io/hostname
               operator: In
               values:
-                - vmi2951245
-                - vmi3115606
-                - marmoset
+                - debian-marmoset
   persistentVolumeReclaimPolicy: Retain
   storageClassName: iscsi-local
   volumeMode: Filesystem

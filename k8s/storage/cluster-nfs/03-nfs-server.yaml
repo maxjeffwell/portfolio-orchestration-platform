@@ -38,16 +38,24 @@ spec:
         # exists. Verified 2026-08-10.
         backup.velero.io/backup-volumes-excludes: nfs-data
     spec:
+      # Pinned to debian-marmoset 2026-08-10. Was a soft preference for
+      # vmi3115606 ("colocate with backrest") -- but backrest moved off this
+      # NFS to the synology-nfs SC back in April, so the reason was stale
+      # while the cost was not: vmi3115606 is a Contabo VPS 52.8ms from this
+      # volume's iSCSI target (the ASUSTOR at home), vs 0.388ms from
+      # debian-marmoset. Synchronous iSCSI over that link ran at ~1.2 MB/s.
+      #
+      # This is `required`, not `preferred`, and must stay in agreement with
+      # the PV's own nodeAffinity in 01-pv-asustor-iscsi-cluster-nfs.yaml.
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              preference:
-                matchExpressions:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
                   - key: kubernetes.io/hostname
                     operator: In
                     values:
-                      - vmi3115606  # colocate with backrest
+                      - debian-marmoset
       containers:
         - name: nfs-server
           # Image's default entrypoint disables NFSv3; we override CMD to enable v3+v4.
