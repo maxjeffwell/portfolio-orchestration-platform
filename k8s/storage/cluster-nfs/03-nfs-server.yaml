@@ -19,6 +19,24 @@ spec:
     metadata:
       labels:
         app: nfs-server
+      annotations:
+        # Exclude nfs-data from Velero fs-backup. Velero runs with
+        # --default-volumes-to-fs-backup, so every volume is backed up unless
+        # opted out here.
+        #
+        # Why: this pod is scheduled on vmi3115606 (Contabo VPS) while its PVC
+        # is iSCSI to the ASUSTOR at home -- 52.8ms RTT vs 0.388ms from a home
+        # node. iSCSI is synchronous, so throughput collapses to ~1.2 MB/s
+        # (64KB / 0.053s). Backing up the 16.1GB volume therefore consumed the
+        # ENTIRE 4h Velero ItemBlock window every night and was the direct
+        # cause of the chronic ~79-error PartiallyFailed daily backups.
+        #
+        # Safe to exclude: nothing consumes the cluster-nfs StorageClass (0
+        # PVCs), and /export holds only orphaned data -- garage remnants
+        # (256 hash dirs + garage-marker; the live garage pods use
+        # openebs-lvmpv) and a backrest subdirectory whose PV no longer
+        # exists. Verified 2026-08-10.
+        backup.velero.io/backup-volumes-excludes: nfs-data
     spec:
       affinity:
         nodeAffinity:
