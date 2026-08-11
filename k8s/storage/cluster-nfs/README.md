@@ -60,8 +60,19 @@ helm upgrade --install cluster-nfs-provisioner \
   --set storageClass.reclaimPolicy=Retain \
   --set storageClass.archiveOnDelete=false \
   --set storageClass.allowVolumeExpansion=true \
-  --set 'nodeSelector.kubernetes\.io/hostname=debian-marmoset'   # pin to same node as nfs-server backend pod
+  --set 'nodeSelector.kubernetes\.io/hostname=debian-marmoset' \
+  --set 'podAnnotations.backup\.velero\.io/backup-volumes-excludes=nfs-subdir-external-provisioner-root'
 ```
+
+The `nodeSelector` pins the provisioner to the same node as the nfs-server backend pod.
+
+The `podAnnotations` line keeps this pod's root mount out of Velero. The provisioner
+mounts the ROOT of the export (`/`), i.e. the parent directory of every PVC it hands
+out — without the exclusion, fs-backup copies all of that data a SECOND time on top of
+the per-PVC backups that already cover it. The PV declares `10Mi` because NFS PVs ignore
+`spec.capacity`, so the real size never surfaces in a capacity audit. Added 2026-08-11
+after Velero measured the sibling `asustor-backups` provisioner's root at **408.56 GB**
+and spent an entire 4h backup window on it. Excluding the root loses no coverage.
 
 ## Why pin the provisioner to `debian-marmoset`
 
