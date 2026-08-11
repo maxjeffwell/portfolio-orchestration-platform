@@ -7,9 +7,22 @@ configuration:
         name: velero-garage-credentials
         key: cloud
       config:
-        region: garage
+        # 2026-08-10: was region "garage" + s3Url garage.monitoring.svc:3900. That
+        # Service's ONLY endpoints are garage-0/garage-1, both Contabo VPSs in New
+        # York running as `gateway` (no local storage) — so every backup byte went
+        # home -> 17.4 Mbit CAKE uplink -> NY -> back down to the home storage nodes,
+        # x2 for RF=2. Measured 50MB PUT: NY gateway <0.42 MB/s vs 19.3 MB/s direct
+        # to debian-marmoset. That, not kine/node-agent/nfs-data, is why `default`
+        # had never once completed while `nas-local` (a LAN target) always did.
+        # 100.64.0.12 = debian-marmoset's k8s InternalIP (Tailscale, direct 4ms).
+        # Use the Tailscale addr, NOT 192.168.50.152 (unroutable from the Contabo
+        # nodes) and NOT the wg0 addr 10.0.0.9 (relayed off-site -> 2.1 MB/s).
+        # region MUST be us-east-1: the home garage daemons (dm/ASUSTOR/AX86U Pro)
+        # sign with us-east-1, while the k8s gateway pods and Synology use "garage".
+        # Wrong region => AuthorizationHeaderMalformed "unexpected scope".
+        region: us-east-1
         s3ForcePathStyle: true
-        s3Url: http://garage.monitoring.svc.cluster.local:3900
+        s3Url: http://100.64.0.12:3900
   # backblaze BSL is owned by the devops-portfolio-manager `backups` ArgoCD app
   # (k8s/backups/velero-backblaze-bsl.yaml) with prefix: velero. Kept out of the
   # Helm install so the chart can't create a competing Helm-owned BSL.
