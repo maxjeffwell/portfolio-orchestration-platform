@@ -19,7 +19,7 @@ spec:
     spec:
       priorityClassName: ai-workload
       nodeSelector:
-        kubernetes.io/hostname: vmi3115606
+        kubernetes.io/hostname: elitedesk
       containers:
         - name: triton
           image: nvcr.io/nvidia/tritonserver:24.01-py3
