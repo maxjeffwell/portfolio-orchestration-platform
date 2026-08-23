@@ -12,7 +12,6 @@ spec:
   tls:
   - hosts:
     - pop-portfolio.el-jefe.me
-    - vertex-platform.el-jefe.me
     secretName: portfolio-orchestration-tls
   rules:
   # 1. Pop Portfolio (Dashboard + Consolidated Apps)
@@ -53,30 +52,5 @@ spec:
   # TenantFlow moved: tenantflow.el-jefe.me is served by platform-ingress in
   # the multi-tenant-platform namespace (GitOps: k8s-multi-tenant-platform).
 
-  # 3. Vertex Platform (Subdomain) - Microservices API
-  - host: vertex-platform.el-jefe.me
-    http:
-      paths:
-      - path: /auth
-        pathType: Prefix
-        backend:
-          service:
-            name: vertex-platform-auth
-            port:
-              number: 3001
-      - path: /analytics
-        pathType: Prefix
-        backend:
-          service:
-            name: vertex-platform-analytics
-            port:
-              number: 3005
-      # Default route to auth service
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: vertex-platform-auth
-            port:
-              number: 3001
-
+  # Vertex Platform moved: vertex-platform.el-jefe.me is served by the
+  # vertex-platform Ingress in its own namespace (GitOps: microservices-platform).
