@@ -12,7 +12,6 @@ spec:
   tls:
   - hosts:
     - pop-portfolio.el-jefe.me
-    - tenantflow.el-jefe.me
     - vertex-platform.el-jefe.me
     secretName: portfolio-orchestration-tls
   rules:
@@ -51,17 +50,8 @@ spec:
       # /educationelly-graphql, /code-talk) are in portfolio-apps-ingress.yaml
       # with stripPrefix middleware applied
 
-  # 2. TenantFlow (Subdomain)
-  - host: tenantflow.el-jefe.me
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: tenantflow-frontend
-            port:
-              number: 80
+  # TenantFlow moved: tenantflow.el-jefe.me is served by platform-ingress in
+  # the multi-tenant-platform namespace (GitOps: k8s-multi-tenant-platform).
 
   # 3. Vertex Platform (Subdomain) - Microservices API
   - host: vertex-platform.el-jefe.me
