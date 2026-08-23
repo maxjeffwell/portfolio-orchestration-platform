@@ -103,7 +103,7 @@ main() {
     echo ""
 
     case "$HOSTNAME" in
-        vmi2951245|vmi3115606|debian-marmoset|marmoset)
+        vmi2951245|vmi3115606|debian-marmoset|marmoset|elitedesk)
             install_watchdog
             ;;
         *)
