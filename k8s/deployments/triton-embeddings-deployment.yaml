@@ -4,7 +4,7 @@ metadata:
   name: triton-embeddings
   namespace: default
 spec:
-  replicas: 0
+  replicas: 1
   selector:
     matchLabels:
       app: triton-embeddings
@@ -15,15 +15,25 @@ spec:
         component: inference
         portfolio: "true"
     spec:
-      # Pinned to debian-marmoset (NOT worker — worker is disk-constrained at 88%).
-      # CP unload + AI-workloads colocation. Triton-embeddings is CPU-only, no GPU
-      # waste on debian-marmoset's iGPU.
+      # Pinned to elitedesk (2026-08-23): CPU-only Triton next to triton-amd,
+      # serving bge_embeddings from the node-local model repository at
+      # /home/maxjeffwell/ai-models (same hostPath triton-amd uses) instead of
+      # the csi-s3 PVC. ovms-embeddings on debian-marmoset stays as-is.
       nodeSelector:
-        kubernetes.io/hostname: debian-marmoset
+        kubernetes.io/hostname: elitedesk
       priorityClassName: ai-workload
       containers:
         - name: embeddings
           image: maxjeffwell/triton-embeddings-cpu:latest
+          # Explicit model control: the shared repository also holds interval_ai
+          # (served by triton-amd); loading only bge_embeddings keeps a foreign
+          # model from ever blocking /v2/health/ready.
+          args:
+            - tritonserver
+            - --model-repository=/models
+            - --model-control-mode=explicit
+            - --load-model=bge_embeddings
+            - --allow-gpu-metrics=false
           ports:
             - containerPort: 8000
             - containerPort: 8001
@@ -47,7 +57,7 @@ spec:
               cpu: 250m
               memory: 1Gi
             limits:
-              cpu: 500m
+              cpu: "2"
               memory: 2Gi
           volumeMounts:
             - name: models
@@ -55,5 +65,6 @@ spec:
               readOnly: true
       volumes:
         - name: models
-          persistentVolumeClaim:
-            claimName: triton-models-pvc
+          hostPath:
+            path: /home/maxjeffwell/ai-models
+            type: Directory
