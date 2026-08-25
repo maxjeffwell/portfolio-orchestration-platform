@@ -21,6 +21,8 @@ spec:
         - tunnel
         - --protocol
         - http2  # Force HTTP/2 - VPS provider blocks QUIC/UDP
+        - --edge-ip-version
+        - "4"    # Pod has no IPv6 route; "auto" kept dialing 2606:4700::/32 edges (~3k "network is unreachable"/day)
         - run
         - --token
         - $(TUNNEL_TOKEN)
