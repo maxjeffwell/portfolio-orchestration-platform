@@ -19,8 +19,8 @@
 #  - Logs to systemd journal (tag flannel-watchdog) only; Loki collects via
 #    promtail if wired
 #
-# Hostname-aware: all 4 K3s nodes (vmi2951245, vmi3115606, debian-marmoset,
-# marmoset) get the same install - uniform pattern because the underlay
+# Hostname-aware: all 6 K3s nodes (vmi2951245, vmi3115606, debian-marmoset,
+# marmoset, elitedesk, m720q) get the same install - uniform pattern because the underlay
 # (tailscale0) and detection (ip link show flannel.1) are universal.
 #
 # Source-of-truth files live in configs/flannel-watchdog/:
@@ -103,12 +103,12 @@ main() {
     echo ""
 
     case "$HOSTNAME" in
-        vmi2951245|vmi3115606|debian-marmoset|marmoset|elitedesk)
+        vmi2951245|vmi3115606|debian-marmoset|marmoset|elitedesk|m720q)
             install_watchdog
             ;;
         *)
             echo "INFO: $HOSTNAME is not a configured K3s node for this watchdog." >&2
-            echo "Known nodes: vmi2951245, vmi3115606, debian-marmoset, marmoset." >&2
+            echo "Known nodes: vmi2951245, vmi3115606, debian-marmoset, marmoset, elitedesk, m720q." >&2
             exit 0
             ;;
     esac
