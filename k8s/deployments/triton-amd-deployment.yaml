@@ -59,8 +59,14 @@ spec:
             - containerPort: 8002
               name: metrics
           resources:
+            # cpu request was 500m, but measured peak over 2 days is ~0.4m: this
+            # server sits idle. It is pinned to elitedesk, which was at 98% of
+            # allocatable CPU in *requests* while peaking near 30% in real use --
+            # enough to leave kube-state-metrics unschedulable after a preemption
+            # on 2026-09-07. Request what it actually uses; the limit stays 500m
+            # so it can still burst if it ever starts serving.
             requests:
-              cpu: 500m
+              cpu: 100m
               memory: 256Mi
             limits:
               cpu: 500m

@@ -53,8 +53,12 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
           resources:
+            # cpu request was 250m against a measured 2-day peak of ~0.6m. Same
+            # reason as triton-amd: it is pinned to elitedesk, whose CPU requests
+            # were 98% subscribed on ~30% real usage. The 2-core limit is
+            # untouched, so real embedding load is unaffected.
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 1Gi
             limits:
               cpu: "2"
