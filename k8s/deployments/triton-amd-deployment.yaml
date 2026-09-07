@@ -65,9 +65,12 @@ spec:
             # enough to leave kube-state-metrics unschedulable after a preemption
             # on 2026-09-07. Request what it actually uses; the limit stays 500m
             # so it can still burst if it ever starts serving.
+            # Memory is the opposite case from cpu: measured 2-day peak is 559Mi
+            # against a 256Mi request, so it was UNDER-requested even though it
+            # is idle cpu-wise (the loaded models sit resident). Limit stays 1Gi.
             requests:
               cpu: 100m
-              memory: 256Mi
+              memory: 640Mi
             limits:
               cpu: 500m
               memory: 1Gi
