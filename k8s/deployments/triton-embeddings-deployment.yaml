@@ -52,6 +52,11 @@ spec:
             initialDelaySeconds: 15
             periodSeconds: 5
             timeoutSeconds: 3
+          # 2026-09-22 memory 1Gi/2Gi -> 1.75Gi/3Gi. Steady state is 1.63-1.77 GiB
+          # (flat, not a leak): config.pbtxt has instance_group count 2 on the
+          # python backend, so two triton_python_backend_stub processes each
+          # hold the 416 MB bge ONNX model plus its runtime (~820 MiB apiece).
+          # 30-day peak 1.89 GiB was 94% of the old 2Gi limit.
           resources:
             # cpu request was 250m against a measured 2-day peak of ~0.6m. Same
             # reason as triton-amd: it is pinned to elitedesk, whose CPU requests
@@ -59,10 +64,10 @@ spec:
             # untouched, so real embedding load is unaffected.
             requests:
               cpu: 100m
-              memory: 1Gi
+              memory: 1792Mi
             limits:
               cpu: "2"
-              memory: 2Gi
+              memory: 3Gi
           volumeMounts:
             - name: models
               mountPath: /models
