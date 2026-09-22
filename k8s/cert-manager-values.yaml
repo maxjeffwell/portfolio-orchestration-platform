@@ -1,5 +1,13 @@
 # cert-manager node placement + leader election override
-# cert-manager v1.13.3 was installed via manifests (not Helm).
+# cert-manager was installed via the upstream static manifest (not Helm).
+# 2026-09-22: upgraded v1.13.3 -> v1.21.2 one minor at a time (1.14.7, 1.15.5, 1.16.5,
+# 1.17.4, 1.18.6, 1.19.6, 1.20.4, 1.21.2) with
+#   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/<tag>/cert-manager.yaml
+# Reason: Cloudflare DNS-01 cleanup bug (DELETE /zones//dns_records/<id>, fixed in 1.16.4)
+# had leaked ~134 _acme-challenge TXT records and hit the zone's 200-record cap.
+# `kubectl apply` keeps the nodeSelector (not in the upstream manifest) but REPLACES the
+# args list, so step 2 below must be re-run after every upgrade. --max-concurrent-challenges
+# and --acme-http01-solver-image are now set by the upstream manifest itself.
 # Runs on control-plane (vmi2951245) so leader election lease renewals
 # use loopback to the local API server, avoiding cross-node latency.
 #
@@ -13,7 +21,7 @@
 #
 # 2. Extend leader election timeouts (safety margin for API server load):
 #   kubectl patch deployment cert-manager -n cert-manager --type=json \
-#     -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["--v=2","--cluster-resource-namespace=$(POD_NAMESPACE)","--leader-election-namespace=kube-system","--acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:v1.13.3","--max-concurrent-challenges=60","--leader-election-lease-duration=120s","--leader-election-renew-deadline=90s"]}]'
+#     -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["--v=2","--cluster-resource-namespace=$(POD_NAMESPACE)","--leader-election-namespace=kube-system","--acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:v1.21.2","--max-concurrent-challenges=60","--leader-election-lease-duration=120s","--leader-election-renew-deadline=90s"]}]'
 #   kubectl patch deployment cert-manager-cainjector -n cert-manager --type=json \
 #     -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["--v=2","--leader-election-namespace=kube-system","--leader-election-lease-duration=120s","--leader-election-renew-deadline=90s"]}]'
 #
