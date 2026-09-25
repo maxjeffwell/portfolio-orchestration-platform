@@ -20,7 +20,9 @@ spec:
     requests.memory: 20Gi
     # 36Gi → 38Gi: namespace was maxed (36762/36864Mi), blocking the Alertmanager
     # pod (needs 306Mi) from scheduling for 29h → no alert delivery cluster-wide.
-    limits.memory: 38Gi
+    # 38Gi → 42Gi: 37/38Gi with 6 nodes; each new node adds an Alloy DaemonSet
+    # pod (3Gi+128Mi limits) that would be silently refused at 38Gi.
+    limits.memory: 42Gi
 ---
 apiVersion: v1
 kind: ResourceQuota
