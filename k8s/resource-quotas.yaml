@@ -27,17 +27,6 @@ spec:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: langfuse-quota
-  namespace: langfuse
-spec:
-  hard:
-    requests.cpu: "4"
-    requests.memory: 8Gi
-    limits.memory: 12Gi
----
-apiVersion: v1
-kind: ResourceQuota
-metadata:
   name: microservices-quota
   namespace: microservices
 spec:
