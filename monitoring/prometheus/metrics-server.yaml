@@ -183,7 +183,7 @@ spec:
           name: tmp-dir
       nodeSelector:
         kubernetes.io/os: linux
-        kubernetes.io/hostname: vmi2951245
+        kubernetes.io/hostname: m920s
       priorityClassName: system-cluster-critical
       serviceAccountName: metrics-server
       volumes:

@@ -8,13 +8,13 @@
 # `kubectl apply` keeps the nodeSelector (not in the upstream manifest) but REPLACES the
 # args list, so step 2 below must be re-run after every upgrade. --max-concurrent-challenges
 # and --acme-http01-solver-image are now set by the upstream manifest itself.
-# Runs on control-plane (vmi2951245) so leader election lease renewals
-# use loopback to the local API server, avoiding cross-node latency.
+# Runs on m920s (a home k3s server, since 2026-09-25) so leader election
+# lease renewals go to a nearby API server, avoiding WAN latency.
 #
 # After reinstalling, apply these patches:
 #
-# 1. Move all components to the control-plane node:
-#   PATCH='{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"vmi2951245","kubernetes.io/os":"linux"}}}}}'
+# 1. Move all components to m920s:
+#   PATCH='{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"m920s","kubernetes.io/os":"linux"}}}}}'
 #   for d in cert-manager cert-manager-cainjector cert-manager-webhook; do
 #     kubectl patch deployment $d -n cert-manager --type=merge -p "$PATCH"
 #   done
@@ -28,18 +28,18 @@
 # If migrating to Helm install (jetstack/cert-manager), use these values:
 
 nodeSelector:
-  kubernetes.io/hostname: vmi2951245
+  kubernetes.io/hostname: m920s
 
 cainjector:
   nodeSelector:
-    kubernetes.io/hostname: vmi2951245
+    kubernetes.io/hostname: m920s
   extraArgs:
     - --leader-election-lease-duration=120s
     - --leader-election-renew-deadline=90s
 
 webhook:
   nodeSelector:
-    kubernetes.io/hostname: vmi2951245
+    kubernetes.io/hostname: m920s
 
 extraArgs:
   - --leader-election-lease-duration=120s
