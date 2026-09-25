@@ -15,12 +15,14 @@ spec:
         component: inference
         portfolio: "true"
     spec:
-      # Pinned to elitedesk (2026-08-23): CPU-only Triton next to triton-amd,
-      # serving bge_embeddings from the node-local model repository at
-      # /home/maxjeffwell/ai-models (same hostPath triton-amd uses) instead of
-      # the csi-s3 PVC. ovms-embeddings on debian-marmoset stays as-is.
+      # Pinned to m720q (2026-09-24, was elitedesk since 2026-08-23): CPU-only
+      # Triton serving bge_embeddings from the node-local model repository at
+      # /home/maxjeffwell/ai-models (copied from elitedesk 9/24; keep both in
+      # sync if models change). Moved to relieve elitedesk memory requests
+      # (81 %) — this pod requests 1.8 Gi but only ~100 m CPU, which is what
+      # m720q's 32 GB is good for. ovms-embeddings on debian-marmoset stays.
       nodeSelector:
-        kubernetes.io/hostname: elitedesk
+        kubernetes.io/hostname: m720q
       priorityClassName: ai-workload
       containers:
         - name: embeddings
