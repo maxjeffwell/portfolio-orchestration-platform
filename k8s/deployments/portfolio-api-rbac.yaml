@@ -1,3 +1,5 @@
+# portfolio-api ServiceAccount + ClusterRole. Moved 2026-09-26 from k8s/ (unsynced)
+# into k8s/deployments so the POP app manages it; matched live exactly.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
