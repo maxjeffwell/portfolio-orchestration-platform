@@ -6,9 +6,15 @@ metadata:
   labels:
     clusterdefinition.kubeblocks.io/name: neon
 spec:
+  # 2026-09-26: synced to live. All components run on m720q (git still said
+  # debian-marmoset; applying the old file would have moved them to the laptop).
+  # Applied with kubectl, NOT ArgoCD (the ArgoCD app only covers k8s/deployments).
   clusterDef: neon
   topology: default
-  terminationPolicy: WipeOut
+  # 2026-09-26: WipeOut -> DoNotTerminate. WipeOut erased data AND backups on
+  # delete; this cluster backs bookmarked + tenantflow. KubeBlocks now refuses
+  # to delete it until this is changed.
+  terminationPolicy: DoNotTerminate
   componentSpecs:
   - name: neon-pageserver
     componentDef: neon-pageserver-1.0.1
@@ -17,7 +23,7 @@ spec:
     podUpdatePolicy: PreferInPlace
     schedulingPolicy:
       nodeSelector:
-        kubernetes.io/hostname: debian-marmoset
+        kubernetes.io/hostname: m720q
     env:
     - name: NEON_S3_BUCKET
       value: neon-storage
@@ -35,7 +41,7 @@ spec:
         secretKeyRef: { name: neon-cluster-s3-creds, key: AWS_SECRET_ACCESS_KEY }
     resources:
       limits: { memory: 512Mi }
-      requests: { cpu: 100m, memory: 256Mi }
+      requests: { cpu: 30m, memory: 192Mi }
     volumeClaimTemplates:
     - name: data
       spec:
@@ -50,12 +56,12 @@ spec:
     podUpdatePolicy: PreferInPlace
     schedulingPolicy:
       nodeSelector:
-        kubernetes.io/hostname: debian-marmoset
+        kubernetes.io/hostname: m720q
     annotations:
       backup.velero.io/backup-volumes-excludes: data
     resources:
       limits: { memory: 256Mi }
-      requests: { cpu: 100m, memory: 128Mi }
+      requests: { cpu: 20m, memory: 64Mi }
     volumeClaimTemplates:
     - name: data
       spec:
@@ -70,12 +76,12 @@ spec:
     podUpdatePolicy: PreferInPlace
     schedulingPolicy:
       nodeSelector:
-        kubernetes.io/hostname: debian-marmoset
+        kubernetes.io/hostname: m720q
     annotations:
       backup.velero.io/backup-volumes-excludes: data
     resources:
       limits: { memory: 128Mi }
-      requests: { cpu: 50m, memory: 64Mi }
+      requests: { cpu: 20m, memory: 64Mi }
   - name: neon-compute
     componentDef: neon-compute-1.0.1
     serviceVersion: 1.0.0
@@ -83,7 +89,7 @@ spec:
     podUpdatePolicy: PreferInPlace
     schedulingPolicy:
       nodeSelector:
-        kubernetes.io/hostname: debian-marmoset
+        kubernetes.io/hostname: m720q
     resources:
       limits: { memory: 512Mi }
-      requests: { cpu: 250m, memory: 256Mi }
+      requests: { cpu: 50m, memory: 128Mi }
