@@ -1,0 +1,21 @@
+# IngressRoute for the educationelly-graphql API. Exported from the live
+# cluster 2026-09-26 (it existed only in the cluster). Synced by the
+# portfolio-orchestration-platform ArgoCD app (k8s/ingress source).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: educationelly-graphql-api
+  namespace: default
+spec:
+  entryPoints:
+  - websecure
+  routes:
+  - kind: Rule
+    match: Host(`educationelly-graphql-k8s.el-jefe.me`) && PathPrefix(`/api`)
+    middlewares:
+    - name: strip-api-prefix
+    services:
+    - name: educationelly-graphql-server
+      port: 8000
+  tls:
+    secretName: educationelly-graphql-tls

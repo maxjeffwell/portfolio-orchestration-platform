@@ -1,6 +1,6 @@
 # Traefik IngressRoutes for Triton. Exported from the live cluster 2026-09-26
-# (they existed only in the cluster); lives next to triton-amd so the
-# portfolio-orchestration-platform ArgoCD app now manages them.
+# (they existed only in the cluster). Synced by the
+# portfolio-orchestration-platform ArgoCD app (k8s/ingress source).
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
