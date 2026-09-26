@@ -18,6 +18,19 @@
 # offline it (replicas 2 + offlineInstances), recreate both PVCs on the new
 # node, chown, then replicas 3 + offlineInstances [].
 #
+# broker + compute (2026-09-26): moved off debian-marmoset. Both are restricted
+# to Mayastor storage nodes (openebs.io/engine=mayastor) with 30s
+# not-ready/unreachable tolerations (default 300s), so a dead node means a
+# ~30-60s restart elsewhere, not 5 min. Neither can have more replicas: a Neon
+# timeline allows ONE writer compute, and the broker is a stateless
+# coordinator with a minimum of 1 replica. The broker's unused 'data' VCT is
+# now mayastor-2-thin (network-attached, so it doesn't node-pin the pod).
+# 🪤 KubeBlocks' update DAG (broker -> safekeeper+pageserver -> compute)
+# stalled: the middle layer was never re-stamped with the new cluster
+# generation, so the compute change waited forever ("waiting for predecessor
+# component in DAG"). Workaround used: apply the same schedulingPolicy
+# directly to the compute Component object.
+#
 # compute: TENANT/TIMELINE pinned. Without them the addon creates a NEW empty
 # tenant on every compute start.
 apiVersion: apps.kubeblocks.io/v1
@@ -127,6 +140,25 @@ spec:
       requests:
         cpu: 200m
         memory: 256Mi
+    schedulingPolicy:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: openebs.io/engine
+                operator: In
+                values:
+                - mayastor
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 30
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 30
     serviceVersion: 1.0.0
     volumeClaimTemplates:
     - name: data
@@ -136,7 +168,7 @@ spec:
         resources:
           requests:
             storage: 5Gi
-        storageClassName: openebs-lvmpv
+        storageClassName: mayastor-2-thin
   - componentDef: neon-compute-1.0.1
     env:
     - name: TENANT
@@ -153,6 +185,25 @@ spec:
       requests:
         cpu: 500m
         memory: 1Gi
+    schedulingPolicy:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: openebs.io/engine
+                operator: In
+                values:
+                - mayastor
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 30
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 30
     serviceVersion: 1.0.0
   terminationPolicy: Delete
   topology: default
