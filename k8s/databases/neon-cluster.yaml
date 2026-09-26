@@ -52,11 +52,32 @@ spec:
   - name: neon-safekeeper
     componentDef: neon-safekeeper-1.0.1
     serviceVersion: 1.0.0
-    replicas: 1
+    # 2026-09-26: 1 -> 3 (WAL quorum 2/3). One per Mayastor storage node,
+    # preferred not required so a down node's safekeeper can reschedule.
+    # safekeeper-1/-2 PVCs were PRE-CREATED on mayastor-2 and chowned to
+    # neonuser 998:996 (a fresh volume is root-owned and the safekeeper
+    # crash-loops "Failed to create id file ... Permission denied").
+    # safekeeper-0's volume (mayastor-1 class) also has 2 replicas.
+    replicas: 3
     podUpdatePolicy: PreferInPlace
     schedulingPolicy:
-      nodeSelector:
-        kubernetes.io/hostname: m720q
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: openebs.io/engine
+                operator: In
+                values: [mayastor]
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: neon-cluster
+                  apps.kubeblocks.io/component-name: neon-safekeeper
+              topologyKey: kubernetes.io/hostname
     annotations:
       backup.velero.io/backup-volumes-excludes: data
     resources:
@@ -90,6 +111,14 @@ spec:
     schedulingPolicy:
       nodeSelector:
         kubernetes.io/hostname: m720q
+    # 2026-09-26: PIN the tenant/timeline. Without TENANT, the addon's
+    # compute.sh creates a NEW empty tenant on every compute start (that is
+    # where the ~38 stray tenants came from).
+    env:
+    - name: TENANT
+      value: 8d45e2a64d43b7a26944909284b9dc90
+    - name: TIMELINE
+      value: 6ab65b49168b055e311e255d58574d7c
     resources:
       limits: { memory: 512Mi }
       requests: { cpu: 50m, memory: 128Mi }
