@@ -28,7 +28,7 @@ data:
         option redispatch
 
     frontend doppler_api
-        bind *:8443
+        bind *:443
         default_backend doppler_backends
 
     backend doppler_backends
