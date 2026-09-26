@@ -1,3 +1,6 @@
+# Moved from k8s/gotify/ on 2026-09-26 so the portfolio-orchestration-platform
+# ArgoCD app (k8s/ingress source) manages it. The rest of k8s/gotify is still
+# hand-applied.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

@@ -19,3 +19,15 @@ spec:
       port: 8000
   tls:
     secretName: educationelly-graphql-tls
+---
+# strip-api-prefix: used only by the IngressRoute above. Adopted from the live
+# cluster 2026-09-26 (hand-applied before; empty kubectl diff).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api-prefix
+  namespace: default
+spec:
+  stripPrefix:
+    prefixes:
+    - /api
