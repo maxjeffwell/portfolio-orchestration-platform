@@ -38,4 +38,4 @@ spec:
       volumes:
         - name: gotify-data
           persistentVolumeClaim:
-            claimName: gotify-synology
+            claimName: gotify-democratic-mp
