@@ -1,89 +1,158 @@
+# tenantflow-neon: self-hosted Neon (KubeBlocks addon neon-1.0.1) backing
+# TENANTFLOW (platform-backend PAGESERVER_URL -> this pageserver). Applied with
+# kubectl, NOT ArgoCD. Run `kubectl diff -f` before any apply.
+#
+# 2026-09-26: regenerated from the LIVE cluster. The previous file had drifted
+# ~85 lines (e.g. pageserver on a 5Gi openebs-lvmpv volume with no S3 creds;
+# live is mayastor-2 25Gi + garage remote storage), so applying it would have
+# broken the pageserver.
+#
+# Safekeepers (3, WAL quorum 2/3), one per storage node since 2026-09-26:
+#   sk-0 m920s     (openebs-lvmpv-vg0, local LV)
+#   sk-1 elitedesk (openebs-lvmpv,     local LV)
+#   sk-2 m720q     (openebs-lvmpv,     local LV)
+# sk-0 and sk-1 were moved off debian-marmoset one at a time via
+# offlineInstances. Their PVCs (data-* holds the WAL, neon-safekeeper-* is an
+# unused extra VCT) were PRE-CREATED on the target node and chowned to
+# neonuser 998:996. The local PVs node-pin each safekeeper. To move one again:
+# offline it (replicas 2 + offlineInstances), recreate both PVCs on the new
+# node, chown, then replicas 3 + offlineInstances [].
+#
+# compute: TENANT/TIMELINE pinned. Without them the addon creates a NEW empty
+# tenant on every compute start.
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
   name: tenantflow-neon
   namespace: neon
   labels:
-    portfolio: "true"
     app: tenantflow
+    clusterdefinition.kubeblocks.io/name: neon
+    portfolio: 'true'
 spec:
   clusterDef: neon
-  topology: default
-  # Delete: removes Cluster resources INCLUDING PVCs on Cluster deletion.
-  # Once data matters, flip to DoNotTerminate (prevents accidental deletion).
-  # v1 API removed `Halt`; choices are DoNotTerminate, Delete, WipeOut.
-  terminationPolicy: Delete
   componentSpecs:
-    - name: neon-broker
-      replicas: 1
-      resources:
-        requests:
-          cpu: 200m
-          memory: 256Mi
-        limits:
-          cpu: "1"
-          memory: 1Gi
-      volumeClaimTemplates:
-        - name: data
-          spec:
-            storageClassName: openebs-lvmpv
-            accessModes: [ReadWriteOnce]
-            resources:
-              requests:
-                storage: 5Gi
-    - name: neon-safekeeper
-      replicas: 3
-      # Prefer one safekeeper per node — quorum is most resilient when WAL
-      # replicas don't share a failure domain. `preferred` (not `required`)
-      # avoids a scheduling deadlock when openebs-lvmpv PVs node-pin the
-      # safekeepers and a node is otherwise unavailable.
-      schedulingPolicy:
-        affinity:
-          podAntiAffinity:
-            preferredDuringSchedulingIgnoredDuringExecution:
-              - weight: 100
-                podAffinityTerm:
-                  labelSelector:
-                    matchLabels:
-                      app.kubernetes.io/instance: tenantflow-neon
-                      apps.kubeblocks.io/component-name: neon-safekeeper
-                  topologyKey: kubernetes.io/hostname
-      resources:
-        requests:
-          cpu: 200m
-          memory: 512Mi
-        limits:
-          cpu: "1"
-          memory: 1Gi
-      volumeClaimTemplates:
-        - name: neon-safekeeper
-          spec:
-            storageClassName: openebs-lvmpv
-            accessModes: [ReadWriteOnce]
-            resources:
-              requests:
-                storage: 10Gi
+  - componentDef: neon-pageserver-1.0.1
+    env:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          key: AWS_ACCESS_KEY_ID
+          name: neon-pageserver-s3
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          key: AWS_SECRET_ACCESS_KEY
+          name: neon-pageserver-s3
+    name: neon-pageserver
+    podUpdatePolicy: PreferInPlace
+    replicas: 1
+    resources:
+      limits:
+        cpu: '2'
+        memory: 4Gi
+      requests:
+        cpu: 50m
+        memory: 256Mi
+    serviceVersion: 1.0.0
+    volumeClaimTemplates:
     - name: neon-pageserver
-      replicas: 1
-      resources:
-        requests:
-          cpu: 500m
-          memory: 1Gi
-        limits:
-          cpu: "2"
-          memory: 4Gi
-      volumeClaimTemplates:
-        - name: neon-pageserver
-          spec:
-            # NVMe-oF/TCP via Mayastor — pageserver does hot page reads on
-            # branch access; the lowest-latency block transport pays off here.
-            # Mayastor pools live on both debian-marmoset and marmoset
-            # (~60 GiB each, expanded 2026-05-25). mayastor-2 SC replicates
-            # synchronously via NVMe-oF/TCP on port 4420 — survives
-            # single-node failure. See k8s/storage/mayastor/ in
-            # devops-portfolio-manager for the SC + DiskPool manifests.
-            storageClassName: mayastor-2
-            accessModes: [ReadWriteOnce]
-            resources:
-              requests:
-                storage: 25Gi
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 25Gi
+        storageClassName: mayastor-2
+    - name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 25Gi
+        storageClassName: mayastor-2
+  - annotations:
+      kubeblocks.io/restart: '2026-09-06T21:53:03Z'
+    componentDef: neon-safekeeper-1.0.1
+    name: neon-safekeeper
+    podUpdatePolicy: PreferInPlace
+    replicas: 3
+    resources:
+      limits:
+        cpu: '1'
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 512Mi
+    schedulingPolicy:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: tenantflow-neon
+                  apps.kubeblocks.io/component-name: neon-safekeeper
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+    serviceVersion: 1.0.0
+    volumeClaimTemplates:
+    - name: neon-safekeeper
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: openebs-lvmpv
+    - name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: openebs-lvmpv
+  - annotations:
+      kubeblocks.io/restart: '2026-09-06T21:53:03Z'
+    componentDef: neon-broker-1.0.1
+    name: neon-broker
+    podUpdatePolicy: PreferInPlace
+    replicas: 1
+    resources:
+      limits:
+        cpu: '1'
+        memory: 1Gi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    serviceVersion: 1.0.0
+    volumeClaimTemplates:
+    - name: data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi
+        storageClassName: openebs-lvmpv
+  - componentDef: neon-compute-1.0.1
+    env:
+    - name: TENANT
+      value: 77a948ddeeb9fc8fd31daad9bdc4bea7
+    - name: TIMELINE
+      value: 01ee6c87fb000f298c1b0b0904ca461e
+    name: neon-compute
+    podUpdatePolicy: PreferInPlace
+    replicas: 1
+    resources:
+      limits:
+        cpu: '2'
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    serviceVersion: 1.0.0
+  terminationPolicy: Delete
+  topology: default
