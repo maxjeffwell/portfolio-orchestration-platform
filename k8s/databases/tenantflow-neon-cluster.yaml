@@ -32,6 +32,15 @@
 # component in DAG"). Workaround used: apply the same schedulingPolicy
 # directly to the compute Component object.
 #
+# Spread (2026-09-26): compute, pageserver and broker share a PREFERRED
+# podAntiAffinity term, so they avoid each other's nodes (compute m720q,
+# pageserver elitedesk, broker m920s at the time). Preferred, so a node
+# failure still lets any of them reschedule. Applied one component at a time
+# so each restart saw the others placed.
+# 🪤 After moving the pageserver, the old pod's dead TCP stream lingered on a
+# safekeeper ("More than one pageserver is streaming WAL", ~120/min). Fixed by
+# restarting that one safekeeper (quorum held).
+#
 # compute: TENANT/TIMELINE pinned. Without them the addon creates a NEW empty
 # tenant on every compute start.
 apiVersion: apps.kubeblocks.io/v1
@@ -78,6 +87,23 @@ spec:
                 operator: In
                 values:
                 - mayastor
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                  - tenantflow-neon
+                - key: apps.kubeblocks.io/component-name
+                  operator: In
+                  values:
+                  - neon-compute
+                  - neon-pageserver
+                  - neon-broker
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       tolerations:
       - effect: NoExecute
         key: node.kubernetes.io/not-ready
@@ -170,6 +196,23 @@ spec:
                 operator: In
                 values:
                 - mayastor
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                  - tenantflow-neon
+                - key: apps.kubeblocks.io/component-name
+                  operator: In
+                  values:
+                  - neon-compute
+                  - neon-pageserver
+                  - neon-broker
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       tolerations:
       - effect: NoExecute
         key: node.kubernetes.io/not-ready
@@ -215,6 +258,23 @@ spec:
                 operator: In
                 values:
                 - mayastor
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                  - tenantflow-neon
+                - key: apps.kubeblocks.io/component-name
+                  operator: In
+                  values:
+                  - neon-compute
+                  - neon-pageserver
+                  - neon-broker
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       tolerations:
       - effect: NoExecute
         key: node.kubernetes.io/not-ready
