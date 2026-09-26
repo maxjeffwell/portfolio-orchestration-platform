@@ -18,7 +18,8 @@
 # offline it (replicas 2 + offlineInstances), recreate both PVCs on the new
 # node, chown, then replicas 3 + offlineInstances [].
 #
-# broker + compute (2026-09-26): moved off debian-marmoset. Both are restricted
+# broker + compute + pageserver (2026-09-26): broker/compute moved off
+# debian-marmoset; the pageserver (mayastor-2 volume) got the same policy. All are restricted
 # to Mayastor storage nodes (openebs.io/engine=mayastor) with 30s
 # not-ready/unreachable tolerations (default 300s), so a dead node means a
 # ~30-60s restart elsewhere, not 5 min. Neither can have more replicas: a Neon
@@ -67,6 +68,25 @@ spec:
       requests:
         cpu: 50m
         memory: 256Mi
+    schedulingPolicy:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: openebs.io/engine
+                operator: In
+                values:
+                - mayastor
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+        tolerationSeconds: 30
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 30
     serviceVersion: 1.0.0
     volumeClaimTemplates:
     - name: neon-pageserver
