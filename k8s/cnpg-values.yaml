@@ -1,0 +1,21 @@
+# CloudNativePG operator -- Helm release `cnpg` in ns cnpg-system
+# Chart cnpg/cloudnative-pg 0.28.0 (app 1.29.0), repo https://cloudnative-pg.github.io/charts
+# Installed 2026-04-06 with --set flags; this file captures the release's FULL user
+# values (added 2026-09-27) so it is reproducible from git. It is NOT ArgoCD-managed.
+# Apply/upgrade with:
+#   helm upgrade cnpg cnpg/cloudnative-pg --version 0.28.0 -n cnpg-system \
+#     -f k8s/cnpg-values.yaml
+# (-f with the full values, NOT --reuse-values, so git stays the source of truth.)
+#
+# resources (2026-09-27): chart default is {} so the LimitRange default 10m/64Mi
+# applied, against a 14d p95 of 19m / 138Mi (max 110m / 216Mi). Requests now
+# cover p95 with margin; the memory limit is ~2.4x the 14d max.
+additionalArgs:
+- --leader-lease-duration=60
+- --leader-renew-deadline=40
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 50m
+    memory: 192Mi
