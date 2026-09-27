@@ -258,6 +258,17 @@ spec:
                 operator: In
                 values:
                 - mayastor
+          # 2026-09-27: soft preference for m920s (12 cores, ~33% CPU requested)
+          # to take this 500m CPU request off m720q (was 89%). Soft, so the pod
+          # still falls back to elitedesk/m720q if m920s is down.
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - m920s
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
