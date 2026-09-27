@@ -21,9 +21,25 @@ spec:
     serviceVersion: 1.0.0
     replicas: 1
     podUpdatePolicy: PreferInPlace
+    # 2026-09-27: hard m720q pin -> soft preference for m920s, spreading
+    # neon-cluster off m720q (it held broker+compute+pageserver+safekeeper-0).
+    # Volume is Mayastor, so any Mayastor node can attach it.
     schedulingPolicy:
-      nodeSelector:
-        kubernetes.io/hostname: m720q
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: openebs.io/engine
+                operator: In
+                values: [mayastor]
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [m920s]
     env:
     - name: NEON_S3_BUCKET
       value: neon-storage
@@ -95,9 +111,18 @@ spec:
     serviceVersion: 1.0.0
     replicas: 1
     podUpdatePolicy: PreferInPlace
+    # 2026-09-27: hard m720q pin -> soft preference for m920s, spreading
+    # neon-cluster off m720q (it held broker+compute+pageserver+safekeeper-0).
     schedulingPolicy:
-      nodeSelector:
-        kubernetes.io/hostname: m720q
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [m920s]
     annotations:
       backup.velero.io/backup-volumes-excludes: data
     resources:
@@ -108,9 +133,18 @@ spec:
     serviceVersion: 1.0.0
     replicas: 1
     podUpdatePolicy: PreferInPlace
+    # 2026-09-27: hard m720q pin -> soft preference for elitedesk, spreading
+    # neon-cluster off m720q (it held broker+compute+pageserver+safekeeper-0).
     schedulingPolicy:
-      nodeSelector:
-        kubernetes.io/hostname: m720q
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values: [elitedesk]
     # 2026-09-26: PIN the tenant/timeline. Without TENANT, the addon's
     # compute.sh creates a NEW empty tenant on every compute start (that is
     # where the ~38 stray tenants came from).
