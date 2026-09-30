@@ -263,9 +263,10 @@ spec:
                 operator: In
                 values:
                 - mayastor
-          # 2026-09-27: soft preference for m920s (12 cores, ~33% CPU requested)
-          # to take this 500m CPU request off m720q (was 89%). Soft, so the pod
-          # still falls back to elitedesk/m720q if m920s is down.
+          # 2026-09-27: soft preference for m920s to take this 500m CPU request off
+          # m720q (was 89%). 2026-09-30: -> neonmarmoset (new Mayastor engine node,
+          # 16 threads) to take the 1Gi memory request off m920s (89%). Soft, so
+          # the pod still falls back to the other engine nodes if neon is down.
           preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
             preference:
@@ -273,7 +274,7 @@ spec:
               - key: kubernetes.io/hostname
                 operator: In
                 values:
-                - m920s
+                - neonmarmoset
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
