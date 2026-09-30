@@ -147,7 +147,9 @@ spec:
         cpu: '1'
         memory: 1Gi
       requests:
-        cpu: 200m
+        # 2026-09-30: cpu 200m -> 50m per member (600m -> 150m cluster-wide).
+        # 30-day peak 14m, 7d p95 9m; neon-cluster's safekeepers run on 20m.
+        cpu: 50m
         memory: 128Mi
     schedulingPolicy:
       affinity:
