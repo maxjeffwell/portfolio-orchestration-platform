@@ -4,7 +4,11 @@ metadata:
   name: cloudflared-ai-gateway
   namespace: default
 spec:
-  replicas: 1
+  # 2 connectors on different nodes: this tunnel is the ONLY public path for
+# argocd/litellm/ai-gateway.el-jefe.me (their CNAMEs point at the tunnel, not the
+# edge Traefik). With one replica those names went dark during the 2026-09-30
+# m920s reboot. Cloudflare load-balances across connectors.
+  replicas: 2
   selector:
     matchLabels:
       app: cloudflared-ai-gateway
@@ -14,6 +18,13 @@ spec:
         app: cloudflared-ai-gateway
     spec:
       priorityClassName: portfolio-app
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: cloudflared-ai-gateway
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: cloudflared
         image: cloudflare/cloudflared:latest
