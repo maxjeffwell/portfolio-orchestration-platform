@@ -25,6 +25,16 @@
 #   kubectl patch deployment cert-manager-cainjector -n cert-manager --type=json \
 #     -p='[{"op":"replace","path":"/spec/template/spec/containers/0/args","value":["--v=2","--leader-election-namespace=kube-system","--leader-election-lease-duration=120s","--leader-election-renew-deadline=90s"]}]'
 #
+# 3. Memory requests (2026-09-30; the namespace LimitRange default of 64Mi was far below
+#    real usage: controller 109Mi/peak 144Mi, cainjector 123Mi/peak 242Mi, webhook 70Mi/peak 90Mi).
+#    Requests only, no limits. NOTE: step 1 (m920s pin) is HISTORICAL — unpinned 9/26, scheduler-placed.
+#   kubectl patch deployment cert-manager -n cert-manager --type=strategic \
+#     -p='{"spec":{"template":{"spec":{"containers":[{"name":"cert-manager-controller","resources":{"requests":{"memory":"128Mi"}}}]}}}}'
+#   kubectl patch deployment cert-manager-cainjector -n cert-manager --type=strategic \
+#     -p='{"spec":{"template":{"spec":{"containers":[{"name":"cert-manager-cainjector","resources":{"requests":{"memory":"256Mi"}}}]}}}}'
+#   kubectl patch deployment cert-manager-webhook -n cert-manager --type=strategic \
+#     -p='{"spec":{"template":{"spec":{"containers":[{"name":"cert-manager-webhook","resources":{"requests":{"memory":"128Mi"}}}]}}}}'
+#
 # If migrating to Helm install (jetstack/cert-manager), use these values:
 
 nodeSelector:
@@ -33,6 +43,9 @@ nodeSelector:
 cainjector:
   nodeSelector:
     kubernetes.io/hostname: m920s
+  resources:
+    requests:
+      memory: 256Mi
   extraArgs:
     - --leader-election-lease-duration=120s
     - --leader-election-renew-deadline=90s
@@ -40,7 +53,14 @@ cainjector:
 webhook:
   nodeSelector:
     kubernetes.io/hostname: m920s
+  resources:
+    requests:
+      memory: 128Mi
 
 extraArgs:
   - --leader-election-lease-duration=120s
   - --leader-election-renew-deadline=90s
+
+resources:
+  requests:
+    memory: 128Mi
