@@ -33,13 +33,7 @@ spec:
               - key: openebs.io/engine
                 operator: In
                 values: [mayastor]
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values: [m920s]
+          # 2026-09-30: hostname preference removed; the required engine=mayastor term is the only constraint (scheduler-placed).
     env:
     - name: NEON_S3_BUCKET
       value: neon-storage
@@ -116,13 +110,7 @@ spec:
     schedulingPolicy:
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values: [m920s]
+          # 2026-09-30: hostname preference removed; the required engine=mayastor term is the only constraint (scheduler-placed).
     annotations:
       backup.velero.io/backup-volumes-excludes: data
     resources:
@@ -138,13 +126,7 @@ spec:
     schedulingPolicy:
       affinity:
         nodeAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values: [elitedesk]
+          # 2026-09-30: hostname preference removed; the required engine=mayastor term is the only constraint (scheduler-placed).
     # 2026-09-26: PIN the tenant/timeline. Without TENANT, the addon's
     # compute.sh creates a NEW empty tenant on every compute start (that is
     # where the ~38 stray tenants came from).

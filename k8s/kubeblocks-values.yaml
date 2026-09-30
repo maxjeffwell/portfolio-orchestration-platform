@@ -2,9 +2,9 @@
 # Chart kubeblocks/kubeblocks 1.0.2 (repo https://apecloud.github.io/helm-charts). NOT ArgoCD-managed.
 # Captured into git 2026-09-27 from the release's full user values. Upgrade with:
 #   helm upgrade kubeblocks kubeblocks/kubeblocks --version 1.0.2 -n kb-system -f k8s/kubeblocks-values.yaml
-# affinity (2026-09-27): each keeps the chart-default kb-controller preference, plus
-#   - main controller   -> soft pref elitedesk
-#   - dataProtection    -> soft pref m720q (moved 1Gi of requests off debian-marmoset)
+# affinity (2026-09-30): only the chart-default kb-controller preference remains
+# (no node carries that label, so it is a no-op); the elitedesk/m720q hostname
+# preferences from 2026-09-27 were removed — scheduler-placed.
 # 🪤 dataProtection.affinity is ALSO passed as an env var to the MAIN controller, so
 #    changing it restarts both pods.
 # 🪤 The chart re-renders existing Addons via `lookup`; a manifest diff shows fake Addon
@@ -19,13 +19,6 @@ affinity:
           values:
           - "true"
       weight: 100
-    - preference:
-        matchExpressions:
-        - key: kubernetes.io/hostname
-          operator: In
-          values:
-          - elitedesk
-      weight: 100
 dataProtection:
   affinity:
     nodeAffinity:
@@ -36,13 +29,6 @@ dataProtection:
             operator: In
             values:
             - "true"
-        weight: 100
-      - preference:
-          matchExpressions:
-          - key: kubernetes.io/hostname
-            operator: In
-            values:
-            - m720q
         weight: 100
 tolerations:
 - effect: NoSchedule
