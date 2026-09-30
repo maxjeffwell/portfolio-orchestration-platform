@@ -5,9 +5,9 @@ metadata:
   namespace: default
 spec:
   # 2 connectors on different nodes: this tunnel is the ONLY public path for
-# argocd/litellm/ai-gateway.el-jefe.me (their CNAMEs point at the tunnel, not the
-# edge Traefik). With one replica those names went dark during the 2026-09-30
-# m920s reboot. Cloudflare load-balances across connectors.
+  # argocd/litellm/ai-gateway.el-jefe.me (their CNAMEs point at the tunnel, not the
+  # edge Traefik). With one replica those names went dark during the 2026-09-30
+  # m920s reboot. Cloudflare load-balances across connectors.
   replicas: 2
   selector:
     matchLabels:
