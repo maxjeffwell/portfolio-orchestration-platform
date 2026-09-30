@@ -148,7 +148,7 @@ spec:
         memory: 1Gi
       requests:
         cpu: 200m
-        memory: 512Mi
+        memory: 128Mi
     schedulingPolicy:
       affinity:
         podAntiAffinity:
@@ -190,7 +190,7 @@ spec:
         memory: 1Gi
       requests:
         cpu: 200m
-        memory: 256Mi
+        memory: 64Mi
     schedulingPolicy:
       affinity:
         nodeAffinity:
@@ -252,7 +252,7 @@ spec:
         memory: 4Gi
       requests:
         cpu: 500m
-        memory: 1Gi
+        memory: 256Mi
     schedulingPolicy:
       affinity:
         nodeAffinity:
