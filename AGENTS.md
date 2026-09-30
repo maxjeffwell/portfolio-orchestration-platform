@@ -737,14 +737,17 @@ k3d cluster create portfolio-cluster \
 minikube start --driver=docker --cpus=4 --memory=8192
 ```
 
-### 3. Build and Deploy Databases
+### 3. Databases
+`k8s/databases/` holds ONLY the self-hosted Neon stack (KubeBlocks), applied by hand,
+never as a whole directory:
 ```bash
-# Apply database manifests
-kubectl apply -f k8s/databases/
-
-# Wait for databases to be ready
-kubectl wait --for=condition=ready pod -l tier=database --timeout=300s
+# Always diff first; apply one file at a time
+kubectl diff -f k8s/databases/tenantflow-neon-cluster.yaml
+kubectl apply -f k8s/databases/tenantflow-neon-cluster.yaml
 ```
+The CNPG PostgreSQL clusters (cnpg-auth, cnpg-codetalk, cnpg-lunary, cnpg-bookmarked)
+and Redis live in `devops-portfolio-manager` (`k8s/cnpg-clusters/`, `k8s/redis/`) and are
+synced by ArgoCD. The stale copies that used to sit here were removed 2026-09-30.
 
 ### 4. Deploy Secrets and ConfigMaps
 ```bash

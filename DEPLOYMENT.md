@@ -228,8 +228,8 @@ kubectl delete -f k8s/services/
 # Delete all secrets
 kubectl delete -f k8s/secrets/
 
-# Delete all databases
-kubectl delete -f k8s/databases/
+# Databases: do NOT bulk-delete k8s/databases/ -- it holds the live self-hosted Neon
+# stack (hand-applied). CNPG and Redis are ArgoCD-managed in devops-portfolio-manager.
 
 # Wait a moment, then redeploy
 ./deploy-all.sh
