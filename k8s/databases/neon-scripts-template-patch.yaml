@@ -1,0 +1,63 @@
+# kb-system/neon-scripts-template — LIVE PATCH (2026-09-29), not in the addon chart.
+#
+# The KubeBlocks neon addon (Helm release `neon`, neon-1.0.1) hardcodes
+# prefix_in_bucket='pageserver/' in pageserver_start.sh, so neon-cluster and
+# tenantflow-neon (both pageserver id=1) shared one folder in neon-storage.
+# Also carries the 2026-09-25 safekeeper patch: unique --id from the pod
+# ordinal (upstream hardcodes --id=1).
+# Patched to read ${NEON_S3_PREFIX:-pageserver/}; each Cluster now sets it:
+#   neon-cluster     -> neon-cluster/pageserver/
+#   tenantflow-neon  -> tenantflow-neon/pageserver/
+#
+# 🪤 `helm upgrade neon` (kb-system) REVERTS this ConfigMap. Afterwards re-apply:
+#   kubectl apply --server-side --force-conflicts -f k8s/databases/neon-scripts-template-patch.yaml
+# and check the per-cluster rendered copies
+# (<cluster>-neon-pageserver-neon-scripts) before any pageserver restart —
+# a pageserver started on the unpatched script falls back to the OLD shared
+# pageserver/ folder, which is frozen as of 2026-09-29.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neon-scripts-template
+  namespace: kb-system
+  annotations:
+    homelab/patched: '2026-09-25 unique safekeeper --id from pod ordinal (upstream hardcodes 1); 2026-09-29 pageserver prefix_in_bucket from NEON_S3_PREFIX (upstream hardcodes pageserver/); both reverted by neon addon helm upgrade'
+data:
+  compute.sh: "#!/bin/bash\n\n# shellcheck disable=SC2034\nut_mode=\"false\"\ntest || __() {\n  set -ex\n}\n\ndeclare SPEC_FILE_SOURCE=\"/config/spec.json\"\ndeclare SPEC_FILE_DOCKER_SOURCE=\"/config/spec.prep.DOCKER.json\"\ndeclare PGDATA_DIR=\"/data/pgdata\"\ndeclare SPEC_DIR=\"/data/spec\"\ndeclare SPEC_FILE=\"/data/spec/spec.json\"\ndeclare SPEC_FILE_DOCKER=\"/data/spec/spec.prep.DOCKER.json\"\ndeclare PG_VERSION=14\ndeclare PAGESERVER\ndeclare SAFEKEEPERS\n\ncheck_required_env() {\n  local missing_vars=()\n\n  if [ -z \"$NEON_PAGESERVER_POD_FQDN_LIST\" ]; then\n    missing_vars+=(\"NEON_PAGESERVER_POD_FQDN_LIST\")\n  fi\n\n  if [ -z \"$NEON_SAFEKEEPERS_POD_FQDN_LIST\" ]; then\n    missing_vars+=(\"NEON_SAFEKEEPERS_POD_FQDN_LIST\")\n  fi\n\n  if [ -z \"$NEON_SAFEKEEPERS_PORT\" ]; then\n    missing_vars+=(\"NEON_SAFEKEEPERS_PORT\")\n  fi\n\n  if [ -z \"$NEON_PAGESERVER_PGPORT\" ]; then\n    missing_vars+=(\"NEON_PAGESERVER_PGPORT\")\n  fi\n\n  if [ -z \"$NEON_PAGESERVER_HTTPPORT\" ];\
+    \ then\n    missing_vars+=(\"NEON_PAGESERVER_HTTPPORT\")\n  fi\n\n  if [ ${#missing_vars[@]} -ne 0 ]; then\n    echo \"Error: Missing required environment variables: ${missing_vars[*]}\" >&2\n    return 1\n  fi\n  return 0\n}\n\nsetup_directories() {\n  if [ ! -d \"$PGDATA_DIR\" ]; then\n    mkdir -p \"$PGDATA_DIR\" || {\n      echo \"Failed to create pgdata directory: $PGDATA_DIR\" >&2\n      return 1\n    }\n    mkdir -p \"$SPEC_DIR\" || {\n      echo \"Failed to create spec directory: $SPEC_DIR\" >&2\n      return 1\n    }\n    cp \"$SPEC_FILE_DOCKER_SOURCE\" \"$SPEC_FILE_DOCKER\"\n    cp \"$SPEC_FILE_SOURCE\" \"$SPEC_FILE\"\n    chmod +w \"$SPEC_FILE_DOCKER\"\n    chmod +w \"$SPEC_FILE\"\n    return 0\n  fi\n  echo \"$PGDATA_DIR already exists\"\n  return 0\n}\n\nbuild_pageserver_string() {\n  echo \"$NEON_PAGESERVER_POD_FQDN_LIST\"\n}\n\nbuild_safekeepers_string() {\n  local result=\"\"\n  local fqdn_list\n\n  IFS=',' read -ra fqdn_list <<< \"$NEON_SAFEKEEPERS_POD_FQDN_LIST\"\n\n\
+    \  if [ ${#fqdn_list[@]} -gt 0 ]; then\n    result=\"${fqdn_list[0]}:$NEON_SAFEKEEPERS_PORT\"\n  fi\n\n  for ((i=1; i<${#fqdn_list[@]}; i++)); do\n    result=\"$result,${fqdn_list[i]}:$NEON_SAFEKEEPERS_PORT\"\n  done\n\n  echo \"$result\"\n}\n\nwait_for_pageserver() {\n  local pageserver=\"$1\"\n  if [ -z \"$pageserver\" ]; then\n    echo \"Error: Empty pageserver address\" >&2\n    return 1\n  fi\n\n  local first_pageserver\n  first_pageserver=$(echo \"$pageserver\" | cut -d',' -f1)\n\n  echo \"Waiting pageserver become ready.\"\n  while ! nc -z \"$first_pageserver\" \"$NEON_PAGESERVER_PGPORT\"; do\n    sleep 1\n  done\n  echo \"Page server is ready.\"\n}\n\ncreate_tenant() {\n  if [ -n \"$TENANT\" ]; then\n    echo \"$TENANT\"\n    return 0\n  fi\n\n  if [ -z \"$PAGESERVER\" ]; then\n    echo \"Error: PAGESERVER is not set\" >&2\n    return 1\n  fi\n\n  local first_pageserver\n  first_pageserver=$(echo \"$PAGESERVER\" | cut -d',' -f1)\n\n  local params=(\n    -sb\n    -X POST\n   \
+    \ -H \"Content-Type: application/json\"\n    -d \"{}\"\n    \"http://${first_pageserver}:$NEON_PAGESERVER_HTTPPORT/v1/tenant/\"\n  )\n\n  local response\n  response=$(curl \"${params[@]}\")\n  status=$?\n  if [ $status -ne 0 ]; then\n    echo \"Error: Failed to create tenant\" >&2\n    return 1\n  fi\n\n  echo \"$response\" | tr -d '\"'\n}\n\ncreate_timeline() {\n  local tenant_id=\"$1\"\n  if [ -z \"$tenant_id\" ]; then\n    echo \"Error: tenant_id is required\" >&2\n    return 1\n  fi\n\n  local timeline_data\n\n  if [ -n \"$TIMELINE\" ]; then\n    if [ -n \"$CREATE_BRANCH\" ]; then\n      timeline_data=\"{\\\"tenant_id\\\":\\\"${tenant_id}\\\", \\\"pg_version\\\": ${PG_VERSION}, \\\"ancestor_timeline_id\\\":\\\"${TIMELINE}\\\"}\"\n    else\n      echo \"$TIMELINE\"\n      return 0\n    fi\n  else\n    timeline_data=\"{\\\"tenant_id\\\":\\\"${tenant_id}\\\", \\\"pg_version\\\": ${PG_VERSION}}\"\n  fi\n\n  local first_pageserver\n  first_pageserver=$(echo \"$PAGESERVER\" | cut -d','\
+    \ -f1)\n\n  local params=(\n    -sb\n    -X POST\n    -H \"Content-Type: application/json\"\n    -d \"$timeline_data\"\n    \"http://${first_pageserver}:$NEON_PAGESERVER_HTTPPORT/v1/tenant/${tenant_id}/timeline/\"\n  )\n  local response\n  response=$(curl \"${params[@]}\")\n  status=$?\n  if [ $status -ne 0 ]; then\n    echo \"Error: Failed to create timeline\" >&2\n    return 1\n  fi\n  echo \"$response\"\n}\n\nupdate_spec_file() {\n  local tenant_id=\"$1\"\n  local timeline_id=\"$2\"\n  local pageserver=\"$3\"\n  local safekeepers=\"$4\"\n\n  if [ -z \"$tenant_id\" ] || [ -z \"$timeline_id\" ] || [ -z \"$pageserver\" ] || [ -z \"$safekeepers\" ]; then\n    echo \"Error: Missing required parameters for update_spec_file\" >&2\n    return 1\n  fi\n\n  cp \"${SPEC_FILE_DOCKER}\" \"${SPEC_FILE}\" || {\n      echo \"Error: Failed to copy template file\" >&2\n      return 1\n  }\n\n  sed \"s|TENANT_ID|${tenant_id}|g\" \"${SPEC_FILE}\" > \"${SPEC_FILE}.tmp\" && mv \"${SPEC_FILE}.tmp\" \"${SPEC_FILE}\"\
+    \n  sed \"s|TIMELINE_ID|${timeline_id}|g\" \"${SPEC_FILE}\" > \"${SPEC_FILE}.tmp\" && mv \"${SPEC_FILE}.tmp\" \"${SPEC_FILE}\"\n  sed \"s|PAGESERVER_SPEC|${pageserver}|g\" \"${SPEC_FILE}\" > \"${SPEC_FILE}.tmp\" && mv \"${SPEC_FILE}.tmp\" \"${SPEC_FILE}\"\n  sed \"s|SAFEKEEPERS_SPEC|${safekeepers}|g\" \"${SPEC_FILE}\" > \"${SPEC_FILE}.tmp\" && mv \"${SPEC_FILE}.tmp\" \"${SPEC_FILE}\"\n\n  rm -f \"${SPEC_FILE}.tmp\"\n  return 0\n}\n\nstart_compute_node() {\n  if [ ! -f \"${SPEC_FILE}\" ]; then\n    echo \"Error: Spec file not found: ${SPEC_FILE}\" >&2\n    return 1\n  fi\n\n  /opt/neondatabase-neon/target/release/compute_ctl \\\n    --pgdata /data/pgdata \\\n    -C \"postgresql://$NEON_COMPUTE_PGUSER@localhost:$NEON_COMPUTE_PGPORT/postgres\" \\\n    -b /opt/neondatabase-neon/pg_install/v14/bin/postgres \\\n    -S \"${SPEC_FILE}\"\n}\n\nsetup_environment() {\n  # check required env\n  check_required_env || return 1\n\n  # setup directories\n  setup_directories || return 1\n\n  # build\
+    \ pageserver and safekeepers string\n  PAGESERVER=$(build_pageserver_string)\n  if [ -z \"$PAGESERVER\" ]; then\n    echo \"Error: Failed to build pageserver string\" >&2\n    return 1\n  fi\n\n  SAFEKEEPERS=$(build_safekeepers_string)\n  if [ -z \"$SAFEKEEPERS\" ]; then\n    echo \"Error: Failed to build safekeepers string\" >&2\n    return 1\n  fi\n\n  echo \"PageServer: ${PAGESERVER}\"\n  echo \"Safekeepers: ${SAFEKEEPERS}\"\n\n  wait_for_pageserver \"$PAGESERVER\" || return 1\n}\n\nprocess_tenant_and_timeline() {\n  local tenant_id\n  local timeline_id\n  local result\n\n  tenant_id=$(create_tenant)\n  status=$?\n  if [ $status -ne 0 ]; then\n    echo \"Error: Failed to create tenant\" >&2\n    return 1\n  fi\n\n  result=$(create_timeline \"$tenant_id\")\n  status=$?\n  if [ $status -ne 0 ]; then\n    echo \"Error: Failed to create timeline\" >&2\n    return 1\n  fi\n\n  if [ -z \"$TIMELINE\" ] || [ -n \"$CREATE_BRANCH\" ]; then\n    echo \"$result\" | jq .\n    echo \"Overwrite\
+    \ tenant id and timeline id in spec file\"\n    tenant_id=$(echo \"${result}\" | jq -r .tenant_id)\n    timeline_id=$(echo \"${result}\" | jq -r .timeline_id)\n  else\n    timeline_id=$TIMELINE\n  fi\n\n  update_spec_file \"$tenant_id\" \"$timeline_id\" \"$PAGESERVER\" \"$SAFEKEEPERS\" || return 1\n}\n\nshow_environment_info() {\n  if [ ! -f \"${SPEC_FILE}\" ]; then\n    echo \"Error: Spec file not found: ${SPEC_FILE}\" >&2\n    return 1\n  fi\n\n  cat \"${SPEC_FILE}\"\n  echo \"Start compute node\"\n  whoami\n  echo \"$PWD\"\n  ls -lah /data\n}\n\nmain() {\n  setup_environment || {\n    echo \"Error: Failed to setup environment\" >&2\n    return 1\n  }\n\n  process_tenant_and_timeline || {\n    echo \"Error: Failed to process tenant and timeline\" >&2\n    return 1\n  }\n\n  show_environment_info || {\n    echo \"Error: Failed to show environment info\" >&2\n    return 1\n  }\n\n  start_compute_node || {\n    echo \"Error: Failed to start compute node\" >&2\n    return 1\n  }\n}\n\n\
+    # This is magic for shellspec ut framework.\n# Sometime, functions are defined in a single shell script.\n# You will want to test it. but you do not want to run the script.\n# When included from shellspec, __SOURCED__ variable defined and script\n# end here. The script path is assigned to the __SOURCED__ variable.\n${__SOURCED__:+false} : || return 0\n\n# main\nmain"
+  pageserver_start.sh: '#!/bin/bash
+
+
+    set -ex
+
+
+    # Handle termination gracefully
+
+    trap : TERM INT
+
+
+    # Start safekeeper with the dynamically generated broker endpoint
+
+    exec pageserver -D /data -c "id=1" -c "broker_endpoint=''http://$NEON_STORAGEBROKER_POD_FQDN_LIST:$NEON_STORAGEBROKER_PORT''" -c "listen_pg_addr=''0.0.0.0:$PAGEKEEPER_PG_PORT''" -c "listen_http_addr=''0.0.0.0:$PAGEKEEPER_HTTP_PORT''" -c "pg_distrib_dir=''/opt/neondatabase-neon/pg_install''" -c "remote_storage={bucket_name=''neon-storage'',bucket_region=''garage'',prefix_in_bucket=''${NEON_S3_PREFIX:-pageserver/}'',endpoint=''http://garage.monitoring.svc.cluster.local:3900''}"'
+  sakekeeper_start.sh: '#!/bin/bash
+
+
+    set -ex
+
+
+    # Handle termination gracefully
+
+    trap : TERM INT
+
+
+    # Start safekeeper with the dynamically generated broker endpoint
+
+    exec safekeeper --id=$(( ${HOSTNAME##*-} + 1 )) -D /data --broker-endpoint=http://$NEON_STORAGEBROKER_POD_FQDN_LIST:$NEON_STORAGEBROKER_PORT -l ${POD_IP}:$SAFEKEEPER_PG_PORT --listen-http=0.0.0.0:$SAFEKEEPER_HTTP_PORT'
+

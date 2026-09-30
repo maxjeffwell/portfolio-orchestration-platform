@@ -48,7 +48,7 @@ spec:
     - name: NEON_S3_REGION
       value: garage
     - name: NEON_S3_PREFIX
-      value: pageserver/
+      value: neon-cluster/pageserver/
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef: { name: neon-cluster-s3-creds, key: AWS_ACCESS_KEY_ID }

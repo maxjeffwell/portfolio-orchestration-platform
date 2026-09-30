@@ -57,6 +57,11 @@ spec:
   componentSpecs:
   - componentDef: neon-pageserver-1.0.1
     env:
+    # Own folder in the shared neon-storage bucket (was pageserver/, shared
+    # with neon-cluster at the same id=1). Read by the patched
+    # pageserver_start.sh in kb-system/neon-scripts-template (2026-09-29).
+    - name: NEON_S3_PREFIX
+      value: tenantflow-neon/pageserver/
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
