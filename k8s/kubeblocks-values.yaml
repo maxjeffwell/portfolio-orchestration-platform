@@ -2,36 +2,16 @@
 # Chart kubeblocks/kubeblocks 1.0.2 (repo https://apecloud.github.io/helm-charts). NOT ArgoCD-managed.
 # Captured into git 2026-09-27 from the release's full user values. Upgrade with:
 #   helm upgrade kubeblocks kubeblocks/kubeblocks --version 1.0.2 -n kb-system -f k8s/kubeblocks-values.yaml
-# affinity (2026-09-30): only the chart-default kb-controller preference remains
-# (no node carries that label, so it is a no-op); the elitedesk/m720q hostname
-# preferences from 2026-09-27 were removed — scheduler-placed.
+# affinity/tolerations (2026-09-30): the chart-default kb-controller preference and
+# toleration are NULLED here (no node carries that label or taint; user asked to remove
+# it). `affinity: null` is required — an empty map would not override the chart default.
+# The elitedesk/m720q hostname preferences from 2026-09-27 were removed earlier — scheduler-placed.
 # 🪤 dataProtection.affinity is ALSO passed as an env var to the MAIN controller, so
 #    changing it restarts both pods.
 # 🪤 The chart re-renders existing Addons via `lookup`; a manifest diff shows fake Addon
 #    changes. Compare rendered Addon .spec against `kubectl get addons` instead.
-affinity:
-  nodeAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-    - preference:
-        matchExpressions:
-        - key: kb-controller
-          operator: In
-          values:
-          - "true"
-      weight: 100
+affinity: null
 dataProtection:
-  affinity:
-    nodeAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-      - preference:
-          matchExpressions:
-          - key: kb-controller
-            operator: In
-            values:
-            - "true"
-        weight: 100
-tolerations:
-- effect: NoSchedule
-  key: kb-controller
-  operator: Equal
-  value: "true"
+  affinity: null
+  tolerations: []
+tolerations: []
