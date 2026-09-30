@@ -17,12 +17,17 @@ metadata:
 spec:
   hard:
     requests.cpu: "8"
-    requests.memory: 20Gi
+    # 20Gi → 28Gi (2026-09-30): requests at 18560Mi/20Gi (91%), KubeQuotaAlmostFull
+    # firing; Prometheus 3.6Gi + Mimir 2Gi + Tempo 1.6Gi + 5× Alloy 1.3Gi. Any new
+    # pod in the namespace would be refused. Limits raised in step to keep the
+    # ~2:1 limits:requests ratio.
+    requests.memory: 28Gi
     # 36Gi → 38Gi: namespace was maxed (36762/36864Mi), blocking the Alertmanager
     # pod (needs 306Mi) from scheduling for 29h → no alert delivery cluster-wide.
     # 38Gi → 42Gi: 37/38Gi with 6 nodes; each new node adds an Alloy DaemonSet
     # pod (3Gi+128Mi limits) that would be silently refused at 38Gi.
-    limits.memory: 42Gi
+    # 42Gi → 56Gi (2026-09-30): 38336Mi/42Gi (89%), raised with requests above.
+    limits.memory: 56Gi
 ---
 apiVersion: v1
 kind: ResourceQuota
