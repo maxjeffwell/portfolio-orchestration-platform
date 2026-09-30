@@ -92,9 +92,8 @@ export KUBECONFIG=~/.kube/k3d-portfolio.yaml
 kubectl apply -f k8s/databases/postgresql.yaml
 kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/postgresql
 
-# Deploy Redis
-kubectl apply -f k8s/databases/redis.yaml
-kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/redis
+# Redis is NOT in this repo: it is the StatefulSet in devops-portfolio-manager/k8s/redis
+# (ArgoCD app `redis`, PVC redis-pvc-lvm-elitedesk on openebs-lvmpv; secret via ExternalSecret).
 
 # Deploy MongoDB
 kubectl apply -f k8s/databases/mongodb.yaml

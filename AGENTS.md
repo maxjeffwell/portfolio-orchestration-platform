@@ -277,8 +277,7 @@ portfolio-orchestration-platform/
 │   │   ├── mongodb-educationelly-graphql.yaml
 │   │   ├── mongodb-intervalai.yaml
 │   │   ├── postgresql-bookmarked.yaml
-│   │   ├── postgresql-codetalk.yaml
-│   │   └── redis.yaml
+│   │   └── postgresql-codetalk.yaml
 │   ├── deployments/           # Application deployments
 │   │   ├── api-deployment.yaml
 │   │   ├── bookmarked-deployment.yaml
