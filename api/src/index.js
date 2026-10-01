@@ -27,7 +27,12 @@ import requestIdMiddleware from './middleware/requestId.js';
 const execAsync = promisify(exec);
 
 const app = express();
-app.enable('trust proxy'); // This fixes the Mixed Content redirect issue
+// Trust exactly two proxy hops: Cloudflare -> Traefik -> this API. Traefik only
+// accepts X-Forwarded-For from Cloudflare's ranges and appends Cloudflare's IP,
+// so req.ip is the real client (Cloudflare appends to any client-sent XFF, so
+// the leftmost entry, which `true` would use, is forgeable). Also keeps
+// X-Forwarded-Proto (the Mixed Content redirect fix) working.
+app.set('trust proxy', 2);
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
