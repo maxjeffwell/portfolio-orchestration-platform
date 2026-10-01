@@ -28,6 +28,7 @@ import {
 import axios from 'axios';
 import { API_BASE_URL } from '../config/apiConfig.js';
 import { withCache } from '../utils/queryCache.js';
+import authService from '../services/authService.js';
 
 function Analytics() {
   const [metrics, setMetrics] = useState(null);
@@ -58,7 +59,7 @@ function Analytics() {
       try {
         const response = await axios.get(`${API_BASE_URL}/metrics`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${authService.getToken()}`,
           },
         });
         setMetrics(response.data);
@@ -77,7 +78,7 @@ function Analytics() {
   useEffect(() => {
     const fetchHistoricalData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = authService.getToken();
         const baseUrl = `${API_BASE_URL}/prometheus`;
 
         // Fetch cluster-wide metrics from Prometheus (with caching)
@@ -152,7 +153,7 @@ function Analytics() {
   useEffect(() => {
     const fetchNamespaceData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = authService.getToken();
         const baseUrl = `${API_BASE_URL}/prometheus`;
 
         // Query for pod count by namespace (with caching)
@@ -189,7 +190,7 @@ function Analytics() {
   useEffect(() => {
     const fetchPodResourceData = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = authService.getToken();
         const baseUrl = `${API_BASE_URL}/prometheus`;
 
         // Query for top pods by CPU and Memory (with caching)
