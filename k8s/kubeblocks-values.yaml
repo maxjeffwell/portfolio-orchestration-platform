@@ -11,7 +11,14 @@
 # 🪤 The chart re-renders existing Addons via `lookup`; a manifest diff shows fake Addon
 #    changes. Compare rendered Addon .spec against `kubectl get addons` instead.
 affinity: null
+# 2026-10-01: DataProtection DISABLED (user decision). Never exercised: 0 BackupRepo /
+# BackupPolicy / BackupSchedule / Backup ever; both Neon clusters have no spec.backup and
+# the neon addon ships no BackupPolicyTemplate. The flag removes ONLY the
+# kubeblocks-dataprotection Deployment + its worker SA/ClusterRole (500m/1Gi request);
+# the 11 StorageProvider CRs are NOT gated by it and stay as inert catalog entries.
+# Re-enable before deploying any addon cluster that should have KubeBlocks-native backups.
 dataProtection:
+  enabled: false
   affinity: null
   tolerations: []
 tolerations: []
