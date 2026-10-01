@@ -22,3 +22,9 @@ dataProtection:
   affinity: null
   tolerations: []
 tolerations: []
+# 2026-10-01: operator memory 1Gi -> 512Mi (user). The chart renders requests = limits
+# from this single value. 14-day peak working set across all operator pods = 222Mi, so
+# 512Mi is ~2.3x headroom. Only possible now that dataProtection (which shared this
+# knob) is disabled. cpu left at the chart default (500m) by merge.
+resources:
+  memory: 512Mi
