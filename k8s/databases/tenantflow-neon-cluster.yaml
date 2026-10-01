@@ -253,7 +253,9 @@ spec:
         cpu: '2'
         memory: 4Gi
       requests:
-        cpu: 500m
+        # 2026-09-30: cpu 500m -> 100m. 30-day peak 5m (TenantFlow is idle);
+        # the 2-core limit still allows real query bursts.
+        cpu: 100m
         memory: 256Mi
     schedulingPolicy:
       affinity:
