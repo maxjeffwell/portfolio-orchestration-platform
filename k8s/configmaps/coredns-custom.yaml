@@ -20,7 +20,8 @@
 #   asustor-smb.home.arpa -> ASUSTOR eth2 (5G), the source for the smb-asustor
 #   StorageClass. Addressed by name because csi-driver-smb bakes `source` into
 #   each PV immutably; repointing to .142/.133 must not require PV rebuilds.
-#   backrest.home.arpa -> traefik LoadBalancer IPs (Ingress host, not a backend).
+#   (backrest.home.arpa removed 2026-10-06: the backrest app was retired 2026-08-29 and
+#   the entry pointed at a dead VPS IP and m920s, neither of which served it.)
 #   The `forward . /etc/resolv.conf` after `hosts` is required: node-local-dns routes the
 #   whole home.arpa zone here, so without a forward, any home.arpa name not in the hosts
 #   block (previously resolvable via each node's upstream resolver) now SERVFAILs from pods.
@@ -49,8 +50,6 @@ data:
       cache 30
       hosts {
         192.168.50.149 asustor-smb.home.arpa
-        100.64.0.1 backrest.home.arpa
-        100.64.0.2 backrest.home.arpa
         fallthrough
       }
       forward . /etc/resolv.conf
