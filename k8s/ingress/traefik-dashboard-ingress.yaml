@@ -11,6 +11,22 @@ spec:
   dnsNames:
     - traefik.el-jefe.me
 ---
+# 2026-10-06: the dashboard and its /api were reachable from the internet with no
+# authentication. basicAuth users come from Secret traefik-dashboard-auth (rendered
+# by the ExternalSecret in devops-portfolio-manager/k8s/platform-external-secrets/
+# from Doppler TRAEFIK_DASHBOARD_HTPASSWD). The POP dashboard links here, so the
+# hostname stays; the CrowdSec bouncer is applied as well.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-dashboard-auth
+  namespace: kube-system
+spec:
+  basicAuth:
+    secret: traefik-dashboard-auth
+    realm: traefik-dashboard
+    removeHeader: true
+---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -22,6 +38,9 @@ spec:
   routes:
     - match: Host(`traefik.el-jefe.me`)
       kind: Rule
+      middlewares:
+        - name: crowdsec-bouncer
+        - name: traefik-dashboard-auth
       services:
         - name: api@internal
           kind: TraefikService
