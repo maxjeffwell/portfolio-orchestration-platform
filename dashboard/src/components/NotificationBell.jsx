@@ -24,6 +24,7 @@ import {
   Info as InfoIcon,
   CheckCircle as SuccessIcon,
 } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 
 // Get icon and color based on priority
@@ -57,6 +58,7 @@ const formatTime = (dateString) => {
 };
 
 export default function NotificationBell() {
+  const { readOnly } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const {
     notifications,
@@ -183,15 +185,17 @@ export default function NotificationBell() {
                     <ListItem
                       disablePadding
                       secondaryAction={
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={(e) => handleDelete(e, notification.id)}
-                          sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      }
+                         !readOnly && (
+                          <IconButton
+                            edge="end"
+                            size="small"
+                            onClick={(e) => handleDelete(e, notification.id)}
+                            sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )
+                       }
                     >
                       <ListItemButton
                         onClick={() => handleNotificationClick(notification)}
@@ -265,14 +269,16 @@ export default function NotificationBell() {
               justifyContent: 'center',
             }}
           >
-            <Button
-              size="small"
-              color="error"
-              startIcon={<ClearAllIcon />}
-              onClick={handleClearAll}
-            >
-              Clear All
-            </Button>
+            {!readOnly && (
+              <Button
+                size="small"
+                color="error"
+                startIcon={<ClearAllIcon />}
+                onClick={handleClearAll}
+              >
+                Clear All
+              </Button>
+            )}
           </Box>
         )}
       </Popover>

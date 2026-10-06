@@ -30,8 +30,10 @@ import {
 } from '@mui/icons-material';
 import podService from '../services/podService';
 import socketService from '../services/socketService';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Pods() {
+  const { readOnly } = useAuth();
   const [pods, setPods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -189,23 +191,27 @@ export default function Pods() {
                   >
                     <ViewIcon fontSize="small" />
                   </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleRestartPod(pod.metadata?.name)}
-                    title="Restart Pod"
-                    sx={{ p: 0.75 }}
-                  >
-                    <RefreshIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDeletePod(pod.metadata?.name, pod.metadata?.namespace)}
-                    title="Delete Pod"
-                    color="error"
-                    sx={{ p: 0.75 }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  {!readOnly && (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRestartPod(pod.metadata?.name)}
+                        title="Restart Pod"
+                        sx={{ p: 0.75 }}
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeletePod(pod.metadata?.name, pod.metadata?.namespace)}
+                        title="Delete Pod"
+                        color="error"
+                        sx={{ p: 0.75 }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  )}
                 </Box>
               </Box>
             </CardContent>
@@ -254,21 +260,25 @@ export default function Pods() {
                       >
                         <ViewIcon />
                       </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRestartPod(pod.metadata?.name)}
-                        title="Restart Pod"
-                      >
-                        <RefreshIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeletePod(pod.metadata?.name, pod.metadata?.namespace)}
-                        title="Delete Pod"
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      {!readOnly && (
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRestartPod(pod.metadata?.name)}
+                            title="Restart Pod"
+                          >
+                            <RefreshIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeletePod(pod.metadata?.name, pod.metadata?.namespace)}
+                            title="Delete Pod"
+                            color="error"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

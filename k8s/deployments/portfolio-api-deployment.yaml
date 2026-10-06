@@ -39,6 +39,9 @@ spec:
           value: "5000"
         - name: NODE_ENV
           value: "production"
+        # 2026-10-06: internet-facing dashboard -> no cluster mutations (see api/src/middleware/readOnly.js)
+        - name: READ_ONLY
+          value: "true"
         - name: CORS_ORIGIN
           value: "https://pop-portfolio.el-jefe.me"
         - name: AUTH_DATABASE_URL

@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import deploymentService from '../services/deploymentService';
 import socketService from '../services/socketService';
+import { useAuth } from '../contexts/AuthContext';
 // URL mapping for portfolio apps (only frontend/client apps that have public URLs)
 const APP_URLS = {
   'bookmarked-client': 'https://bookmarked-k8s.el-jefe.me/',
@@ -44,6 +45,7 @@ const APP_URLS = {
   // Backend/API services don't have public URLs
 };
 export default function Deployments() {
+  const { readOnly } = useAuth();
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -181,22 +183,26 @@ export default function Deployments() {
                     </Typography>
                   </Box>
                   <Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleOpenScaleDialog(deployment)}
-                      title="Scale Deployment"
-                      sx={{ p: 0.75 }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleRestart(deployment.metadata?.name)}
-                      title="Restart Deployment"
-                      sx={{ p: 0.75 }}
-                    >
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
+                    {!readOnly && (
+                      <>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenScaleDialog(deployment)}
+                          title="Scale Deployment"
+                          sx={{ p: 0.75 }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRestart(deployment.metadata?.name)}
+                          title="Restart Deployment"
+                          sx={{ p: 0.75 }}
+                        >
+                          <RefreshIcon fontSize="small" />
+                        </IconButton>
+                      </>
+                    )}
                   </Box>
                 </Box>
               </CardContent>
@@ -260,20 +266,24 @@ export default function Deployments() {
                         {new Date(deployment.metadata?.creationTimestamp).toLocaleDateString()}
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenScaleDialog(deployment)}
-                          title="Scale Deployment"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRestart(deployment.metadata?.name)}
-                          title="Restart Deployment"
-                        >
-                          <RefreshIcon />
-                        </IconButton>
+                        {!readOnly && (
+                          <>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenScaleDialog(deployment)}
+                              title="Scale Deployment"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRestart(deployment.metadata?.name)}
+                              title="Restart Deployment"
+                            >
+                              <RefreshIcon />
+                            </IconButton>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                   );

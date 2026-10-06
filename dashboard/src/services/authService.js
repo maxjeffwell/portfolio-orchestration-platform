@@ -2,6 +2,7 @@ import api from './api';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'user';
+const READ_ONLY_KEY = 'read_only';
 
 const authService = {
   async login(username, password) {
@@ -9,10 +10,11 @@ const authService = {
       const response = await api.post('/auth/login', { username, password });
 
       if (response.data.success) {
-        const { token, user } = response.data.data;
+        const { token, user, readOnly } = response.data.data;
         this.setToken(token);
         this.setUser(user);
-        return { success: true, user };
+        this.setReadOnly(readOnly);
+        return { success: true, user, readOnly: !!readOnly };
       }
 
       return { success: false, error: response.data.error || 'Login failed' };
@@ -42,6 +44,9 @@ const authService = {
   async verifyToken() {
     try {
       const response = await api.get('/auth/verify');
+      if (response.data.success) {
+        this.setReadOnly(response.data.data?.readOnly);
+      }
       return response.data.success;
     } catch (error) {
       this.clearAuth();
@@ -66,9 +71,19 @@ const authService = {
     return user ? JSON.parse(user) : null;
   },
 
+  // Read-only mode is decided by the API (READ_ONLY env); the UI only hides controls.
+  setReadOnly(readOnly) {
+    localStorage.setItem(READ_ONLY_KEY, readOnly === false ? 'false' : 'true');
+  },
+
+  isReadOnly() {
+    return localStorage.getItem(READ_ONLY_KEY) !== 'false';
+  },
+
   clearAuth() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(READ_ONLY_KEY);
   },
 
   isAuthenticated() {

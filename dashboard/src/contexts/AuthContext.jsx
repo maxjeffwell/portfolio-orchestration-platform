@@ -15,6 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // true unless the API says otherwise (fail closed)
+  const [readOnly, setReadOnly] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -58,6 +60,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     isAuthenticated,
+    readOnly,
     login,
     logout,
   };

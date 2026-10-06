@@ -29,10 +29,8 @@ import {
   Hub as PodrickIcon,
   Apartment as TenantFlowIcon,
   Speed as GrafanaIcon,
-  QueryStats as PrometheusIcon,
   AltRoute as TraefikIcon,
   Timeline as LunaryIcon,
-  AutoStories as StorybookIcon,
 } from '@mui/icons-material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -55,12 +53,10 @@ const applicationItems = [
   { text: 'ArgoCD', icon: <ArgoIcon />, path: 'https://argocd.el-jefe.me', external: true },
   { text: 'PodRick', icon: <PodrickIcon />, path: 'https://podrick.el-jefe.me', external: true },
   { text: 'TenantFlow', icon: <TenantFlowIcon />, path: 'https://tenantflow.el-jefe.me', external: true },
-  { text: 'React Storybook', icon: <StorybookIcon />, path: 'https://showcase.el-jefe.me', external: true },
 ];
 
 const monitoringItems = [
   { text: 'Grafana', icon: <GrafanaIcon />, path: 'https://grafana.el-jefe.me', external: true },
-  { text: 'Prometheus', icon: <PrometheusIcon />, path: 'https://prometheus.el-jefe.me', external: true },
   { text: 'Traefik', icon: <TraefikIcon />, path: 'https://traefik.el-jefe.me/dashboard/', external: true },
   { text: 'Lunary', icon: <LunaryIcon />, path: 'https://lunary.el-jefe.me', external: true },
 ];

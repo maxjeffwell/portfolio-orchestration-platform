@@ -1,4 +1,5 @@
 import { generateToken } from '../middleware/auth.js';
+import { READ_ONLY } from '../middleware/readOnly.js';
 import userService from '../services/userService.js';
 import logger from '../utils/logger.js';
 import { asyncHandler, sendSuccess, ApiError } from '../utils/asyncHandler.js';
@@ -38,12 +39,13 @@ class AuthController {
         username: user.username,
         role: user.role,
       },
+      readOnly: READ_ONLY,
     });
   });
 
   verify = asyncHandler(async (req, res) => {
     // If we reach here, the authMiddleware has already verified the token
-    sendSuccess(res, { user: req.user });
+    sendSuccess(res, { user: req.user, readOnly: READ_ONLY });
   });
 
   logout = asyncHandler(async (req, res) => {

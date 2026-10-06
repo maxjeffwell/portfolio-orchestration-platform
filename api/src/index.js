@@ -21,6 +21,7 @@ import webhookRoutes from './routes/webhookRoutes.js';
 import gotifyService from './services/gotifyService.js';
 import eventMonitorService from './services/eventMonitorService.js';
 import { authMiddleware } from './middleware/auth.js';
+import { READ_ONLY, readOnlyGuard } from './middleware/readOnly.js';
 import errorHandler from './middleware/errorHandler.js';
 import requestIdMiddleware from './middleware/requestId.js';
 
@@ -65,6 +66,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
+    readOnly: READ_ONLY,
     kubernetes: {
       connected: k8sClient.initialized,
       context: k8sClient.initialized ? k8sClient.getCurrentContext() : null,
@@ -75,9 +77,10 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 
-// Protected routes (require authentication)
-app.use('/api/pods', authMiddleware, podRoutes);
-app.use('/api/deployments', authMiddleware, deploymentRoutes);
+// Protected routes (require authentication). readOnlyGuard rejects every
+// mutating method on these routers while READ_ONLY is on (see middleware/readOnly.js).
+app.use('/api/pods', authMiddleware, readOnlyGuard, podRoutes);
+app.use('/api/deployments', authMiddleware, readOnlyGuard, deploymentRoutes);
 
 // Read-only monitoring routes, no auth required
 app.use('/api/metrics', metricsRoutes);
@@ -87,7 +90,7 @@ app.use('/api/prometheus', prometheusRoutes);
 app.use('/api/ai', authMiddleware, aiRoutes);
 
 // Notification routes (protected - requires authentication)
-app.use('/api/notifications', authMiddleware, notificationRoutes);
+app.use('/api/notifications', authMiddleware, readOnlyGuard, notificationRoutes);
 
 // Webhook routes (public - external services send webhooks without auth)
 app.use('/api/webhooks', webhookRoutes);
