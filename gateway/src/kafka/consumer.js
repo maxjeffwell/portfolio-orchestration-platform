@@ -1,6 +1,9 @@
+import os from 'node:os';
 import { Kafka, logLevel } from 'kafkajs';
 
+let kafka = null;
 let consumer = null;
+let groupId = null;
 let isRunning = false;
 let eventHandlers = [];
 
@@ -8,8 +11,17 @@ let eventHandlers = [];
  * Start Kafka consumer for AI gateway events.
  * Retries indefinitely with exponential backoff so the gateway
  * self-heals if Kafka starts after this pod.
- * Uses an ephemeral consumer group so each pod restart re-reads all
- * retained events and populates the in-memory buffer.
+ *
+ * Every replica must see EVERY event (each feeds its own in-memory buffer and
+ * its own GraphQL subscribers), so replicas must NOT share a consumer group.
+ * The group is per pod and named after the pod (os.hostname() is the pod name
+ * on Kubernetes). It never commits offsets: a restart is meant to replay the
+ * retained events from the beginning, and a group with no committed offsets is
+ * dropped by the broker as soon as it is empty -- so restarts no longer leave
+ * dead groups behind (the previous `graphql-gateway-<timestamp>` scheme had
+ * accumulated 11 of them by 2026-10-06). stopConsumer() also deletes the group
+ * explicitly on graceful shutdown. KAFKA_GROUP_ID overrides the name for
+ * single-instance local runs only; never set it on a multi-replica deployment.
  */
 export async function startConsumer() {
   if (isRunning) return;
@@ -19,8 +31,9 @@ export async function startConsumer() {
     : ['vertex-kafka-kafka-bootstrap.microservices.svc:9092'];
   const clientId = process.env.KAFKA_CLIENT_ID || 'graphql-gateway';
   const topic = process.env.KAFKA_AI_EVENTS_TOPIC || 'ai.gateway.events';
+  groupId = process.env.KAFKA_GROUP_ID || `graphql-gateway-${os.hostname()}`;
 
-  const kafka = new Kafka({
+  kafka = new Kafka({
     clientId,
     brokers,
     logLevel: logLevel.ERROR,
@@ -30,7 +43,6 @@ export async function startConsumer() {
   const maxDelay = 30_000;
   let delay = 2_000;
   while (true) {
-    const groupId = `graphql-gateway-${Date.now()}`;
     try {
       consumer = kafka.consumer({
         groupId,
@@ -41,10 +53,13 @@ export async function startConsumer() {
       await consumer.connect();
       await consumer.subscribe({ topic, fromBeginning: true });
 
-      console.log('[Kafka] Consumer subscribed to', topic);
+      console.log('[Kafka] Consumer subscribed to', topic, 'as group', groupId);
       isRunning = true;
 
       await consumer.run({
+        // No offset commits: see the note above (replay-on-restart by design,
+        // and an offset-less group is garbage-collected the moment it empties).
+        autoCommit: false,
         eachMessage: async ({ message }) => {
           try {
             const event = JSON.parse(message.value.toString());
@@ -88,5 +103,20 @@ export async function stopConsumer() {
     console.log('[Kafka] Consumer stopped');
   } catch (err) {
     console.error('[Kafka] Error stopping consumer:', err.message);
+  }
+  // Belt and braces: the group is per pod and useless once this pod is gone.
+  // The broker drops it anyway (no committed offsets), but a crash mid-rebalance
+  // can leave it Empty for a while, so delete it explicitly when we can.
+  if (kafka && groupId) {
+    const admin = kafka.admin();
+    try {
+      await admin.connect();
+      await admin.deleteGroups([groupId]);
+      console.log('[Kafka] Consumer group deleted:', groupId);
+    } catch (err) {
+      console.warn('[Kafka] Could not delete consumer group:', err.message);
+    } finally {
+      try { await admin.disconnect(); } catch {}
+    }
   }
 }
