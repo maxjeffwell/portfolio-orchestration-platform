@@ -89,8 +89,10 @@ spec:
     - name: api-server-health
       rules:
         - alert: APIServerHighLatency
+          # 2026-10-07: also exclude CONNECT (exec/port-forward/logs -f streams are long-lived
+          # by design; their "latency" = session length, capped at 60 s -> false alarms).
           expr: |
-            histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!="WATCH"}[5m])) by (le, verb)) > 3
+            histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{verb!~"WATCH|CONNECT"}[5m])) by (le, verb)) > 3
           for: 10m
           labels:
             severity: warning
