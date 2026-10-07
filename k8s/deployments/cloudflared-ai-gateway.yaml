@@ -50,3 +50,19 @@ spec:
           limits:
             cpu: 100m
             memory: 128Mi
+---
+# 2026-10-07: keep >= 1 tunnel connector through drains. The 2 replicas already
+# sit on different nodes (required podAntiAffinity above); without this a drain
+# could evict both and drop the Cloudflare tunnel until one restarts.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cloudflared-ai-gateway
+  namespace: default
+  labels:
+    app: cloudflared-ai-gateway
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: cloudflared-ai-gateway
