@@ -17,14 +17,12 @@ import { createRateLimitStore } from '../utils/rateLimitStore.js';
 const windowMinutes = parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MIN || '15', 10);
 const max = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '10', 10);
 
-export const loginLimiter = rateLimit({
+const baseOptions = {
   windowMs: windowMinutes * 60 * 1000,
   limit: max,
   skipSuccessfulRequests: true,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  store: createRateLimitStore('login'), // undefined -> MemoryStore
-  passOnStoreError: true, // Redis down -> fail open, never block logins with 500s
   handler: (req, res, _next, options) => {
     logger.warn(`Login rate limit hit for ${req.ip} (username: ${req.body?.username ?? '?'})`);
     res.status(options.statusCode).json({
@@ -32,4 +30,18 @@ export const loginLimiter = rateLimit({
       error: `Too many failed login attempts. Try again in ${windowMinutes} minutes.`,
     });
   },
-});
+};
+
+const sharedStore = createRateLimitStore('login'); // undefined without REDIS_URL
+
+/**
+ * Either a single in-memory limiter (no REDIS_URL) or a chain of two: the
+ * Redis-backed limiter shared by all replicas, then an in-memory per-pod
+ * backstop. When Redis is down or not yet connected the first one lets the
+ * request through (passOnStoreError) and the backstop still enforces today's
+ * per-pod limit, so an outage never means "no limit". Express accepts the
+ * array anywhere a middleware goes.
+ */
+export const loginLimiter = sharedStore
+  ? [rateLimit({ ...baseOptions, store: sharedStore, passOnStoreError: true }), rateLimit(baseOptions)]
+  : rateLimit(baseOptions);
