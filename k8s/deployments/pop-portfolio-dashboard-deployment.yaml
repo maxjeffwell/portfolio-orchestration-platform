@@ -32,7 +32,7 @@ spec:
         effect: PreferNoSchedule
       containers:
       - name: dashboard
-        image: maxjeffwell/portfolio-dashboard:20261006-163848-e46c897
+        image: maxjeffwell/portfolio-dashboard:20261015-233305-3fab57d
         imagePullPolicy: Always
         ports:
         - containerPort: 80
