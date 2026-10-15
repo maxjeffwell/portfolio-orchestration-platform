@@ -35,13 +35,14 @@ const baseOptions = {
 const sharedStore = createRateLimitStore('login'); // undefined without REDIS_URL
 
 /**
- * Either a single in-memory limiter (no REDIS_URL) or a chain of two: the
- * Redis-backed limiter shared by all replicas, then an in-memory per-pod
- * backstop. When Redis is down or not yet connected the first one lets the
+ * Either a single in-memory limiter (no REDIS_URL) or a chain of two: an
+ * in-memory per-pod backstop, then the Redis-backed limiter shared by all
+ * replicas. When Redis is down or not yet connected the Redis one lets the
  * request through (passOnStoreError) and the backstop still enforces today's
- * per-pod limit, so an outage never means "no limit". Express accepts the
- * array anywhere a middleware goes.
+ * per-pod limit, so an outage never means "no limit". The Redis limiter runs
+ * last so the RateLimit-* headers report the shared count. Express accepts
+ * the array anywhere a middleware goes.
  */
 export const loginLimiter = sharedStore
-  ? [rateLimit({ ...baseOptions, store: sharedStore, passOnStoreError: true }), rateLimit(baseOptions)]
+  ? [rateLimit(baseOptions), rateLimit({ ...baseOptions, store: sharedStore, passOnStoreError: true })]
   : rateLimit(baseOptions);
