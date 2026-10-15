@@ -66,6 +66,15 @@ spec:
             secretKeyRef:
               name: portfolio-api-secrets
               key: jwt-secret
+        # Cross-replica login-attempt counter (api/src/utils/rateLimitStore.js).
+        # Unset REDIS_URL = per-pod in-memory counter (2 replicas = 2x budget).
+        - name: REDIS_URL
+          value: redis://redis.default.svc.cluster.local:6379
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: portfolio-api-secrets
+              key: redis-password
         - name: ADMIN_USERNAME
           valueFrom:
             secretKeyRef:

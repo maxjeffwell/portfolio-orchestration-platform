@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import logger from '../utils/logger.js';
+import { createRateLimitStore } from '../utils/rateLimitStore.js';
 
 /**
  * Brute-force protection for POST /api/auth/login.
@@ -9,6 +10,9 @@ import logger from '../utils/logger.js';
  * which relies on `trust proxy` = 2 in index.js (Cloudflare -> Traefik -> API).
  *
  * Env overrides: LOGIN_RATE_LIMIT_MAX (default 10), LOGIN_RATE_LIMIT_WINDOW_MIN (default 15).
+ *
+ * The counter is shared across replicas through Redis when REDIS_URL is set
+ * (utils/rateLimitStore.js); otherwise it is per pod, i.e. 2 replicas = 2x max.
  */
 const windowMinutes = parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MIN || '15', 10);
 const max = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '10', 10);
@@ -19,6 +23,8 @@ export const loginLimiter = rateLimit({
   skipSuccessfulRequests: true,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  store: createRateLimitStore('login'), // undefined -> MemoryStore
+  passOnStoreError: true, // Redis down -> fail open, never block logins with 500s
   handler: (req, res, _next, options) => {
     logger.warn(`Login rate limit hit for ${req.ip} (username: ${req.body?.username ?? '?'})`);
     res.status(options.statusCode).json({
