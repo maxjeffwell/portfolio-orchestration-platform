@@ -6,9 +6,14 @@ metadata:
   labels:
     app: portfolio-api
 spec:
-  replicas: 1
+  # 2026-10-15: 2 replicas, rolling, spread across servers (+ PDB below) so a
+  # server loss or a deploy never takes the API down.
+  replicas: 2
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: portfolio-api
@@ -18,6 +23,13 @@ spec:
         app: portfolio-api
     spec:
       priorityClassName: portfolio-app
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: portfolio-api
       serviceAccountName: portfolio-api-sa
       containers:
       - name: portfolio-api
@@ -96,3 +108,16 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: portfolio-api
+  namespace: default
+  labels:
+    app: portfolio-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: portfolio-api
