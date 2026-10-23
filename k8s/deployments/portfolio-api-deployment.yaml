@@ -19,6 +19,8 @@ spec:
       app: portfolio-api
   template:
     metadata:
+      annotations:
+        el-jefe.me/database: "patroni-2026-10-23"   # auth DB moved to the Patroni HA cluster; bump to roll pods
       labels:
         app: portfolio-api
     spec:
