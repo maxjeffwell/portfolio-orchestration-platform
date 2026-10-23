@@ -63,6 +63,8 @@ spec:
             secretKeyRef:
               name: portfolio-api-secrets
               key: auth-database-url
+        - name: NODE_EXTRA_CA_CERTS   # Patroni cluster CA -> AUTH_DATABASE_URL uses sslmode=verify-full
+          value: /etc/pg-ha/ca.crt
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
@@ -103,6 +105,10 @@ spec:
             secretKeyRef:
               name: portfolio-api-secrets
               key: gotify-client-token
+        volumeMounts:
+          - name: pg-ha-ca
+            mountPath: /etc/pg-ha
+            readOnly: true
         livenessProbe:
           httpGet:
             path: /health
@@ -119,6 +125,11 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 3
           failureThreshold: 3
+      volumes:
+        - name: pg-ha-ca   # Patroni cluster CA (secret pg-ha-ca, devops-portfolio-manager k8s/platform-external-secrets)
+          secret:
+            secretName: pg-ha-ca
+
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
