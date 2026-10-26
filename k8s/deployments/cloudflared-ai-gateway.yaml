@@ -27,7 +27,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: cloudflared
-        image: cloudflare/cloudflared:2026.10.0  # pinned 2026-10-07 (was latest); = running digest 9b49eed8
+        image: cloudflare/cloudflared:2026.10.3  # bumped 2026-10-26 (Cloudflare notice: >= 2026.10.2 required)
         args:
         - tunnel
         - --protocol
