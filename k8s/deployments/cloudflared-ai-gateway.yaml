@@ -19,6 +19,15 @@ spec:
     spec:
       priorityClassName: portfolio-app
       affinity:
+        # Home servers only: every origin (ai-gateway, litellm, argocd) lives on them,
+        # so a VPS connector just adds a tailnet hop + the VPS provider's latency jitter.
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: ["elitedesk", "m720q", "m920s"]
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
