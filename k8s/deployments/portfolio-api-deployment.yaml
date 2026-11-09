@@ -67,6 +67,10 @@ spec:
           value: "true"
         - name: CORS_ORIGIN
           value: "https://pop-portfolio.el-jefe.me"
+        # 2026-11-09: was set by hand (kubectl set env) to shared-ai-gateway-service, which now
+        # targets the gateway's key-required PUBLIC port. In-cluster callers use shared-ai-gateway.
+        - name: AI_GATEWAY_URL
+          value: "http://shared-ai-gateway:8002"
         - name: AUTH_DATABASE_URL
           valueFrom:
             secretKeyRef:
