@@ -3,6 +3,8 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 COPY package*.json ./
+# patch-package runs as postinstall during npm ci, so the patches must already be present
+COPY patches ./patches
 
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev
