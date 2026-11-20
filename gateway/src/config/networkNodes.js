@@ -154,7 +154,7 @@ export const NODE_DEFINITIONS = [
     up: { job: 'router-node', instance: 'ax86u-pro' },
     services: [
       { name: 'Wi-Fi Access Point', port: null },
-      { name: 'Wired Backhaul', port: null },
+      { name: 'Ethernet Backhaul', port: null },
       { name: 'Tailnet Subnet Router', port: null },
     ],
   },
@@ -264,7 +264,7 @@ export const LINK_DEFINITIONS = [
   { source: 'gpu-2', target: 'asustor', type: 'NFS' },
   { source: 'cp-1', target: 'asustor', type: 'NFS' },
 
-  // The mesh node reaches the primary router over a wired backhaul. The node's
+  // The mesh node reaches the primary router over an Ethernet backhaul. The node's
   // uplink port is the live signal: carrier lost means the backhaul is down.
   {
     source: 'primary-router',
