@@ -256,7 +256,11 @@ test('wired LAN: machines link to their switch, segments reach the router over M
   const wired = (source) =>
     links.filter((l) => l.type === 'ETHERNET' && l.source === source).map((l) => l.target).sort();
 
-  assert.deepEqual(wired('cp-3'), ['switch-a']);
+  assert.deepEqual(wired('cp-3'), ['mesh-node', 'switch-a']);
+  assert.equal(
+    links.find((l) => l.source === 'cp-3' && l.target === 'mesh-node').bandwidthBps,
+    1e9,
+  );
   assert.deepEqual(wired('gpu-workstation'), ['switch-a']);
   assert.deepEqual(wired('cp-1'), ['switch-b1']);
   assert.deepEqual(wired('asustor'), ['switch-b1', 'switch-b2']);
@@ -268,7 +272,9 @@ test('wired LAN: machines link to their switch, segments reach the router over M
   assert.ok(moca.every((l) => l.target === 'primary-router'));
 
   const backhaul = links.find((l) => l.type === 'BACKHAUL');
-  assert.deepEqual([backhaul.source, backhaul.target], ['mesh-node', 'switch-a']);
+  // Router to mesh node over the coax, not through a switch.
+  assert.deepEqual([backhaul.source, backhaul.target], ['primary-router', 'mesh-node']);
+  assert.equal(backhaul.metadata.via, 'MoCA coax');
 
   // Live speed only where a machine has a single wired link.
   const speed = (source) => links.find((l) => l.type === 'ETHERNET' && l.source === source).bandwidthBps;
@@ -285,13 +291,10 @@ test('a switch has no metrics: it is up while any machine on it is reachable, an
 
   assert.equal(health([]), 'HEALTHY');
   assert.equal(health(['m720q']), 'HEALTHY');
-  // Mesh node is scraped under another job, so it is still up here.
-  assert.equal(health(['m720q', 'marmoset']), 'HEALTHY');
 
   const up = allUp();
   up['integrations/unix|m720q'] = false;
   up['integrations/unix|marmoset'] = false;
-  up['router-node|ax86u-pro'] = false;
   const topology = buildTopology(EMPTY_METRICS, up, STORAGE_OK, {}, OVERLAY_OK);
   assert.equal(byId(topology, 'switch-a').health, 'OFFLINE');
   assert.ok(!topology.links.some((l) => l.type === 'TAILSCALE' && l.target.startsWith('switch')));

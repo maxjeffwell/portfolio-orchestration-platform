@@ -264,6 +264,7 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
       status: linkUp ? ends : 'OFFLINE',
       bandwidthBps:
         (port?.carrier ? port.speedBps : null) ??
+        link.speedBps ??
         (link.type === 'ETHERNET' && wiredLinkCount[link.source] === 1
           ? (uplinks[hostnameById[link.source]] ?? null)
           : null),

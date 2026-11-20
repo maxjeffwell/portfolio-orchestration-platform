@@ -199,7 +199,7 @@ export const NODE_DEFINITIONS = [
     type: 'SWITCH',
     zone: 'HOME_NETWORK',
     metricsInstance: null,
-    inferFrom: ['cp-3', 'gpu-workstation', 'mesh-node'],
+    inferFrom: ['cp-3', 'gpu-workstation'],
     services: [{ name: 'MoCA Uplink', port: null }],
   },
   {
@@ -318,11 +318,12 @@ export const LINK_DEFINITIONS = [
   //                                -> MoCA coax -> primary router
   //   Access Switch 2 (YuLinca)    ASUSTOR, Synology; cabled to Access Switch 1
   //   Access Switch 3 (YuLinca)    Control Plane 2 -> primary router
-  //   Access Switch 4 (YuanLey)    Control Plane 3, GPU Workstation, Mesh Node
+  //   Access Switch 4 (YuanLey)    Control Plane 3, GPU Workstation
   //                                -> MoCA coax -> primary router
   //   direct                       Control Plane 2 -> primary router
   //
-  // A machine with a single wired link reports its live uplink speed
+  // A link may state a fixed `speedBps`. Otherwise a machine with a single
+  // wired link reports its live uplink speed
   // (lib/storageClient.js, fetchUplinkSpeeds); one cabled to two places does
   // not, because the metric does not say which link is which.
   ...[
@@ -340,19 +341,26 @@ export const LINK_DEFINITIONS = [
     ['switch-c', 'primary-router'],
   ].map(([source, target]) => ({ source, target, type: 'ETHERNET' })),
 
+  // Control Plane 3 has a third NIC (1 GbE) cabled to a LAN port on the mesh
+  // node; its two 2.5 GbE NICs go to Access Switch 4. The mesh node itself is
+  // not cabled to that switch.
+  { source: 'cp-3', target: 'mesh-node', type: 'ETHERNET', speedBps: 1e9 },
+
   // Both access segments reach the primary router over the MoCA coax. Each
   // coax run ends in a MoCA adapter that plugs into the router by Ethernet;
   // the adapters are deliberately not drawn, so the link runs switch to router.
   { source: 'switch-a', target: 'primary-router', type: 'MOCA' },
   { source: 'switch-b1', target: 'primary-router', type: 'MOCA' },
 
-  // The mesh node's uplink: Ethernet out of the node into Access Switch 4,
-  // then on over the coax. The node's uplink port is the live signal: carrier
-  // lost means the backhaul is down.
+  // The mesh node's Ethernet backhaul runs from the primary router over the
+  // MoCA coax straight into the mesh node; it does not pass through a switch.
+  // The node's uplink port is the live signal: carrier lost means the
+  // backhaul is down.
   {
-    source: 'mesh-node',
-    target: 'switch-a',
+    source: 'primary-router',
+    target: 'mesh-node',
     type: 'BACKHAUL',
+    via: 'MoCA coax',
     port: { instance: 'ax86u-pro', device: 'eth5' },
   },
 
