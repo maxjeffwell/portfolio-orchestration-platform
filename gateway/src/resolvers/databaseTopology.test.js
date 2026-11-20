@@ -37,7 +37,8 @@ test('wiring matches the connection settings read from the cluster', () => {
   assert.deepEqual(uses('pop-portfolio'), ['pg-ha', 'redis-ha']);
   assert.deepEqual(uses('immich'), ['pg-immich', 'immich-redis']);
   assert.deepEqual(uses('bookmarked'), ['pg-bookmarked', 'redis-ha']);
-  assert.deepEqual(uses('firebook'), ['redis-ha']);
+  assert.deepEqual(uses('firebook'), ['firestore', 'redis-ha']);
+  assert.deepEqual(uses('podrick'), ['prometheus']);
   for (const app of ['lunary', 'vaultwarden']) assert.deepEqual(uses(app), ['pg-ha']);
 });
 
@@ -111,4 +112,13 @@ test('backup status: fresh is healthy, overdue is offline, no signal is unknown'
   assert.equal(base({ cnpgBackupAge: { 'cnpg-bookmarked-4': 3 * 86400 } }).status, 'OFFLINE');
   assert.equal(base({}).status, 'UNKNOWN');
   assert.equal(backups({}).find((b) => b.target === 'VOLUME_SNAPSHOT').status, 'UNKNOWN');
+});
+
+test('a hosted database has no instances here and is not reported as down', () => {
+  const firestore = db(buildDatabaseTopology([], {}), 'firestore');
+  assert.deepEqual(firestore.instances, []);
+  assert.equal(firestore.storage, 'EXTERNAL');
+  assert.equal(firestore.health, 'HEALTHY');
+  // A cluster database with nothing running is still offline.
+  assert.equal(db(buildDatabaseTopology([], {}), 'prometheus').health, 'OFFLINE');
 });

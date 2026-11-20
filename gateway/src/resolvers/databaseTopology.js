@@ -87,6 +87,9 @@ function buildBackup(backup, signals, now) {
 // All expected instances ready is HEALTHY; none ready, or no primary where
 // the engine has one, is OFFLINE; anything in between is DEGRADED.
 function databaseHealth(db, instances) {
+  // A hosted service has no instances here and nothing measures it. HEALTHY
+  // is a placeholder; the page shows such stores as not monitored.
+  if (db.external) return 'HEALTHY';
   const ready = instances.filter((i) => i.ready);
   if (ready.length === 0) return 'OFFLINE';
   const hasRoles = instances.some((i) => i.role === 'PRIMARY' || i.role === 'REPLICA');
@@ -96,7 +99,9 @@ function databaseHealth(db, instances) {
 
 export function buildDatabaseTopology(pods, signals, now = Date.now()) {
   const databases = DATABASES.map((db) => {
-    const instances = db.patroni ? patroniInstances(db, signals ?? {}) : podInstances(db, pods ?? []);
+    let instances = [];
+    if (db.patroni) instances = patroniInstances(db, signals ?? {});
+    else if (db.pods) instances = podInstances(db, pods ?? []);
     return {
       id: db.id,
       displayName: db.displayName,

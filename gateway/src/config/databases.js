@@ -9,8 +9,9 @@
 //             label that carries the role (primary/replica) if there is one
 //   patroni   set instead of `pods` for the host-level Patroni cluster
 //   storage   MAYASTOR (replicated volumes), LVM_LOCAL (node-local volumes),
-//             HOST_DISK (directly on the servers' disks) or NONE (a cache that
-//             keeps nothing across restarts)
+//             HOST_DISK (directly on the servers' disks), NONE (a cache that
+//             keeps nothing across restarts) or EXTERNAL (a hosted service
+//             outside the cluster: no instances here, nothing to monitor)
 //   backups   `source` names the live signal that proves the backup ran:
 //               cnpg       CloudNativePG "last available backup" for a cluster
 //               cron       last success of a Kubernetes CronJob
@@ -229,6 +230,33 @@ export const DATABASES = [
     storage: 'LVM_LOCAL',
     backups: [VELERO_DAILY, VELERO_OFFSITE],
   },
+  {
+    // Metrics only. Its volume is deliberately excluded from Velero: long-term
+    // metrics are kept in Mimir, so losing this one loses recent history only.
+    id: 'prometheus',
+    displayName: 'Prometheus',
+    engine: 'PROMETHEUS',
+    manager: 'Metrics \u00b7 recent only',
+    expectedInstances: 1,
+    pods: {
+      namespace: 'monitoring',
+      labels: { 'app.kubernetes.io/name': 'prometheus' },
+      roleLabel: null,
+    },
+    storage: 'LVM_LOCAL',
+    backups: [],
+  },
+  {
+    // Hosted by Google, outside the cluster: nothing here runs or measures it.
+    id: 'firestore',
+    displayName: 'Cloud Firestore',
+    engine: 'FIRESTORE',
+    manager: 'Google Firebase \u00b7 hosted',
+    expectedInstances: 0,
+    external: true,
+    storage: 'EXTERNAL',
+    backups: [],
+  },
 ];
 
 // Which application talks to which data store, read from each workload's
@@ -243,9 +271,9 @@ export const DATABASE_APPS = [
   { id: 'litellm', displayName: 'LiteLLM', databases: ['pg-ha', 'redis-ha'] },
   { id: 'vaultwarden', displayName: 'Vaultwarden', databases: ['pg-ha'] },
   { id: 'netbox', displayName: 'NetBox', databases: ['pg-ha', 'redis-ha'] },
-  { id: 'grafana', displayName: 'Grafana', databases: ['pg-ha', 'influxdb'] },
+  { id: 'grafana', displayName: 'Grafana', databases: ['pg-ha', 'influxdb', 'prometheus'] },
   { id: 'crowdsec', displayName: 'CrowdSec', databases: ['pg-ha'] },
-  { id: 'tenantflow', displayName: 'TenantFlow', databases: ['neon-tenantflow'] },
+  { id: 'tenantflow', displayName: 'TenantFlow', databases: ['neon-tenantflow', 'prometheus'] },
   { id: 'educationelly', displayName: 'EducationELLy', databases: ['mongo-educationelly'] },
   {
     id: 'educationelly-graphql',
@@ -253,7 +281,11 @@ export const DATABASE_APPS = [
     databases: ['mongo-educationelly-graphql'],
   },
   { id: 'intervalai', displayName: 'IntervalAI', databases: ['mongo-intervalai', 'qdrant-ha'] },
-  { id: 'firebook', displayName: 'Firebook', databases: ['redis-ha'] },
+  // Firebook keeps its data in Firestore and uses Redis HA, through an HTTP
+  // proxy, as a cache.
+  { id: 'firebook', displayName: 'Firebook', databases: ['firestore', 'redis-ha'] },
+  // Podrick has no database of its own: it reads cluster metrics.
+  { id: 'podrick', displayName: 'Podrick', databases: ['prometheus'] },
   { id: 'shared-ai-gateway', displayName: 'Shared AI Gateway', databases: ['redis-ha', 'kafka'] },
   { id: 'graphql-gateway', displayName: 'GraphQL Gateway', databases: ['kafka'] },
 ];

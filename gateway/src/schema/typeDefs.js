@@ -266,6 +266,8 @@ export const typeDefs = /* GraphQL */ `
     QDRANT
     INFLUXDB
     KAFKA
+    PROMETHEUS
+    FIRESTORE
   }
 
   enum DatabaseStorage {
@@ -273,6 +275,7 @@ export const typeDefs = /* GraphQL */ `
     LVM_LOCAL
     HOST_DISK
     NONE
+    EXTERNAL
   }
 
   enum BackupTarget {
