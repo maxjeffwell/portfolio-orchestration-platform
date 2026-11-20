@@ -226,6 +226,7 @@ export const typeDefs = /* GraphQL */ `
     K8S_NODE
     NAS
     ROUTER
+    SWITCH
     REPLICATED_STORAGE
     OVERLAY_CONTROL
     OFFSITE_BACKUP
@@ -241,6 +242,7 @@ export const typeDefs = /* GraphQL */ `
     TAILSCALE
     WIREGUARD
     ETHERNET
+    MOCA
     BACKHAUL
     NVME_OF
     ISCSI

@@ -72,6 +72,13 @@ function nodeHealth(def, up, mimirAnswered) {
   return 'HEALTHY';
 }
 
+// A device without metrics of its own is as healthy as the best-off machine
+// attached to it: any machine reachable means the device is passing traffic.
+function inferredHealth(attached) {
+  if (attached.includes('HEALTHY')) return 'HEALTHY';
+  return attached.includes('DEGRADED') ? 'DEGRADED' : 'OFFLINE';
+}
+
 function serviceStatus(svc, def, health, up, mimirAnswered, headscale) {
   if (health === 'OFFLINE') return 'OFFLINE';
   if (svc.signal) return signalStatus(svc.signal, headscale);
@@ -191,9 +198,17 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   const mimirAnswered = Object.keys(up ?? {}).length > 0;
   const healthById = {};
 
+  // Machines first: a switch's health is inferred from the machines on it.
+  const machineDefs = NODE_DEFINITIONS.filter((def) => !def.inferFrom);
+  machineDefs.forEach((def) => {
+    healthById[def.id] = nodeHealth(def, up ?? {}, mimirAnswered);
+  });
+  NODE_DEFINITIONS.filter((def) => def.inferFrom).forEach((def) => {
+    healthById[def.id] = inferredHealth(def.inferFrom.map((id) => healthById[id]));
+  });
+
   const nodes = NODE_DEFINITIONS.map((def) => {
-    const health = nodeHealth(def, up ?? {}, mimirAnswered);
-    healthById[def.id] = health;
+    const health = healthById[def.id];
 
     return {
       id: def.id,
@@ -222,6 +237,10 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
 
   const hostnameById = Object.fromEntries(NODE_DEFINITIONS.map((n) => [n.id, n.hostname]));
   const uplinks = overlay?.uplinkSpeeds ?? {};
+  const wiredLinkCount = {};
+  LINK_DEFINITIONS.filter((l) => l.type === 'ETHERNET').forEach((l) => {
+    wiredLinkCount[l.source] = (wiredLinkCount[l.source] ?? 0) + 1;
+  });
 
   const handshakes = overlay?.wireguardHandshakes ?? {};
   const haveHandshakes = Object.keys(handshakes).length > 0;
@@ -245,7 +264,9 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
       status: linkUp ? ends : 'OFFLINE',
       bandwidthBps:
         (port?.carrier ? port.speedBps : null) ??
-        (link.type === 'ETHERNET' ? (uplinks[hostnameById[link.source]] ?? null) : null),
+        (link.type === 'ETHERNET' && wiredLinkCount[link.source] === 1
+          ? (uplinks[hostnameById[link.source]] ?? null)
+          : null),
       latencyMs: null,
       metadata:
         age != null || link.via

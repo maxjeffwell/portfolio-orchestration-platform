@@ -158,6 +158,50 @@ export const NODE_DEFINITIONS = [
       { name: 'Tailnet Subnet Router', port: null },
     ],
   },
+  // The four LAN switches. They expose no metrics, so their health is
+  // inferred: a switch is up while any machine cabled to it is reachable
+  // (`inferFrom`). Published by role, not by make, and listed left to right as
+  // they sit above the machines cabled to them.
+  {
+    id: 'switch-b1',
+    hostname: 'TRENDnet',
+    displayName: 'Access Switch 1',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFrom: ['cp-1', 'gpu-1', 'gpu-2', 'asustor'],
+    services: [{ name: 'MoCA Uplink', port: null }],
+  },
+  {
+    id: 'switch-b2',
+    hostname: 'YuLinca-B',
+    displayName: 'Access Switch 2',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFrom: ['asustor', 'synology'],
+    services: [],
+  },
+  {
+    id: 'switch-c',
+    hostname: 'YuLinca-router',
+    displayName: 'Access Switch 3',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFrom: ['cp-2'],
+    services: [{ name: 'Router Uplink', port: null }],
+  },
+  {
+    id: 'switch-a',
+    hostname: 'YuanLey',
+    displayName: 'Access Switch 4',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFrom: ['cp-3', 'gpu-workstation', 'mesh-node'],
+    services: [{ name: 'MoCA Uplink', port: null }],
+  },
   {
     id: 'asustor',
     hostname: 'AS5402T-A7F3',
@@ -209,7 +253,9 @@ export const MAYASTOR_NODE = {
 // home LAN reach each other directly, so the tunnels that carry traffic are
 // the ones between the cloud node and everything at home: those are drawn.
 const TAILNET_REMOTE = 'edge-vps';
-const TAILNET_HOME = NODE_DEFINITIONS.map((n) => n.id).filter((id) => id !== TAILNET_REMOTE);
+const TAILNET_HOME = NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
+  .map((n) => n.id)
+  .filter((id) => id !== TAILNET_REMOTE);
 
 // Backblaze B2 holds the off-site copies. It is a service, not a machine; its
 // health is the freshness of the jobs that write to it (lib/backupClient.js).
@@ -265,42 +311,45 @@ export const LINK_DEFINITIONS = [
   { source: 'cp-1', target: 'asustor', type: 'NFS' },
 
   // Wired LAN, as cabled (confirmed by the owner, not discoverable from
-  // metrics). The home LAN is two switch segments that each reach the primary
-  // router over the MoCA coax fabric, plus one server cabled straight in:
+  // metrics):
   //
-  //   direct      Control Plane 2
-  //   segment A   Control Plane 3, GPU Workstation, Mesh Node
-  //               -> YuanLey switch first
-  //   segment B   Control Plane 1, GPU Worker 1, GPU Worker 2, both NAS units
-  //               -> TRENDnet switch, which also connects to the YuLinca switch
+  //   Access Switch 1 (TRENDnet)   Control Plane 1, GPU Worker 1 and 2, ASUSTOR
+  //                                -> MoCA coax -> primary router
+  //   Access Switch 2 (YuLinca)    ASUSTOR, Synology; cabled to Access Switch 1
+  //   Access Switch 3 (YuLinca)    Control Plane 2 -> primary router
+  //   Access Switch 4 (YuanLey)    Control Plane 3, GPU Workstation, Mesh Node
+  //                                -> MoCA coax -> primary router
+  //   direct                       Control Plane 2 -> primary router
   //
-  // The switches are not nodes on the map; `via` lists what a link crosses.
-  // Segment A is drawn to the Mesh Node, which sits on it; segment B has no
-  // machine of its own on the map and is drawn to the router. `via` names the
-  // medium on the way to the router. A link whose source is a k3s node reports
-  // that node's live uplink speed (lib/storageClient.js, fetchUplinkSpeeds).
-  { source: 'cp-2', target: 'primary-router', type: 'ETHERNET', via: 'Direct' },
-  ...['cp-3', 'gpu-workstation'].map((id) => ({
-    source: id,
-    target: 'mesh-node',
-    type: 'ETHERNET',
-    via: 'YuanLey switch',
-  })),
-  ...['cp-1', 'gpu-1', 'gpu-2', 'asustor', 'synology'].map((id) => ({
-    source: id,
-    target: 'primary-router',
-    type: 'ETHERNET',
-    via: 'TRENDnet + YuLinca switches, MoCA coax',
-  })),
+  // A machine with a single wired link reports its live uplink speed
+  // (lib/storageClient.js, fetchUplinkSpeeds); one cabled to two places does
+  // not, because the metric does not say which link is which.
+  ...[
+    ['cp-3', 'switch-a'],
+    ['gpu-workstation', 'switch-a'],
+    ['cp-1', 'switch-b1'],
+    ['gpu-1', 'switch-b1'],
+    ['gpu-2', 'switch-b1'],
+    ['asustor', 'switch-b1'],
+    ['asustor', 'switch-b2'],
+    ['synology', 'switch-b2'],
+    ['cp-2', 'switch-c'],
+    ['cp-2', 'primary-router'],
+    ['switch-b1', 'switch-b2'],
+    ['switch-c', 'primary-router'],
+  ].map(([source, target]) => ({ source, target, type: 'ETHERNET' })),
 
-  // The mesh node's uplink to the primary router: Ethernet out of the node,
-  // carried over the MoCA coax. The node's uplink port is the live signal:
-  // carrier lost means the backhaul is down.
+  // Both access segments reach the primary router over the MoCA coax.
+  { source: 'switch-a', target: 'primary-router', type: 'MOCA' },
+  { source: 'switch-b1', target: 'primary-router', type: 'MOCA' },
+
+  // The mesh node's uplink: Ethernet out of the node into Access Switch 4,
+  // then on over the coax. The node's uplink port is the live signal: carrier
+  // lost means the backhaul is down.
   {
-    source: 'primary-router',
-    target: 'mesh-node',
+    source: 'mesh-node',
+    target: 'switch-a',
     type: 'BACKHAUL',
-    via: 'YuanLey switch, MoCA coax',
     port: { instance: 'ax86u-pro', device: 'eth5' },
   },
 

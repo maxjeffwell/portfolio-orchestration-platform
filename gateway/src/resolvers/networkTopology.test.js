@@ -20,7 +20,7 @@ const EMPTY_METRICS = {
 function allUp() {
   const up = {};
   for (const def of NODE_DEFINITIONS) {
-    up[`${def.up.job}|${def.up.instance}`] = true;
+    if (def.up) up[`${def.up.job}|${def.up.instance}`] = true;
     if (def.garageInstance) up[`garage|${def.garageInstance}`] = true;
   }
   return up;
@@ -181,7 +181,10 @@ test('the tailnet is drawn as links from the cloud node to every machine at home
   assert.ok(tailnet.every((l) => l.source === 'edge-vps'));
   assert.deepEqual(
     tailnet.map((l) => l.target).sort(),
-    NODE_DEFINITIONS.map((n) => n.id).filter((id) => id !== 'edge-vps').sort(),
+    NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
+      .map((n) => n.id)
+      .filter((id) => id !== 'edge-vps')
+      .sort(),
   );
   assert.ok(
     !links.some((l) => l.type === 'WIREGUARD' && ['cp-1', 'cp-2', 'cp-3'].includes(l.target)),
@@ -246,28 +249,50 @@ test('off-site backup is degraded when a job is overdue or unknown, and names th
   assert.equal(node({ ...OVERLAY_OK.offsite, veleroAgeS: null }).health, 'DEGRADED');
 });
 
-test('wired LAN: one server direct, segment A on the mesh node, segment B over MoCA, with live uplink speed', () => {
+test('wired LAN: machines link to their switch, segments reach the router over MoCA', () => {
   const overlay = { ...OVERLAY_OK, uplinkSpeeds: { elitedesk: 1e10, m920s: 5e9 } };
   const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, overlay);
-  const eth = Object.fromEntries(
-    links.filter((l) => l.type === 'ETHERNET').map((l) => [l.source, l]),
-  );
+  const wired = (source) =>
+    links.filter((l) => l.type === 'ETHERNET' && l.source === source).map((l) => l.target).sort();
 
-  assert.deepEqual(Object.keys(eth).sort(), [
-    'asustor', 'cp-1', 'cp-2', 'cp-3', 'gpu-1', 'gpu-2', 'gpu-workstation', 'synology',
-  ]);
-  assert.equal(eth['cp-2'].target, 'primary-router');
-  assert.equal(eth['cp-2'].metadata.via, 'Direct');
-  assert.equal(eth['cp-2'].bandwidthBps, 1e10);
-  assert.equal(eth['cp-3'].target, 'mesh-node');
-  assert.equal(eth['gpu-workstation'].target, 'mesh-node');
-  assert.match(eth['cp-1'].metadata.via, /MoCA/);
-  assert.equal(eth['cp-1'].bandwidthBps, 5e9);
-  // No metric for the NAS units: drawn without a speed.
-  assert.equal(eth.asustor.bandwidthBps, null);
+  assert.deepEqual(wired('cp-3'), ['switch-a']);
+  assert.deepEqual(wired('gpu-workstation'), ['switch-a']);
+  assert.deepEqual(wired('cp-1'), ['switch-b1']);
+  assert.deepEqual(wired('asustor'), ['switch-b1', 'switch-b2']);
+  assert.deepEqual(wired('synology'), ['switch-b2']);
+  assert.deepEqual(wired('cp-2'), ['primary-router', 'switch-c']);
+
+  const moca = links.filter((l) => l.type === 'MOCA');
+  assert.deepEqual(moca.map((l) => l.source).sort(), ['switch-a', 'switch-b1']);
+  assert.ok(moca.every((l) => l.target === 'primary-router'));
 
   const backhaul = links.find((l) => l.type === 'BACKHAUL');
-  assert.match(backhaul.metadata.via, /MoCA coax/);
-  assert.match(eth['cp-3'].metadata.via, /YuanLey/);
-  assert.match(eth['cp-1'].metadata.via, /TRENDnet/);
+  assert.deepEqual([backhaul.source, backhaul.target], ['mesh-node', 'switch-a']);
+
+  // Live speed only where a machine has a single wired link.
+  const speed = (source) => links.find((l) => l.type === 'ETHERNET' && l.source === source).bandwidthBps;
+  assert.equal(speed('cp-1'), 5e9);
+  assert.equal(speed('cp-2'), null);
+});
+
+test('a switch has no metrics: it is up while any machine on it is reachable, and is not a tailnet member', () => {
+  const health = (downHosts) => {
+    const up = allUp();
+    downHosts.forEach((h) => { up[`integrations/unix|${h}`] = false; });
+    return byId(buildTopology(EMPTY_METRICS, up, STORAGE_OK, {}, OVERLAY_OK), 'switch-a').health;
+  };
+
+  assert.equal(health([]), 'HEALTHY');
+  assert.equal(health(['m720q']), 'HEALTHY');
+  // Mesh node is scraped under another job, so it is still up here.
+  assert.equal(health(['m720q', 'marmoset']), 'HEALTHY');
+
+  const up = allUp();
+  up['integrations/unix|m720q'] = false;
+  up['integrations/unix|marmoset'] = false;
+  up['router-node|ax86u-pro'] = false;
+  const topology = buildTopology(EMPTY_METRICS, up, STORAGE_OK, {}, OVERLAY_OK);
+  assert.equal(byId(topology, 'switch-a').health, 'OFFLINE');
+  assert.ok(!topology.links.some((l) => l.type === 'TAILSCALE' && l.target.startsWith('switch')));
+  assert.equal(byId(buildTopology(EMPTY_METRICS, {}, STORAGE_OK), 'switch-a').health, 'DEGRADED');
 });
