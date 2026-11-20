@@ -40,6 +40,22 @@ export const LLM_NODES = [
     signal: { workloads: ['code-talk-server'] },
   },
   {
+    id: 'educationelly',
+    stage: 'APP',
+    displayName: 'EducationELLy',
+    location: 'English-learner tracking, REST',
+    role: 'A chat assistant for teachers, plus generated flashcards, quizzes and study recommendations.',
+    signal: { workloads: ['educationelly-server'] },
+  },
+  {
+    id: 'educationelly-graphql',
+    stage: 'APP',
+    displayName: 'EducationELLy GQL',
+    location: 'The same app on GraphQL',
+    role: 'The same assistant, flashcards and quizzes, reached through GraphQL resolvers.',
+    signal: { workloads: ['educationelly-graphql-server'] },
+  },
+  {
     id: 'pop-portfolio',
     stage: 'APP',
     displayName: 'Pop!_Portfolio',
@@ -52,7 +68,7 @@ export const LLM_NODES = [
     stage: 'APP',
     displayName: 'IntervalAI',
     location: 'Spaced-repetition flashcards',
-    role: 'Asks a small trained model when a card should next be reviewed, and finds related cards by meaning.',
+    role: 'Asks a small trained model when a card should next be reviewed, finds related cards by meaning, and has a study chat that explains cards.',
     signal: { workloads: ['intervalai-server'] },
   },
   {
@@ -85,7 +101,7 @@ export const LLM_NODES = [
     stage: 'ROUTE',
     displayName: 'AI gateway',
     location: 'shared-ai-gateway',
-    role: 'The one door every app uses. It builds the prompt for each task, tries the local model first, and falls back tier by tier to hosted models when the local one is down or its answer is unusable.',
+    role: 'The one door every app uses. It builds the prompt for each task and picks the model by who is asking: Code Talk and both EducationELLy apps go straight to Groq; everyone else gets the local model first and falls back tier by tier to hosted models when it is down or its answer is unusable.',
     signal: { workloads: ['shared-ai-gateway'] },
   },
   {
@@ -103,7 +119,7 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen2.5 1.5B chat',
     location: OVMS_LLM,
-    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. First choice for every generation request.',
+    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers.',
     signal: { workloads: ['ovms-llm'], model: 'qwen2.5-1.5b-instruct' },
   },
   {
@@ -153,14 +169,14 @@ export const LLM_NODES = [
     stage: 'CLOUD',
     displayName: 'Groq · GPT-OSS 120B',
     location: 'Hosted, free tier',
-    role: 'A large open-weight model. Used when the local model is unavailable or its answer is unusable.',
+    role: 'A large open-weight model. First choice for Code Talk and both EducationELLy apps, and the next tier for everyone else when the local model is unavailable or its answer is unusable.',
   },
   {
     id: 'anthropic',
     stage: 'CLOUD',
     displayName: 'Claude Sonnet 4',
     location: 'Anthropic API',
-    role: 'Used only when a request asks for it by name, for work that needs stronger reasoning.',
+    role: 'Used when a request asks for it by name, and as the stand-in when Groq rate-limits a chat.',
   },
   {
     id: 'openai',
@@ -225,8 +241,11 @@ const flow = (from, to, signal, note) => ({ from, to, signal, note });
 // signal: CHAT, EMBED, RERANK, PREDICT, VISION, FALLBACK, TRACE or STORE.
 export const LLM_FLOWS = [
   // apps -> gateway
-  flow('bookmarked', 'gateway', 'CHAT', 'Tag suggestions and short generated text for a bookmark.'),
+  flow('bookmarked', 'gateway', 'CHAT', 'Tag suggestions (local model first, Groq if its answer is unusable) and short generated text for a bookmark.'),
   flow('code-talk', 'gateway', 'CHAT', 'Chat replies, code explanations and quizzes.'),
+  flow('educationelly', 'gateway', 'CHAT', 'Assistant chat, flashcards, quizzes and study recommendations.'),
+  flow('educationelly-graphql', 'gateway', 'CHAT', 'Assistant chat, flashcards and quizzes.'),
+  flow('intervalai', 'gateway', 'CHAT', 'Study chat and explanations of a card.'),
   flow('pop-portfolio', 'gateway', 'CHAT', 'Dashboard assistant: chat and text generation.'),
   flow('tenants', 'gateway', 'CHAT', 'Text generation, allowed in by a network policy for tenant namespaces only.'),
   flow('public', 'gateway', 'CHAT', 'Through the Cloudflare Tunnel to a separate listener that requires a client key.'),
@@ -241,13 +260,13 @@ export const LLM_FLOWS = [
   flow('intervalai', 'qdrant', 'STORE', 'Indexes card vectors and asks for the nearest neighbours.'),
 
   // gateway -> models
-  flow('gateway', 'qwen-chat', 'CHAT', 'First choice for every request: the local model, if its health check passes.'),
+  flow('gateway', 'qwen-chat', 'CHAT', 'First choice for callers that are not on the Groq list, if the local model’s health check passes.'),
   flow('gateway', 'e5', 'EMBED', 'The gateway’s own embedding endpoint.'),
   flow('gateway', 'reranker', 'RERANK', 'The gateway’s rerank endpoint.'),
   flow('gateway', 'litellm', 'FALLBACK', 'Hosted models are reached through LiteLLM so the call is logged and its cost counted. If LiteLLM is down the gateway calls the provider directly.'),
   flow('gateway', 'runpod', 'FALLBACK', 'Last tier, called directly.'),
-  flow('litellm', 'groq', 'FALLBACK', 'Next tier after the local model.'),
-  flow('litellm', 'anthropic', 'FALLBACK', 'Only when the request names Claude.'),
+  flow('litellm', 'groq', 'FALLBACK', 'First choice for Code Talk and both EducationELLy apps; the next tier after the local model for everyone else.'),
+  flow('litellm', 'anthropic', 'FALLBACK', 'When the request names Claude, or when Groq rate-limits a chat.'),
   flow('litellm', 'qwen-chat', 'CHAT', 'LiteLLM also lists the local model, under the alias local-llama.'),
 
   // what is kept
