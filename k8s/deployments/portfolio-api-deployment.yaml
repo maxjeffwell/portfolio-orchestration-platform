@@ -56,7 +56,9 @@ spec:
             cpu: "50m"
           limits:
             memory: "512Mi"
-            cpu: "500m"
+            # 2026-11-19: 500m was CFS-throttled in 23-33 % of periods at a
+            # 10m average (multi-threaded bursts, worse on the 12-CPU node).
+            cpu: "1000m"
         env:
         - name: PORT
           value: "5000"
