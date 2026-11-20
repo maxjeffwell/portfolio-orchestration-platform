@@ -4,7 +4,7 @@ import {
   fetchPortStatus,
   formatUptime,
 } from '../lib/mimirClient.js';
-import { fetchMayastorStatus } from '../lib/storageClient.js';
+import { fetchMayastorStatus, fetchUplinkSpeeds } from '../lib/storageClient.js';
 import { fetchOffsiteBackupStatus } from '../lib/backupClient.js';
 import { fetchHeadscaleStatus, fetchWireguardHandshakes } from '../lib/overlayClient.js';
 import {
@@ -220,6 +220,9 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   healthById[offsite.id] = offsite.health;
   nodes.push(offsite);
 
+  const hostnameById = Object.fromEntries(NODE_DEFINITIONS.map((n) => [n.id, n.hostname]));
+  const uplinks = overlay?.uplinkSpeeds ?? {};
+
   const handshakes = overlay?.wireguardHandshakes ?? {};
   const haveHandshakes = Object.keys(handshakes).length > 0;
 
@@ -240,16 +243,15 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
       target: link.target,
       type: link.type,
       status: linkUp ? ends : 'OFFLINE',
-      bandwidthBps: port?.carrier ? port.speedBps : null,
+      bandwidthBps:
+        (port?.carrier ? port.speedBps : null) ??
+        (link.type === 'ETHERNET' ? (uplinks[hostnameById[link.source]] ?? null) : null),
       latencyMs: null,
       metadata:
-        age != null
+        age != null || link.via
           ? {
-              lastHandshake: new Date(Date.now() - age * 1000).toISOString(),
-              transferRxBytes: null,
-              transferTxBytes: null,
-              targetIqn: null,
-              partitionsShared: null,
+              lastHandshake: age != null ? new Date(Date.now() - age * 1000).toISOString() : null,
+              via: link.via ?? null,
             }
           : null,
     };
@@ -259,7 +261,7 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up, storage, ports, headscale, wireguardHandshakes, offsite] =
+  const [metrics, up, storage, ports, headscale, wireguardHandshakes, offsite, uplinkSpeeds] =
     await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
@@ -268,11 +270,13 @@ async function fetchNetworkTopology() {
     fetchHeadscaleStatus().catch(() => null),
     fetchWireguardHandshakes().catch(() => ({})),
     fetchOffsiteBackupStatus().catch(() => null),
+    fetchUplinkSpeeds().catch(() => ({})),
   ]);
   return buildTopology(metrics, up, storage, ports, {
     headscale,
     wireguardHandshakes,
     offsite,
+    uplinkSpeeds,
   });
 }
 

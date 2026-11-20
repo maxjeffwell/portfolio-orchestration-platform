@@ -1,5 +1,6 @@
-// Mayastor volume-layer status from the in-cluster Prometheus
-// (kube-state-metrics and kubelet volume stats; Mimir does not carry these).
+// Signals from the in-cluster Prometheus that Mimir does not carry:
+// Mayastor volume-layer status (kube-state-metrics, kubelet volume stats) and
+// each node's uplink speed (node-exporter).
 
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ||
@@ -40,4 +41,29 @@ export async function fetchMayastorStatus() {
   const status = Object.fromEntries(names.map((name, i) => [name, values[i]]));
   if (status.enginesReady == null || status.enginesDesired == null) return null;
   return status;
+}
+
+// Negotiated uplink speed of each k3s node in bits per second, keyed by
+// hostname: the bond if there is one, otherwise the fastest NIC that is up.
+export async function fetchUplinkSpeeds() {
+  const promql =
+    'max by (nodename) (((node_network_speed_bytes{device=~"bond0|en.*"} * 8)' +
+    ' and on (instance, device) (node_network_up == 1))' +
+    ' * on (instance) group_left (nodename) node_uname_info)';
+  try {
+    const res = await fetch(`${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(promql)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const speeds = {};
+    for (const r of data.data?.result ?? []) {
+      const bps = parseFloat(r.value?.[1]);
+      if (r.metric?.nodename && bps > 0) speeds[r.metric.nodename] = bps;
+    }
+    return speeds;
+  } catch (err) {
+    console.error('[storageClient] uplink query failed:', err.message);
+    return {};
+  }
 }

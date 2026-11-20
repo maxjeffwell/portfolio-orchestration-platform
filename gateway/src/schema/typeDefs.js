@@ -240,6 +240,7 @@ export const typeDefs = /* GraphQL */ `
   enum LinkType {
     TAILSCALE
     WIREGUARD
+    ETHERNET
     BACKHAUL
     NVME_OF
     ISCSI
@@ -365,6 +366,7 @@ export const typeDefs = /* GraphQL */ `
 
   type LinkMetadata {
     lastHandshake: String
+    via: String
     transferRxBytes: Float
     transferTxBytes: Float
     targetIqn: String
