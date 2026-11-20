@@ -339,7 +339,9 @@ export const LINK_DEFINITIONS = [
     ['switch-c', 'primary-router'],
   ].map(([source, target]) => ({ source, target, type: 'ETHERNET' })),
 
-  // Both access segments reach the primary router over the MoCA coax.
+  // Both access segments reach the primary router over the MoCA coax. Each
+  // coax run ends in a MoCA adapter that plugs into the router by Ethernet;
+  // the adapters are deliberately not drawn, so the link runs switch to router.
   { source: 'switch-a', target: 'primary-router', type: 'MOCA' },
   { source: 'switch-b1', target: 'primary-router', type: 'MOCA' },
 
