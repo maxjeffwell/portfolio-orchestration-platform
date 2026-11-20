@@ -36,7 +36,7 @@ export async function fetchNodeMetrics() {
         'node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}'
       ),
       queryMimir('node_filesystem_size_bytes{mountpoint="/"}'),
-      queryMimir('node_time_seconds - node_boot_time_seconds'),
+      queryMimir('time() - node_boot_time_seconds'),
     ]);
 
   const normalize = (map) => {
@@ -56,6 +56,20 @@ export async function fetchNodeMetrics() {
     storageTotal: normalize(resultToMap(storageTotal)),
     uptime: normalize(resultToMap(uptimeResults)),
   };
+}
+
+// Scrape-target liveness, keyed "job|instance" -> true/false.
+// An empty map means Mimir itself could not be queried.
+export async function fetchUpStatus() {
+  const results = await queryMimir(
+    'up{job=~"integrations/unix|router-node|garage"}'
+  );
+  const map = {};
+  for (const r of results) {
+    const { job, instance } = r.metric ?? {};
+    if (job && instance) map[`${job}|${instance}`] = r.value?.[1] === '1';
+  }
+  return map;
 }
 
 export function formatUptime(seconds) {
