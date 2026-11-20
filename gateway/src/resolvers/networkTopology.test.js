@@ -256,7 +256,11 @@ test('wired LAN: machines link to their switch, segments reach the router over M
   const wired = (source) =>
     links.filter((l) => l.type === 'ETHERNET' && l.source === source).map((l) => l.target).sort();
 
-  assert.deepEqual(wired('cp-3'), ['switch-a']);
+  assert.deepEqual(wired('cp-3'), ['mesh-node', 'switch-a']);
+  assert.equal(
+    links.find((l) => l.source === 'cp-3' && l.target === 'mesh-node').bandwidthBps,
+    1e9,
+  );
   assert.deepEqual(wired('gpu-workstation'), ['switch-a']);
   assert.deepEqual(wired('cp-1'), ['switch-b1']);
   assert.deepEqual(wired('asustor'), ['switch-b1', 'switch-b2']);

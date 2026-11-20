@@ -322,7 +322,8 @@ export const LINK_DEFINITIONS = [
   //                                -> MoCA coax -> primary router
   //   direct                       Control Plane 2 -> primary router
   //
-  // A machine with a single wired link reports its live uplink speed
+  // A link may state a fixed `speedBps`. Otherwise a machine with a single
+  // wired link reports its live uplink speed
   // (lib/storageClient.js, fetchUplinkSpeeds); one cabled to two places does
   // not, because the metric does not say which link is which.
   ...[
@@ -339,6 +340,11 @@ export const LINK_DEFINITIONS = [
     ['switch-b1', 'switch-b2'],
     ['switch-c', 'primary-router'],
   ].map(([source, target]) => ({ source, target, type: 'ETHERNET' })),
+
+  // Control Plane 3 has a third NIC (1 GbE) cabled to a LAN port on the mesh
+  // node; its two 2.5 GbE NICs go to Access Switch 4. The mesh node itself is
+  // not cabled to that switch.
+  { source: 'cp-3', target: 'mesh-node', type: 'ETHERNET', speedBps: 1e9 },
 
   // Both access segments reach the primary router over the MoCA coax. Each
   // coax run ends in a MoCA adapter that plugs into the router by Ethernet;
