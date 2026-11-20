@@ -270,8 +270,11 @@ export const LINK_DEFINITIONS = [
   //
   //   direct      Control Plane 2
   //   segment A   Control Plane 3, GPU Workstation, Mesh Node
+  //               -> YuanLey switch first
   //   segment B   Control Plane 1, GPU Worker 1, GPU Worker 2, both NAS units
+  //               -> TRENDnet switch, which also connects to the YuLinca switch
   //
+  // The switches are not nodes on the map; `via` lists what a link crosses.
   // Segment A is drawn to the Mesh Node, which sits on it; segment B has no
   // machine of its own on the map and is drawn to the router. `via` names the
   // medium on the way to the router. A link whose source is a k3s node reports
@@ -281,13 +284,13 @@ export const LINK_DEFINITIONS = [
     source: id,
     target: 'mesh-node',
     type: 'ETHERNET',
-    via: 'Switch segment A',
+    via: 'YuanLey switch',
   })),
   ...['cp-1', 'gpu-1', 'gpu-2', 'asustor', 'synology'].map((id) => ({
     source: id,
     target: 'primary-router',
     type: 'ETHERNET',
-    via: 'Switch segment B, MoCA coax',
+    via: 'TRENDnet + YuLinca switches, MoCA coax',
   })),
 
   // The mesh node's uplink to the primary router: Ethernet out of the node,
@@ -297,7 +300,7 @@ export const LINK_DEFINITIONS = [
     source: 'primary-router',
     target: 'mesh-node',
     type: 'BACKHAUL',
-    via: 'MoCA coax',
+    via: 'YuanLey switch, MoCA coax',
     port: { instance: 'ax86u-pro', device: 'eth5' },
   },
 

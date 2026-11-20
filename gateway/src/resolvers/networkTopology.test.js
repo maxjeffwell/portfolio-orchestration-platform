@@ -267,5 +267,7 @@ test('wired LAN: one server direct, segment A on the mesh node, segment B over M
   assert.equal(eth.asustor.bandwidthBps, null);
 
   const backhaul = links.find((l) => l.type === 'BACKHAUL');
-  assert.equal(backhaul.metadata.via, 'MoCA coax');
+  assert.match(backhaul.metadata.via, /MoCA coax/);
+  assert.match(eth['cp-3'].metadata.via, /YuanLey/);
+  assert.match(eth['cp-1'].metadata.via, /TRENDnet/);
 });
