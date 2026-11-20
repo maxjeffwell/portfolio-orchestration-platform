@@ -1,5 +1,10 @@
 import { fetchNodeMetrics, fetchUpStatus, formatUptime } from '../lib/mimirClient.js';
-import { NODE_DEFINITIONS, LINK_DEFINITIONS } from '../config/networkNodes.js';
+import { fetchMayastorStatus } from '../lib/storageClient.js';
+import {
+  NODE_DEFINITIONS,
+  LINK_DEFINITIONS,
+  MAYASTOR_NODE,
+} from '../config/networkNodes.js';
 
 const TOPOLOGY_INTERVAL_MS = parseInt(
   process.env.NETWORK_TOPOLOGY_INTERVAL_MS || '30000',
@@ -67,7 +72,58 @@ function serviceStatus(svc, def, health, up, mimirAnswered) {
   return mimirAnswered ? 'HEALTHY' : 'DEGRADED';
 }
 
-export function buildTopology(metrics, up) {
+const GIB = 1073741824;
+
+// Health of the volume layer follows its io-engines: all ready is HEALTHY,
+// some ready is DEGRADED (volumes run on fewer replicas), none is OFFLINE.
+// No answer from Prometheus is unknown, shown as DEGRADED.
+function buildMayastorNode(storage) {
+  let health = 'DEGRADED';
+  if (storage) {
+    if (storage.enginesReady <= 0) health = 'OFFLINE';
+    else if (storage.enginesReady >= storage.enginesDesired) health = 'HEALTHY';
+  }
+
+  const services = [];
+  if (storage) {
+    if (storage.volumes != null) {
+      services.push({ name: `${storage.volumes} volumes`, status: health, port: null });
+    }
+    services.push({
+      name: `${storage.enginesReady}/${storage.enginesDesired} io-engines`,
+      status: health,
+      port: null,
+    });
+  }
+  services.push({ name: 'NVMe-oF', status: health, port: null });
+
+  const hasUsage = storage?.usedBytes != null && storage?.provisionedBytes != null;
+
+  return {
+    id: MAYASTOR_NODE.id,
+    hostname: MAYASTOR_NODE.displayName,
+    displayName: MAYASTOR_NODE.displayName,
+    type: MAYASTOR_NODE.type,
+    zone: MAYASTOR_NODE.zone,
+    wireguardIp: null,
+    health,
+    services,
+    // Used vs provisioned space across all Mayastor volumes.
+    metrics: hasUsage
+      ? {
+          cpuPercent: null,
+          memoryPercent: null,
+          memoryUsedMb: null,
+          memoryTotalMb: null,
+          storageUsedGb: round(storage.usedBytes / GIB, 1),
+          storageTotalGb: round(storage.provisionedBytes / GIB, 1),
+          uptime: null,
+        }
+      : null,
+  };
+}
+
+export function buildTopology(metrics, up, storage = null) {
   const mimirAnswered = Object.keys(up ?? {}).length > 0;
   const healthById = {};
 
@@ -92,6 +148,10 @@ export function buildTopology(metrics, up) {
     };
   });
 
+  const mayastor = buildMayastorNode(storage);
+  healthById[mayastor.id] = mayastor.health;
+  nodes.push(mayastor);
+
   // A link is only as healthy as its less healthy end.
   const links = LINK_DEFINITIONS.map((link) => ({
     source: link.source,
@@ -107,11 +167,12 @@ export function buildTopology(metrics, up) {
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up] = await Promise.all([
+  const [metrics, up, storage] = await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
+    fetchMayastorStatus().catch(() => null),
   ]);
-  return buildTopology(metrics, up);
+  return buildTopology(metrics, up, storage);
 }
 
 export const networkTopologyResolvers = {
