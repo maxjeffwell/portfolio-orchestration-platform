@@ -53,7 +53,7 @@ test('services report replicas; operator-managed stores are matched by pod prefi
 });
 
 test('hosted models and unmeasured callers carry no health at all', () => {
-  for (const id of ['groq', 'anthropic', 'runpod', 'tenants']) {
+  for (const id of ['groq', 'anthropic', 'openai', 'runpod', 'tenants']) {
     assert.equal(node(OK, id).health, null);
     assert.equal(node(OK, id).stat, null);
   }

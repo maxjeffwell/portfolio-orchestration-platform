@@ -56,6 +56,14 @@ export const LLM_NODES = [
     signal: { workloads: ['intervalai-server'] },
   },
   {
+    id: 'immich',
+    stage: 'APP',
+    displayName: 'Immich',
+    location: 'Photo library',
+    role: 'Sends photos to its own machine-learning service so they can be searched by what is in them.',
+    signal: { workloads: ['immich-server'] },
+  },
+  {
     id: 'tenants',
     stage: 'APP',
     displayName: 'TenantFlow tenants',
@@ -130,6 +138,14 @@ export const LLM_NODES = [
     role: 'Not a language model: a small network trained on review history that predicts how long until a card is forgotten. It shares the model server with the embedding models.',
     signal: { workloads: ['ovms-embeddings'], model: 'interval_ai' },
   },
+  {
+    id: 'immich-ml',
+    stage: 'LOCAL',
+    displayName: 'Immich vision models',
+    location: 'OpenVINO · GPU Worker 1',
+    role: 'Not language models: Immich’s own image models, loaded on demand and unloaded after ten idle minutes. They use the OpenVINO runtime inside Immich’s service rather than the model server, and share the same integrated GPU as the local chat model.',
+    signal: { workloads: ['immich-ml'] },
+  },
 
   // --- hosted models
   {
@@ -145,6 +161,13 @@ export const LLM_NODES = [
     displayName: 'Claude Sonnet 4',
     location: 'Anthropic API',
     role: 'Used only when a request asks for it by name, for work that needs stronger reasoning.',
+  },
+  {
+    id: 'openai',
+    stage: 'CLOUD',
+    displayName: 'OpenAI · GPT-4o mini',
+    location: 'OpenAI API',
+    role: 'A path that exists but is idle: Bookmarked calls OpenAI directly only when no gateway is configured, and one is.',
   },
   {
     id: 'runpod',
@@ -199,7 +222,7 @@ export const LLM_NODES = [
 
 const flow = (from, to, signal, note) => ({ from, to, signal, note });
 
-// signal: CHAT, EMBED, RERANK, PREDICT, FALLBACK, TRACE or STORE.
+// signal: CHAT, EMBED, RERANK, PREDICT, VISION, FALLBACK, TRACE or STORE.
 export const LLM_FLOWS = [
   // apps -> gateway
   flow('bookmarked', 'gateway', 'CHAT', 'Tag suggestions and short generated text for a bookmark.'),
@@ -211,6 +234,8 @@ export const LLM_FLOWS = [
   // apps -> models and stores directly
   flow('bookmarked', 'qwen-embed', 'EMBED', 'Bookmarked embeds each bookmark and each search query, calling the model server directly.'),
   flow('bookmarked', 'pgvector', 'STORE', 'Saves the vector beside the bookmark and searches by cosine distance.'),
+  flow('immich', 'immich-ml', 'VISION', 'Each new photo, and each search phrase, goes to Immich’s own service.'),
+  flow('bookmarked', 'openai', 'FALLBACK', 'Idle today: used only if the gateway setting is removed.'),
   flow('intervalai', 'interval-model', 'PREDICT', 'Sends a card’s review history and gets back a predicted interval. Falls back to a copy of the model inside the app, then to the classic SM-2 formula.'),
   flow('intervalai', 'e5', 'EMBED', 'Embeds each flashcard to find related ones.'),
   flow('intervalai', 'qdrant', 'STORE', 'Indexes card vectors and asks for the nearest neighbours.'),
