@@ -18,8 +18,8 @@ export const LLM_STAGES = [
   { id: 'KEEP', label: 'Memory and records' },
 ];
 
-const OVMS_LLM = 'OpenVINO Model Server · GPU Worker 1';
-const OVMS_EMBED = 'OpenVINO Model Server · GPU Worker 2';
+const OVMS_LLM = 'OpenVINO server · GPU Worker 1';
+const OVMS_EMBED = 'OpenVINO server · GPU Worker 2';
 
 export const LLM_NODES = [
   // --- who asks
@@ -66,7 +66,7 @@ export const LLM_NODES = [
     id: 'public',
     stage: 'APP',
     displayName: 'Outside callers',
-    location: 'Firebook and scripts, over a Cloudflare Tunnel',
+    location: 'Firebook, scripts (tunnel)',
     role: 'Callers outside the cluster reach the gateway at a public address. Each needs its own client key; requests without one are refused.',
     signal: { workloads: ['cloudflared-ai-gateway'] },
   },
@@ -76,7 +76,7 @@ export const LLM_NODES = [
     id: 'gateway',
     stage: 'ROUTE',
     displayName: 'AI gateway',
-    location: 'shared-ai-gateway, two replicas',
+    location: 'shared-ai-gateway',
     role: 'The one door every app uses. It builds the prompt for each task, tries the local model first, and falls back tier by tier to hosted models when the local one is down or its answer is unusable.',
     signal: { workloads: ['shared-ai-gateway'] },
   },
@@ -84,7 +84,7 @@ export const LLM_NODES = [
     id: 'litellm',
     stage: 'ROUTE',
     displayName: 'LiteLLM',
-    location: 'Model proxy, two replicas',
+    location: 'Model proxy',
     role: 'Gives every model one OpenAI-style API, holds the provider keys, and records spend per virtual key in HA Postgres.',
     signal: { workloads: ['litellm'] },
   },
@@ -93,9 +93,9 @@ export const LLM_NODES = [
   {
     id: 'qwen-chat',
     stage: 'LOCAL',
-    displayName: 'Qwen2.5 1.5B Instruct',
+    displayName: 'Qwen2.5 1.5B chat',
     location: OVMS_LLM,
-    role: 'The local chat model, running on an Intel integrated GPU. First choice for every generation request.',
+    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. First choice for every generation request.',
     signal: { workloads: ['ovms-llm'], model: 'qwen2.5-1.5b-instruct' },
   },
   {
@@ -125,7 +125,7 @@ export const LLM_NODES = [
   {
     id: 'interval-model',
     stage: 'LOCAL',
-    displayName: 'Review-interval model',
+    displayName: 'Interval predictor',
     location: OVMS_EMBED,
     role: 'Not a language model: a small network trained on review history that predicts how long until a card is forgotten. It shares the model server with the embedding models.',
     signal: { workloads: ['ovms-embeddings'], model: 'interval_ai' },
@@ -167,7 +167,7 @@ export const LLM_NODES = [
     id: 'pgvector',
     stage: 'KEEP',
     displayName: 'Bookmark vectors',
-    location: 'pgvector in Bookmarked’s Postgres',
+    location: 'pgvector in Postgres',
     role: 'Stores one vector per bookmark and ranks them by similarity inside the database.',
     signal: { pods: { namespace: 'default', prefix: 'cnpg-bookmarked-' } },
   },
@@ -175,7 +175,7 @@ export const LLM_NODES = [
     id: 'qdrant',
     stage: 'KEEP',
     displayName: 'Qdrant',
-    location: 'Vector database, three replicas',
+    location: 'Vector database',
     role: 'Stores one vector per flashcard and returns the cards nearest in meaning.',
     signal: { pods: { namespace: 'qdrant', prefix: 'qdrant-ha-qdrant-' } },
   },
