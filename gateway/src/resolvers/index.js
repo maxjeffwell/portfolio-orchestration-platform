@@ -12,6 +12,7 @@ import { networkTopologyResolvers } from './networkTopology.js';
 import { databaseTopologyResolvers } from './databaseTopology.js';
 import { dnsTopologyResolvers } from './dnsTopology.js';
 import { monitoringTopologyResolvers } from './monitoringTopology.js';
+import { llmTopologyResolvers } from './llmTopology.js';
 
 export const resolvers = {
   Query: {
@@ -28,6 +29,7 @@ export const resolvers = {
     ...databaseTopologyResolvers.Query,
     ...dnsTopologyResolvers.Query,
     ...monitoringTopologyResolvers.Query,
+    ...llmTopologyResolvers.Query,
   },
   Mutation: {
     ...contactFormResolvers.Mutation,

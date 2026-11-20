@@ -8,7 +8,7 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "postinstall": "patch-package --error-on-fail",
-    "test": "node --test src/resolvers/networkTopology.test.js src/resolvers/databaseTopology.test.js src/resolvers/dnsTopology.test.js src/resolvers/monitoringTopology.test.js"
+    "test": "node --test src/resolvers/networkTopology.test.js src/resolvers/databaseTopology.test.js src/resolvers/dnsTopology.test.js src/resolvers/monitoringTopology.test.js src/resolvers/llmTopology.test.js"
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.21.0",
