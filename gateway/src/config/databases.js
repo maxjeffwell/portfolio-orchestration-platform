@@ -57,7 +57,7 @@ const cnpg = ({ id, displayName, namespace, cluster, scraped = true, offsite = t
   displayName,
   engine: 'POSTGRES',
   // Three clusters are still running but their databases moved to HA Postgres.
-  manager: unused ? 'CloudNativePG · no app uses it now' : 'CloudNativePG',
+  manager: unused ? 'CloudNativePG · unused' : 'CloudNativePG',
   expectedInstances: 2,
   pods: { namespace, labels: { 'cnpg.io/cluster': cluster }, roleLabel: 'cnpg.io/instanceRole' },
   storage: 'MAYASTOR',
