@@ -322,16 +322,17 @@ export const LINK_DEFINITIONS = [
   //                                -> MoCA coax -> primary router
   //   direct                       Control Plane 2 -> primary router
   //
+  // Four machines are dual-cabled into their switch (`via: 'Two cables'`).
   // A link may state a fixed `speedBps`. Otherwise a machine with a single
   // wired link reports its live uplink speed
   // (lib/storageClient.js, fetchUplinkSpeeds); one cabled to two places does
   // not, because the metric does not say which link is which.
   ...[
-    ['cp-3', 'switch-a'],
+    ['cp-3', 'switch-a', 'Two cables'],
     ['gpu-workstation', 'switch-a'],
-    ['cp-1', 'switch-b1'],
-    ['gpu-1', 'switch-b1'],
-    ['gpu-2', 'switch-b1'],
+    ['cp-1', 'switch-b1', 'Two cables'],
+    ['gpu-1', 'switch-b1', 'Two cables'],
+    ['gpu-2', 'switch-b1', 'Two cables'],
     ['asustor', 'switch-b1'],
     ['asustor', 'switch-b2'],
     ['synology', 'switch-b2'],
@@ -339,7 +340,7 @@ export const LINK_DEFINITIONS = [
     ['cp-2', 'primary-router'],
     ['switch-b1', 'switch-b2'],
     ['switch-c', 'primary-router'],
-  ].map(([source, target]) => ({ source, target, type: 'ETHERNET' })),
+  ].map(([source, target, via]) => ({ source, target, type: 'ETHERNET', ...(via && { via }) })),
 
   // Control Plane 3 has a third NIC (1 GbE) cabled to a LAN port on the mesh
   // node; its two 2.5 GbE NICs go to Access Switch 4. The mesh node itself is

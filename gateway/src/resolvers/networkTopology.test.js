@@ -276,6 +276,12 @@ test('wired LAN: machines link to their switch, segments reach the router over M
   assert.deepEqual([backhaul.source, backhaul.target], ['primary-router', 'mesh-node']);
   assert.equal(backhaul.metadata.via, 'MoCA coax');
 
+  const via = (source, target) =>
+    links.find((l) => l.source === source && l.target === target).metadata?.via ?? null;
+  for (const id of ['cp-1', 'gpu-1', 'gpu-2']) assert.equal(via(id, 'switch-b1'), 'Two cables');
+  assert.equal(via('cp-3', 'switch-a'), 'Two cables');
+  assert.equal(via('asustor', 'switch-b1'), null);
+
   // Live speed only where a machine has a single wired link.
   const speed = (source) => links.find((l) => l.type === 'ETHERNET' && l.source === source).bandwidthBps;
   assert.equal(speed('cp-1'), 5e9);
