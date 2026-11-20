@@ -1,41 +1,123 @@
+// Network visualization topology.
+//
+// This file is the hand-maintained map of the infrastructure. Health and
+// metrics are live (Mimir); which machines exist and how they connect is not,
+// so update this file when hardware or roles change.
+//
+// `hostname` is internal only: the resolver publishes `displayName` and never
+// sends real hostnames or addresses to the client.
+//
+//   metricsInstance  `instance` label of the host's node_exporter series
+//   up               { job, instance } of the scrape target that decides
+//                    whether the node is reachable
+//   garageInstance   `instance` label under job="garage" for Garage members
+
+const UNIX = 'integrations/unix';
+
 export const NODE_DEFINITIONS = [
   {
-    id: 'control-plane',
-    hostname: 'vmi2951245',
-    displayName: 'Control Plane',
+    id: 'edge-vps',
+    hostname: 'vmi3610371',
+    displayName: 'Edge VPS',
     type: 'K8S_NODE',
     zone: 'CLOUD',
-    wireguardIp: '10.0.0.1',
+    metricsInstance: 'vmi3610371',
+    up: { job: UNIX, instance: 'vmi3610371' },
     services: [
-      { name: 'K3s CP', port: 6443 },
-      { name: 'Garage S3', port: 3900 },
-      { name: 'Mimir', port: 8080 },
-      { name: 'CrowdSec', port: null },
+      { name: 'Traefik Ingress', port: 443 },
+      { name: 'App Frontends', port: null },
+      { name: 'K3s Agent', port: null },
     ],
   },
   {
-    id: 'worker',
-    hostname: 'vmi3115606',
-    displayName: 'Worker Node',
-    type: 'K8S_NODE',
-    zone: 'CLOUD',
-    wireguardIp: '10.0.0.3',
-    services: [
-      { name: 'Databases', port: null },
-      { name: 'Apps', port: null },
-      { name: 'Tempo', port: 3200 },
-    ],
-  },
-  {
-    id: 'gpu-node',
-    hostname: 'marmoset',
-    displayName: 'GPU Node',
+    id: 'cp-1',
+    hostname: 'm920s',
+    displayName: 'Control Plane 1',
     type: 'K8S_NODE',
     zone: 'HOME_NETWORK',
-    wireguardIp: '10.0.0.2',
+    metricsInstance: 'm920s',
+    up: { job: UNIX, instance: 'm920s' },
+    garageInstance: 'm920s',
+    services: [
+      { name: 'K3s Server', port: 6443 },
+      { name: 'Mimir', port: 8080 },
+      { name: 'Mayastor', port: null },
+      { name: 'Garage S3', port: 3900 },
+    ],
+  },
+  {
+    id: 'cp-2',
+    hostname: 'elitedesk',
+    displayName: 'Control Plane 2',
+    type: 'K8S_NODE',
+    zone: 'HOME_NETWORK',
+    metricsInstance: 'elitedesk',
+    up: { job: UNIX, instance: 'elitedesk' },
+    garageInstance: 'elitedesk',
+    services: [
+      { name: 'K3s Server', port: 6443 },
+      { name: 'CrowdSec LAPI', port: 8080 },
+      { name: 'Mayastor', port: null },
+      { name: 'Garage S3', port: 3900 },
+    ],
+  },
+  {
+    id: 'cp-3',
+    hostname: 'm720q',
+    displayName: 'Control Plane 3',
+    type: 'K8S_NODE',
+    zone: 'HOME_NETWORK',
+    metricsInstance: 'm720q',
+    up: { job: UNIX, instance: 'm720q' },
+    garageInstance: 'm720q',
+    services: [
+      { name: 'K3s Server', port: 6443 },
+      { name: 'Tempo', port: 3200 },
+      { name: 'Mayastor', port: null },
+      { name: 'Garage S3', port: 3900 },
+    ],
+  },
+  {
+    id: 'gpu-1',
+    hostname: 'debian-marmoset',
+    displayName: 'GPU Worker 1',
+    type: 'K8S_NODE',
+    zone: 'HOME_NETWORK',
+    metricsInstance: 'debian-marmoset',
+    up: { job: UNIX, instance: 'debian-marmoset' },
+    garageInstance: 'debian-marmoset',
     services: [
       { name: 'K3s Agent', port: null },
-      { name: 'Triton', port: 8020 },
+      { name: 'Intel Xe GPU', port: null },
+      { name: 'Garage S3', port: 3900 },
+    ],
+  },
+  {
+    id: 'gpu-2',
+    hostname: 'neonmarmoset',
+    displayName: 'GPU Worker 2',
+    type: 'K8S_NODE',
+    zone: 'HOME_NETWORK',
+    metricsInstance: 'neonmarmoset',
+    up: { job: UNIX, instance: 'neonmarmoset' },
+    garageInstance: 'neonmarmoset',
+    services: [
+      { name: 'K3s Agent', port: null },
+      { name: 'Intel Xe GPU', port: null },
+      { name: 'Garage S3', port: 3900 },
+    ],
+  },
+  {
+    id: 'gpu-workstation',
+    hostname: 'marmoset',
+    displayName: 'GPU Workstation',
+    type: 'K8S_NODE',
+    zone: 'HOME_NETWORK',
+    metricsInstance: 'marmoset',
+    up: { job: UNIX, instance: 'marmoset' },
+    services: [
+      { name: 'K3s Agent', port: null },
+      { name: 'NVIDIA GPU', port: null },
     ],
   },
   {
@@ -44,22 +126,11 @@ export const NODE_DEFINITIONS = [
     displayName: 'Primary Router',
     type: 'ROUTER',
     zone: 'HOME_NETWORK',
-    wireguardIp: null,
+    metricsInstance: 'be88u',
+    up: { job: 'router-node', instance: 'be88u' },
     services: [
-      { name: 'CrowdSec', port: null },
       { name: 'Gateway', port: null },
-    ],
-  },
-  {
-    id: 'axe-7800',
-    hostname: 'RT-AXE7800',
-    displayName: 'AXE-7800',
-    type: 'ROUTER',
-    zone: 'HOME_NETWORK',
-    wireguardIp: null,
-    services: [
-      { name: 'Garage S3', port: 3900 },
-      { name: 'CrowdSec', port: null },
+      { name: 'DHCP / DNS', port: null },
     ],
   },
   {
@@ -68,11 +139,9 @@ export const NODE_DEFINITIONS = [
     displayName: 'AX86U Pro',
     type: 'ROUTER',
     zone: 'HOME_NETWORK',
-    wireguardIp: null,
-    services: [
-      { name: 'Garage S3', port: 3900 },
-      { name: 'CrowdSec', port: null },
-    ],
+    metricsInstance: 'ax86u-pro',
+    up: { job: 'router-node', instance: 'ax86u-pro' },
+    services: [{ name: 'Access Point', port: null }],
   },
   {
     id: 'asustor',
@@ -80,11 +149,12 @@ export const NODE_DEFINITIONS = [
     displayName: 'ASUSTOR NAS',
     type: 'NAS',
     zone: 'STORAGE',
-    wireguardIp: '10.0.0.4',
+    metricsInstance: 'AS5402T-A7F3',
+    up: { job: UNIX, instance: 'AS5402T-A7F3' },
+    garageInstance: 'asustor',
     services: [
       { name: 'Garage S3', port: 3900 },
       { name: 'Loki', port: 3100 },
-      { name: 'CrowdSec LAPI', port: 8080 },
       { name: 'NFS', port: 2049 },
     ],
   },
@@ -94,47 +164,52 @@ export const NODE_DEFINITIONS = [
     displayName: 'Synology NAS',
     type: 'NAS',
     zone: 'STORAGE',
-    wireguardIp: '10.0.0.5',
+    // No node_exporter on this host: its Garage scrape is the liveness signal.
+    metricsInstance: null,
+    up: { job: 'garage', instance: 'synology' },
+    garageInstance: 'synology',
     services: [
       { name: 'Garage S3', port: 3900 },
       { name: 'iSCSI Targets', port: 3260 },
-      { name: 'Snapshots', port: null },
     ],
   },
 ];
 
-export const WIREGUARD_PEERS = [
-  { source: 'control-plane', target: 'worker' },
-  { source: 'control-plane', target: 'gpu-node' },
-  { source: 'control-plane', target: 'asustor' },
-  { source: 'control-plane', target: 'synology' },
-  { source: 'worker', target: 'gpu-node' },
-  { source: 'worker', target: 'asustor' },
-  { source: 'worker', target: 'synology' },
-  { source: 'gpu-node', target: 'asustor' },
-  { source: 'gpu-node', target: 'synology' },
-  { source: 'asustor', target: 'synology' },
-];
+const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
+const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
+const NAS = ['asustor', 'synology'];
+const GARAGE_MEMBERS = NODE_DEFINITIONS.filter((n) => n.garageInstance).map((n) => n.id);
 
-export const STATIC_LINKS = [
-  { source: 'worker', target: 'synology', type: 'ISCSI' },
+function pairs(ids) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) out.push([ids[i], ids[j]]);
+  }
+  return out;
+}
+
+export const LINK_DEFINITIONS = [
+  // Encrypted overlay: the cloud node joins the home control plane over it.
+  ...CONTROL_PLANE.map((cp) => ({ source: 'edge-vps', target: cp, type: 'WIREGUARD' })),
+
+  // Mayastor replicates volumes between the three servers over NVMe-oF.
+  ...pairs(CONTROL_PLANE).map(([source, target]) => ({ source, target, type: 'NVME_OF' })),
+
+  // Garage is a full mesh of seven members. Drawing all 21 pairs is
+  // unreadable, so each member is drawn to the two NAS members only.
+  ...GARAGE_MEMBERS.filter((id) => !NAS.includes(id)).flatMap((id) =>
+    NAS.map((nas) => ({ source: id, target: nas, type: 'GARAGE_REPLICATION' })),
+  ),
   { source: 'asustor', target: 'synology', type: 'GARAGE_REPLICATION' },
-  { source: 'asustor', target: 'axe-7800', type: 'GARAGE_REPLICATION' },
-  { source: 'asustor', target: 'ax86u-pro', type: 'GARAGE_REPLICATION' },
-  { source: 'synology', target: 'axe-7800', type: 'GARAGE_REPLICATION' },
-  { source: 'synology', target: 'ax86u-pro', type: 'GARAGE_REPLICATION' },
-  { source: 'axe-7800', target: 'ax86u-pro', type: 'GARAGE_REPLICATION' },
-  { source: 'control-plane', target: 'asustor', type: 'LOKI' },
-  { source: 'worker', target: 'asustor', type: 'LOKI' },
-  { source: 'gpu-node', target: 'asustor', type: 'LOKI' },
-  { source: 'worker', target: 'asustor', type: 'NFS' },
-  { source: 'control-plane', target: 'asustor', type: 'NFS' },
+
+  // Every cluster node ships logs to Loki on the ASUSTOR.
+  ...K8S_NODES.map((id) => ({ source: id, target: 'asustor', type: 'LOKI' })),
+
+  // Media and photo libraries are NFS mounts from the ASUSTOR.
+  { source: 'gpu-1', target: 'asustor', type: 'NFS' },
+  { source: 'gpu-2', target: 'asustor', type: 'NFS' },
+  { source: 'cp-1', target: 'asustor', type: 'NFS' },
+
+  // One remaining iSCSI volume lives on the Synology.
+  { source: 'cp-1', target: 'synology', type: 'ISCSI' },
 ];
-
-export const HOSTNAME_TO_ID = Object.fromEntries(
-  NODE_DEFINITIONS.map((n) => [n.hostname, n.id])
-);
-
-export const WG_IP_TO_ID = Object.fromEntries(
-  NODE_DEFINITIONS.filter((n) => n.wireguardIp).map((n) => [n.wireguardIp, n.id])
-);
