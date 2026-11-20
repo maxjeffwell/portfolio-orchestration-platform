@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildDatabaseTopology } from './databaseTopology.js';
-import { DATABASES, DATABASE_APPS } from '../config/databases.js';
+import { DATABASES, DATABASE_APPS, UNUSED_DATABASES } from '../config/databases.js';
 
 const pod = (name, namespace, labels, node, ready = true) => ({
   name,
@@ -19,7 +19,7 @@ const cnpgPods = (ready = true) => [
 
 const db = (topology, id) => topology.databases.find((d) => d.id === id);
 
-test('every app points at a defined database, and every database has an app', () => {
+test('every app points at a defined database; only the known leftovers have no app', () => {
   const ids = new Set(DATABASES.map((d) => d.id));
   const used = new Set();
   for (const app of DATABASE_APPS) {
@@ -28,7 +28,27 @@ test('every app points at a defined database, and every database has an app', ()
       used.add(id);
     }
   }
-  for (const id of ids) assert.ok(used.has(id), `${id} has no app`);
+  const unused = [...ids].filter((id) => !used.has(id)).sort();
+  assert.deepEqual(unused, [...UNUSED_DATABASES].sort());
+});
+
+test('wiring matches the connection settings read from the cluster', () => {
+  const uses = (app) => DATABASE_APPS.find((a) => a.id === app).databases;
+  assert.deepEqual(uses('pop-portfolio'), ['pg-ha', 'redis-ha']);
+  assert.deepEqual(uses('immich'), ['pg-immich', 'immich-redis']);
+  assert.deepEqual(uses('bookmarked'), ['pg-bookmarked', 'redis-ha']);
+  assert.deepEqual(uses('firebook'), ['redis-ha']);
+  for (const app of ['lunary', 'vaultwarden']) assert.deepEqual(uses(app), ['pg-ha']);
+});
+
+test('Velero covers database volumes, except MongoDB (dumped instead) and the cache', () => {
+  const targets = (id) => DATABASES.find((d) => d.id === id).backups.map((b) => b.name);
+  assert.ok(targets('redis-ha').includes('Velero daily volume copy'));
+  assert.ok(targets('pg-bookmarked').includes('Velero weekly off-site copy'));
+  // immich is not in the weekly off-site list.
+  assert.ok(!targets('pg-immich').includes('Velero weekly off-site copy'));
+  assert.ok(!targets('mongo-intervalai').some((n) => n.startsWith('Velero')));
+  assert.deepEqual(targets('immich-redis'), []);
 });
 
 test('instances carry role and machine, published by display name only', () => {
