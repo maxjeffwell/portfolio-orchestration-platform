@@ -245,3 +245,27 @@ test('off-site backup is degraded when a job is overdue or unknown, and names th
   assert.equal(node(null).health, 'DEGRADED');
   assert.equal(node({ ...OVERLAY_OK.offsite, veleroAgeS: null }).health, 'DEGRADED');
 });
+
+test('wired LAN: one server direct, segment A on the mesh node, segment B over MoCA, with live uplink speed', () => {
+  const overlay = { ...OVERLAY_OK, uplinkSpeeds: { elitedesk: 1e10, m920s: 5e9 } };
+  const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, overlay);
+  const eth = Object.fromEntries(
+    links.filter((l) => l.type === 'ETHERNET').map((l) => [l.source, l]),
+  );
+
+  assert.deepEqual(Object.keys(eth).sort(), [
+    'asustor', 'cp-1', 'cp-2', 'cp-3', 'gpu-1', 'gpu-2', 'gpu-workstation', 'synology',
+  ]);
+  assert.equal(eth['cp-2'].target, 'primary-router');
+  assert.equal(eth['cp-2'].metadata.via, 'Direct');
+  assert.equal(eth['cp-2'].bandwidthBps, 1e10);
+  assert.equal(eth['cp-3'].target, 'mesh-node');
+  assert.equal(eth['gpu-workstation'].target, 'mesh-node');
+  assert.match(eth['cp-1'].metadata.via, /MoCA/);
+  assert.equal(eth['cp-1'].bandwidthBps, 5e9);
+  // No metric for the NAS units: drawn without a speed.
+  assert.equal(eth.asustor.bandwidthBps, null);
+
+  const backhaul = links.find((l) => l.type === 'BACKHAUL');
+  assert.equal(backhaul.metadata.via, 'MoCA coax');
+});

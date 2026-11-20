@@ -264,12 +264,40 @@ export const LINK_DEFINITIONS = [
   { source: 'gpu-2', target: 'asustor', type: 'NFS' },
   { source: 'cp-1', target: 'asustor', type: 'NFS' },
 
-  // The mesh node reaches the primary router over an Ethernet backhaul. The node's
-  // uplink port is the live signal: carrier lost means the backhaul is down.
+  // Wired LAN, as cabled (confirmed by the owner, not discoverable from
+  // metrics). The home LAN is two switch segments that each reach the primary
+  // router over the MoCA coax fabric, plus one server cabled straight in:
+  //
+  //   direct      Control Plane 2
+  //   segment A   Control Plane 3, GPU Workstation, Mesh Node
+  //   segment B   Control Plane 1, GPU Worker 1, GPU Worker 2, both NAS units
+  //
+  // Segment A is drawn to the Mesh Node, which sits on it; segment B has no
+  // machine of its own on the map and is drawn to the router. `via` names the
+  // medium on the way to the router. A link whose source is a k3s node reports
+  // that node's live uplink speed (lib/storageClient.js, fetchUplinkSpeeds).
+  { source: 'cp-2', target: 'primary-router', type: 'ETHERNET', via: 'Direct' },
+  ...['cp-3', 'gpu-workstation'].map((id) => ({
+    source: id,
+    target: 'mesh-node',
+    type: 'ETHERNET',
+    via: 'Switch segment A',
+  })),
+  ...['cp-1', 'gpu-1', 'gpu-2', 'asustor', 'synology'].map((id) => ({
+    source: id,
+    target: 'primary-router',
+    type: 'ETHERNET',
+    via: 'Switch segment B, MoCA coax',
+  })),
+
+  // The mesh node's uplink to the primary router: Ethernet out of the node,
+  // carried over the MoCA coax. The node's uplink port is the live signal:
+  // carrier lost means the backhaul is down.
   {
     source: 'primary-router',
     target: 'mesh-node',
     type: 'BACKHAUL',
+    via: 'MoCA coax',
     port: { instance: 'ax86u-pro', device: 'eth5' },
   },
 
