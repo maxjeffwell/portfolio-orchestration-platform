@@ -58,7 +58,8 @@ spec:
             memory: "512Mi"
             # 2026-11-19: 500m was CFS-throttled in 23-33 % of periods at a
             # 10m average (multi-threaded bursts, worse on the 12-CPU node).
-            cpu: "1000m"
+            # 1000m left the m920s pod at 11.5 % (elitedesk 3.5 %) -> 2000m.
+            cpu: "2000m"
         env:
         - name: PORT
           value: "5000"
