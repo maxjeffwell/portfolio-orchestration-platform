@@ -175,25 +175,29 @@ export const NODE_DEFINITIONS = [
   },
 ];
 
+// The Mayastor volume layer is not a machine: its pools live on the three
+// control-plane servers. It is drawn as one storage node, with health and
+// usage taken from Prometheus (see lib/storageClient.js).
+export const MAYASTOR_NODE = {
+  id: 'mayastor',
+  displayName: 'Mayastor Volumes',
+  type: 'REPLICATED_STORAGE',
+  zone: 'STORAGE',
+};
+
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
 const NAS = ['asustor', 'synology'];
 const GARAGE_MEMBERS = NODE_DEFINITIONS.filter((n) => n.garageInstance).map((n) => n.id);
 
-function pairs(ids) {
-  const out = [];
-  for (let i = 0; i < ids.length; i += 1) {
-    for (let j = i + 1; j < ids.length; j += 1) out.push([ids[i], ids[j]]);
-  }
-  return out;
-}
 
 export const LINK_DEFINITIONS = [
   // Encrypted overlay: the cloud node joins the home control plane over it.
   ...CONTROL_PLANE.map((cp) => ({ source: 'edge-vps', target: cp, type: 'WIREGUARD' })),
 
-  // Mayastor replicates volumes between the three servers over NVMe-oF.
-  ...pairs(CONTROL_PLANE).map(([source, target]) => ({ source, target, type: 'NVME_OF' })),
+  // Mayastor pools sit on the three servers; volumes are replicated between
+  // them and served to pods over NVMe-oF.
+  ...CONTROL_PLANE.map((cp) => ({ source: cp, target: MAYASTOR_NODE.id, type: 'NVME_OF' })),
 
   // Garage is a full mesh of seven members. Drawing all 21 pairs is
   // unreadable, so each member is drawn to the two NAS members only.

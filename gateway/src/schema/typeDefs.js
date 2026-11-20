@@ -225,6 +225,7 @@ export const typeDefs = /* GraphQL */ `
     K8S_NODE
     NAS
     ROUTER
+    REPLICATED_STORAGE
   }
 
   enum ZoneType {
