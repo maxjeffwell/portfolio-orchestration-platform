@@ -9,6 +9,7 @@ import { argocdResolvers } from './argocdApps.js';
 import { githubResolvers } from './githubRuns.js';
 import { contactFormResolvers } from './contactForm.js';
 import { networkTopologyResolvers } from './networkTopology.js';
+import { databaseTopologyResolvers } from './databaseTopology.js';
 
 export const resolvers = {
   Query: {
@@ -22,6 +23,7 @@ export const resolvers = {
     ...argocdResolvers.Query,
     ...githubResolvers.Query,
     ...networkTopologyResolvers.Query,
+    ...databaseTopologyResolvers.Query,
   },
   Mutation: {
     ...contactFormResolvers.Mutation,
