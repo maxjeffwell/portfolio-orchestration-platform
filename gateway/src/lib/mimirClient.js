@@ -72,6 +72,29 @@ export async function fetchUpStatus() {
   return map;
 }
 
+// Carrier and negotiated speed of the routers' network ports, keyed
+// "instance|device" -> { carrier: bool, speedBps: number|null }.
+export async function fetchPortStatus() {
+  const [carrier, speed] = await Promise.all([
+    queryMimir('node_network_carrier{job="router-node"}'),
+    queryMimir('node_network_speed_bytes{job="router-node"} * 8'),
+  ]);
+  const map = {};
+  for (const r of carrier) {
+    const { instance, device } = r.metric ?? {};
+    if (instance && device) {
+      map[`${instance}|${device}`] = { carrier: r.value?.[1] === '1', speedBps: null };
+    }
+  }
+  for (const r of speed) {
+    const { instance, device } = r.metric ?? {};
+    const entry = map[`${instance}|${device}`];
+    const bps = parseFloat(r.value?.[1]);
+    if (entry && bps > 0) entry.speedBps = bps;
+  }
+  return map;
+}
+
 export function formatUptime(seconds) {
   if (!seconds) return null;
   const days = Math.floor(seconds / 86400);

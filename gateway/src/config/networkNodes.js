@@ -11,6 +11,10 @@
 //   up               { job, instance } of the scrape target that decides
 //                    whether the node is reachable
 //   garageInstance   `instance` label under job="garage" for Garage members
+//
+// A link may name a `port` ({ instance, device }): the network interface that
+// carries it. Its carrier and negotiated speed then drive the link's status
+// and bandwidth instead of the link being inferred from its two ends alone.
 
 const UNIX = 'integrations/unix';
 
@@ -131,17 +135,22 @@ export const NODE_DEFINITIONS = [
     services: [
       { name: 'Gateway', port: null },
       { name: 'DHCP / DNS', port: null },
+      { name: 'Tailnet Subnet Router', port: null },
     ],
   },
   {
-    id: 'ax86u-pro',
+    id: 'mesh-node',
     hostname: 'RT-AX86U_Pro',
-    displayName: 'AX86U Pro',
+    displayName: 'Mesh Node',
     type: 'ROUTER',
     zone: 'HOME_NETWORK',
     metricsInstance: 'ax86u-pro',
     up: { job: 'router-node', instance: 'ax86u-pro' },
-    services: [{ name: 'Access Point', port: null }],
+    services: [
+      { name: 'Wi-Fi Access Point', port: null },
+      { name: 'Wired Backhaul', port: null },
+      { name: 'Tailnet Subnet Router', port: null },
+    ],
   },
   {
     id: 'asustor',
@@ -185,6 +194,32 @@ export const MAYASTOR_NODE = {
   zone: 'STORAGE',
 };
 
+// Headscale is the coordination server of the tailnet that the cluster's node
+// network runs on. It is a service, not a machine (it runs natively on GPU
+// Worker 1 with a cold standby on Control Plane 1), drawn as one node so the
+// tailnet reads as "members of one overlay" instead of a 28-line full mesh.
+// Health comes from Prometheus (see lib/overlayClient.js).
+export const HEADSCALE_NODE = {
+  id: 'headscale',
+  displayName: 'Headscale Tailnet',
+  type: 'OVERLAY_CONTROL',
+  zone: 'HOME_NETWORK',
+};
+
+// Every machine on the map is registered with Headscale (checked against its
+// node list). Client devices on the tailnet are not infrastructure and are not
+// drawn. Both routers also advertise the home LAN to the tailnet.
+const TAILNET_MEMBERS = NODE_DEFINITIONS.map((n) => n.id);
+
+// Backblaze B2 holds the off-site copies. It is a service, not a machine; its
+// health is the freshness of the jobs that write to it (lib/backupClient.js).
+export const OFFSITE_NODE = {
+  id: 'offsite-backup',
+  displayName: 'Backblaze B2',
+  type: 'OFFSITE_BACKUP',
+  zone: 'CLOUD',
+};
+
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
 // Nodes running the Mayastor CSI node plugin: they mount volumes over NVMe-oF.
@@ -195,8 +230,24 @@ const GARAGE_MEMBERS = NODE_DEFINITIONS.filter((n) => n.garageInstance).map((n) 
 
 
 export const LINK_DEFINITIONS = [
-  // Encrypted overlay: the cloud node joins the home control plane over it.
-  ...CONTROL_PLANE.map((cp) => ({ source: 'edge-vps', target: cp, type: 'WIREGUARD' })),
+  // Tailscale is the cluster overlay: every k3s node uses its tailnet address
+  // as its node address, so pod and API traffic between the cloud node and
+  // home rides the tailnet. Members are drawn to the coordination server.
+  ...TAILNET_MEMBERS.map((id) => ({
+    source: id,
+    target: HEADSCALE_NODE.id,
+    type: 'TAILSCALE',
+  })),
+
+  // WireGuard is the older, separate mesh. It still carries what must not
+  // depend on the tailnet: the public front door to Headscale itself (edge
+  // Traefik -> GPU Worker 1) and the edge node's reach to hosts outside k3s.
+  // `wgPeer` is the peer's address on that mesh; its last handshake in Mimir
+  // decides whether the tunnel is up.
+  { source: 'edge-vps', target: 'gpu-1', type: 'WIREGUARD', wgPeer: '10.0.0.9' },
+  { source: 'edge-vps', target: 'asustor', type: 'WIREGUARD', wgPeer: '10.0.0.4' },
+  { source: 'edge-vps', target: 'synology', type: 'WIREGUARD', wgPeer: '10.0.0.5' },
+  { source: 'edge-vps', target: 'mesh-node', type: 'WIREGUARD', wgPeer: '10.0.0.6' },
 
   // Mayastor pools sit on the three servers; volumes are replicated between
   // them and served over NVMe-oF to every node that mounts one.
@@ -216,6 +267,19 @@ export const LINK_DEFINITIONS = [
   { source: 'gpu-1', target: 'asustor', type: 'NFS' },
   { source: 'gpu-2', target: 'asustor', type: 'NFS' },
   { source: 'cp-1', target: 'asustor', type: 'NFS' },
+
+  // The mesh node reaches the primary router over a wired backhaul. The node's
+  // uplink port is the live signal: carrier lost means the backhaul is down.
+  {
+    source: 'primary-router',
+    target: 'mesh-node',
+    type: 'BACKHAUL',
+    port: { instance: 'ax86u-pro', device: 'eth5' },
+  },
+
+  // Off-site backups leave from the three servers: Velero and the Garage dump
+  // sync run in the cluster, and the Postgres mirror runs on the HA leader.
+  ...CONTROL_PLANE.map((cp) => ({ source: cp, target: OFFSITE_NODE.id, type: 'OFFSITE_BACKUP' })),
 
   // One remaining iSCSI volume lives on the Synology.
   { source: 'cp-1', target: 'synology', type: 'ISCSI' },

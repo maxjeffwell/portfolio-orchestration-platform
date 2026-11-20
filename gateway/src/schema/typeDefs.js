@@ -22,6 +22,7 @@ export const typeDefs = /* GraphQL */ `
     argoCDApplications: [ArgoCDApplication!]!
     recentGitHubRuns: [GitHubRun!]!
     networkTopology: NetworkTopology!
+    databaseTopology: DatabaseTopology!
   }
 
   type Pod {
@@ -226,6 +227,8 @@ export const typeDefs = /* GraphQL */ `
     NAS
     ROUTER
     REPLICATED_STORAGE
+    OVERLAY_CONTROL
+    OFFSITE_BACKUP
   }
 
   enum ZoneType {
@@ -235,18 +238,85 @@ export const typeDefs = /* GraphQL */ `
   }
 
   enum LinkType {
+    TAILSCALE
     WIREGUARD
+    BACKHAUL
     NVME_OF
     ISCSI
     GARAGE_REPLICATION
     LOKI
     NFS
+    OFFSITE_BACKUP
   }
 
   enum HealthStatus {
     HEALTHY
     DEGRADED
     OFFLINE
+  }
+
+  enum DatabaseEngine {
+    POSTGRES
+    MONGODB
+    REDIS
+    QDRANT
+  }
+
+  enum DatabaseStorage {
+    MAYASTOR
+    LVM_LOCAL
+    HOST_DISK
+  }
+
+  enum BackupTarget {
+    GARAGE
+    BACKBLAZE_B2
+    VOLUME_SNAPSHOT
+  }
+
+  enum BackupStatus {
+    HEALTHY
+    OFFLINE
+    UNKNOWN
+  }
+
+  type DatabaseTopology {
+    apps: [DatabaseApp!]!
+    databases: [Database!]!
+    lastUpdated: String!
+  }
+
+  type DatabaseApp {
+    id: ID!
+    displayName: String!
+    databases: [ID!]!
+  }
+
+  type Database {
+    id: ID!
+    displayName: String!
+    engine: DatabaseEngine!
+    manager: String!
+    health: HealthStatus!
+    expectedInstances: Int!
+    instances: [DatabaseInstance!]!
+    storage: DatabaseStorage!
+    backups: [DatabaseBackup!]!
+  }
+
+  type DatabaseInstance {
+    name: String!
+    role: String!
+    machineId: ID
+    machineName: String!
+    ready: Boolean!
+  }
+
+  type DatabaseBackup {
+    name: String!
+    target: BackupTarget!
+    status: BackupStatus!
+    lastSuccess: String
   }
 
   type NetworkTopology {
