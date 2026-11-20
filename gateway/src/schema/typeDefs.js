@@ -236,6 +236,7 @@ export const typeDefs = /* GraphQL */ `
 
   enum LinkType {
     WIREGUARD
+    BACKHAUL
     NVME_OF
     ISCSI
     GARAGE_REPLICATION

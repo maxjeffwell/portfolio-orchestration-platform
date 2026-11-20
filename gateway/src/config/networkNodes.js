@@ -11,6 +11,10 @@
 //   up               { job, instance } of the scrape target that decides
 //                    whether the node is reachable
 //   garageInstance   `instance` label under job="garage" for Garage members
+//
+// A link may name a `port` ({ instance, device }): the network interface that
+// carries it. Its carrier and negotiated speed then drive the link's status
+// and bandwidth instead of the link being inferred from its two ends alone.
 
 const UNIX = 'integrations/unix';
 
@@ -134,14 +138,17 @@ export const NODE_DEFINITIONS = [
     ],
   },
   {
-    id: 'ax86u-pro',
+    id: 'mesh-node',
     hostname: 'RT-AX86U_Pro',
-    displayName: 'AX86U Pro',
+    displayName: 'Mesh Node',
     type: 'ROUTER',
     zone: 'HOME_NETWORK',
     metricsInstance: 'ax86u-pro',
     up: { job: 'router-node', instance: 'ax86u-pro' },
-    services: [{ name: 'Access Point', port: null }],
+    services: [
+      { name: 'Wi-Fi Access Point', port: null },
+      { name: 'Wired Backhaul', port: null },
+    ],
   },
   {
     id: 'asustor',
@@ -216,6 +223,15 @@ export const LINK_DEFINITIONS = [
   { source: 'gpu-1', target: 'asustor', type: 'NFS' },
   { source: 'gpu-2', target: 'asustor', type: 'NFS' },
   { source: 'cp-1', target: 'asustor', type: 'NFS' },
+
+  // The mesh node reaches the primary router over a wired backhaul. The node's
+  // uplink port is the live signal: carrier lost means the backhaul is down.
+  {
+    source: 'primary-router',
+    target: 'mesh-node',
+    type: 'BACKHAUL',
+    port: { instance: 'ax86u-pro', device: 'eth5' },
+  },
 
   // One remaining iSCSI volume lives on the Synology.
   { source: 'cp-1', target: 'synology', type: 'ISCSI' },

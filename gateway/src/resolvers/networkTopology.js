@@ -1,4 +1,9 @@
-import { fetchNodeMetrics, fetchUpStatus, formatUptime } from '../lib/mimirClient.js';
+import {
+  fetchNodeMetrics,
+  fetchUpStatus,
+  fetchPortStatus,
+  formatUptime,
+} from '../lib/mimirClient.js';
 import { fetchMayastorStatus } from '../lib/storageClient.js';
 import {
   NODE_DEFINITIONS,
@@ -123,7 +128,7 @@ function buildMayastorNode(storage) {
   };
 }
 
-export function buildTopology(metrics, up, storage = null) {
+export function buildTopology(metrics, up, storage = null, ports = {}) {
   const mimirAnswered = Object.keys(up ?? {}).length > 0;
   const healthById = {};
 
@@ -152,27 +157,36 @@ export function buildTopology(metrics, up, storage = null) {
   healthById[mayastor.id] = mayastor.health;
   nodes.push(mayastor);
 
-  // A link is only as healthy as its less healthy end.
-  const links = LINK_DEFINITIONS.map((link) => ({
-    source: link.source,
-    target: link.target,
-    type: link.type,
-    status: worst(healthById[link.source], healthById[link.target]),
-    bandwidthBps: null,
-    latencyMs: null,
-    metadata: null,
-  }));
+  // A link is only as healthy as its less healthy end. A link that names the
+  // port carrying it is also down when that port has lost carrier, and reports
+  // the port's negotiated speed.
+  const links = LINK_DEFINITIONS.map((link) => {
+    const port = link.port ? ports?.[`${link.port.instance}|${link.port.device}`] : null;
+    const ends = worst(healthById[link.source], healthById[link.target]);
+    const linkUp = !port || port.carrier;
+
+    return {
+      source: link.source,
+      target: link.target,
+      type: link.type,
+      status: linkUp ? ends : 'OFFLINE',
+      bandwidthBps: port?.carrier ? port.speedBps : null,
+      latencyMs: null,
+      metadata: null,
+    };
+  });
 
   return { nodes, links, lastUpdated: new Date().toISOString() };
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up, storage] = await Promise.all([
+  const [metrics, up, storage, ports] = await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
     fetchMayastorStatus().catch(() => null),
+    fetchPortStatus().catch(() => ({})),
   ]);
-  return buildTopology(metrics, up, storage);
+  return buildTopology(metrics, up, storage, ports);
 }
 
 export const networkTopologyResolvers = {

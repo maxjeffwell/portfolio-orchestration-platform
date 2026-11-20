@@ -141,3 +141,23 @@ test('Mayastor links cover every node that mounts volumes and follow node health
   assert.equal(links.find((l) => l.source === 'gpu-1').status, 'HEALTHY');
   assert.equal(links.find((l) => l.source === 'cp-1').status, 'HEALTHY');
 });
+
+test('mesh backhaul follows its uplink port: speed when up, offline when carrier is lost', () => {
+  const backhaul = (ports) =>
+    buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, ports).links.find(
+      (l) => l.type === 'BACKHAUL',
+    );
+
+  const up = backhaul({ 'ax86u-pro|eth5': { carrier: true, speedBps: 2.5e9 } });
+  assert.equal(up.status, 'HEALTHY');
+  assert.equal(up.bandwidthBps, 2.5e9);
+
+  const down = backhaul({ 'ax86u-pro|eth5': { carrier: false, speedBps: null } });
+  assert.equal(down.status, 'OFFLINE');
+  assert.equal(down.bandwidthBps, null);
+
+  // No port data: fall back to the health of the two routers.
+  const unknown = backhaul({});
+  assert.equal(unknown.status, 'HEALTHY');
+  assert.equal(unknown.bandwidthBps, null);
+});
