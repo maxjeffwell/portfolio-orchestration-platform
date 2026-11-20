@@ -229,6 +229,7 @@ export const typeDefs = /* GraphQL */ `
     ROUTER
     SWITCH
     REPLICATED_STORAGE
+    LOCAL_STORAGE
     OVERLAY_CONTROL
     OFFSITE_BACKUP
   }
@@ -246,6 +247,7 @@ export const typeDefs = /* GraphQL */ `
     MOCA
     BACKHAUL
     NVME_OF
+    LOCAL_VOLUME
     ISCSI
     GARAGE_REPLICATION
     LOKI

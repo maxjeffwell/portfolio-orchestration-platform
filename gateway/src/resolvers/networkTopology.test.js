@@ -5,6 +5,7 @@ import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
+  LVM_NODE,
   OFFSITE_NODE,
 } from '../config/networkNodes.js';
 
@@ -34,7 +35,16 @@ const STORAGE_OK = {
   enginesDesired: 3,
 };
 
+const LVM_OK = {
+  volumes: 36,
+  provisionedBytes: 291 * 1024 ** 3,
+  usedBytes: 38.7 * 1024 ** 3,
+  pluginsReady: 4,
+  pluginsDesired: 4,
+};
+
 const OVERLAY_OK = {
+  lvm: LVM_OK,
   headscale: { primaryUp: true, publicUp: true, standbySynced: true },
   offsite: { veleroAgeS: 5 * 86400, garageSyncAgeS: 5 * 86400, postgresAgeS: 900 },
   wireguardHandshakes: { '10.0.0.9': 40, '10.0.0.4': 60, '10.0.0.5': 90, '10.0.0.6': 120 },
@@ -46,6 +56,7 @@ test('every link references a defined node', () => {
   const ids = new Set([
     ...NODE_DEFINITIONS.map((n) => n.id),
     MAYASTOR_NODE.id,
+    LVM_NODE.id,
     OFFSITE_NODE.id,
   ]);
   for (const link of LINK_DEFINITIONS) {
@@ -56,7 +67,7 @@ test('every link references a defined node', () => {
 
 test('all targets up: every node and link is healthy', () => {
   const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
-  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 2);
+  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 3);
   assert.ok(topology.nodes.every((n) => n.health === 'HEALTHY'));
   assert.ok(topology.links.every((l) => l.status === 'HEALTHY'));
 });
@@ -305,4 +316,26 @@ test('a switch has no metrics: it is up while any machine on it is reachable, an
   assert.equal(byId(topology, 'switch-a').health, 'OFFLINE');
   assert.ok(!topology.links.some((l) => l.type === 'TAILSCALE' && l.target.startsWith('switch')));
   assert.equal(byId(buildTopology(EMPTY_METRICS, {}, STORAGE_OK), 'switch-a').health, 'DEGRADED');
+});
+
+test('LVM local volumes: a storage node linked from the three servers, with health from its node plugins', () => {
+  const build = (lvm) => buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { ...OVERLAY_OK, lvm });
+  const node = byId(build(LVM_OK), 'lvm-local');
+
+  assert.equal(node.zone, 'STORAGE');
+  assert.equal(node.health, 'HEALTHY');
+  assert.deepEqual(
+    node.services.map((s) => s.name),
+    ['36 volumes', '4/4 node plugins', 'Not replicated'],
+  );
+  assert.equal(node.metrics.storageUsedGb, 38.7);
+  assert.equal(node.metrics.storageTotalGb, 291);
+
+  const links = build(LVM_OK).links.filter((l) => l.type === 'LOCAL_VOLUME');
+  assert.deepEqual(links.map((l) => l.source).sort(), ['cp-1', 'cp-2', 'cp-3']);
+  assert.ok(links.every((l) => l.target === 'lvm-local'));
+
+  assert.equal(byId(build({ ...LVM_OK, pluginsReady: 3 }), 'lvm-local').health, 'DEGRADED');
+  assert.equal(byId(build({ ...LVM_OK, pluginsReady: 0 }), 'lvm-local').health, 'OFFLINE');
+  assert.equal(byId(build(null), 'lvm-local').health, 'DEGRADED');
 });

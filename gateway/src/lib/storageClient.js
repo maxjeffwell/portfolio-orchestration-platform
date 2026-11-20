@@ -43,6 +43,27 @@ export async function fetchMayastorStatus() {
   return status;
 }
 
+const LVM_PV = 'kube_persistentvolume_info{storageclass=~"openebs-lvmpv.*"}';
+const LVM_PVC = 'kube_persistentvolumeclaim_info{storageclass=~"openebs-lvmpv.*"}';
+
+const LVM_QUERIES = {
+  volumes: `count(${LVM_PV})`,
+  provisionedBytes: `sum(kube_persistentvolume_capacity_bytes * on(persistentvolume) group_left(storageclass) ${LVM_PV})`,
+  usedBytes: `sum(kubelet_volume_stats_used_bytes * on(namespace, persistentvolumeclaim) group_left(storageclass) ${LVM_PVC})`,
+  pluginsReady: 'sum(kube_daemonset_status_number_ready{daemonset=~".*lvm.*node.*"})',
+  pluginsDesired:
+    'sum(kube_daemonset_status_desired_number_scheduled{daemonset=~".*lvm.*node.*"})',
+};
+
+// Returns null when Prometheus cannot say whether the node plugins are running.
+export async function fetchLvmStatus() {
+  const names = Object.keys(LVM_QUERIES);
+  const values = await Promise.all(names.map((name) => queryScalar(LVM_QUERIES[name])));
+  const status = Object.fromEntries(names.map((name, i) => [name, values[i]]));
+  if (status.pluginsReady == null || status.pluginsDesired == null) return null;
+  return status;
+}
+
 // Negotiated uplink speed of each k3s node in bits per second, keyed by
 // hostname: the bond if there is one, otherwise the fastest NIC that is up.
 export async function fetchUplinkSpeeds() {

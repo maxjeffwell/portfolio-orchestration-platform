@@ -4,13 +4,14 @@ import {
   fetchPortStatus,
   formatUptime,
 } from '../lib/mimirClient.js';
-import { fetchMayastorStatus, fetchUplinkSpeeds } from '../lib/storageClient.js';
+import { fetchMayastorStatus, fetchLvmStatus, fetchUplinkSpeeds } from '../lib/storageClient.js';
 import { fetchOffsiteBackupStatus } from '../lib/backupClient.js';
 import { fetchHeadscaleStatus, fetchWireguardHandshakes } from '../lib/overlayClient.js';
 import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
+  LVM_NODE,
   OFFSITE_NODE,
 } from '../config/networkNodes.js';
 
@@ -89,6 +90,55 @@ function serviceStatus(svc, def, health, up, mimirAnswered, headscale) {
 }
 
 const GIB = 1073741824;
+
+// Health of the local-volume layer follows its per-node plugins: without one,
+// volumes on that server cannot be attached. All ready is HEALTHY, some is
+// DEGRADED, none is OFFLINE; no answer from Prometheus is DEGRADED.
+function buildLvmNode(lvm) {
+  let health = 'DEGRADED';
+  if (lvm) {
+    if (lvm.pluginsReady <= 0) health = 'OFFLINE';
+    else if (lvm.pluginsReady >= lvm.pluginsDesired) health = 'HEALTHY';
+  }
+
+  const services = [];
+  if (lvm) {
+    if (lvm.volumes != null) {
+      services.push({ name: `${lvm.volumes} volumes`, status: health, port: null });
+    }
+    services.push({
+      name: `${lvm.pluginsReady}/${lvm.pluginsDesired} node plugins`,
+      status: health,
+      port: null,
+    });
+  }
+  services.push({ name: 'Not replicated', status: health, port: null });
+
+  const hasUsage = lvm?.usedBytes != null && lvm?.provisionedBytes != null;
+
+  return {
+    id: LVM_NODE.id,
+    hostname: LVM_NODE.displayName,
+    displayName: LVM_NODE.displayName,
+    type: LVM_NODE.type,
+    zone: LVM_NODE.zone,
+    wireguardIp: null,
+    health,
+    services,
+    // Used vs provisioned space across all LVM local volumes.
+    metrics: hasUsage
+      ? {
+          cpuPercent: null,
+          memoryPercent: null,
+          memoryUsedMb: null,
+          memoryTotalMb: null,
+          storageUsedGb: round(lvm.usedBytes / GIB, 1),
+          storageTotalGb: round(lvm.provisionedBytes / GIB, 1),
+          uptime: null,
+        }
+      : null,
+  };
+}
 
 // Health of the volume layer follows its io-engines: all ready is HEALTHY,
 // some ready is DEGRADED (volumes run on fewer replicas), none is OFFLINE.
@@ -227,9 +277,13 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
     };
   });
 
+  const lvm = buildLvmNode(overlay?.lvm ?? null);
+  healthById[lvm.id] = lvm.health;
+
   const mayastor = buildMayastorNode(storage);
   healthById[mayastor.id] = mayastor.health;
   nodes.push(mayastor);
+  nodes.push(lvm);
 
   const offsite = buildOffsiteNode(overlay?.offsite ?? null);
   healthById[offsite.id] = offsite.health;
@@ -283,7 +337,7 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up, storage, ports, headscale, wireguardHandshakes, offsite, uplinkSpeeds] =
+  const [metrics, up, storage, ports, headscale, wireguardHandshakes, offsite, uplinkSpeeds, lvm] =
     await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
@@ -293,12 +347,14 @@ async function fetchNetworkTopology() {
     fetchWireguardHandshakes().catch(() => ({})),
     fetchOffsiteBackupStatus().catch(() => null),
     fetchUplinkSpeeds().catch(() => ({})),
+    fetchLvmStatus().catch(() => null),
   ]);
   return buildTopology(metrics, up, storage, ports, {
     headscale,
     wireguardHandshakes,
     offsite,
     uplinkSpeeds,
+    lvm,
   });
 }
 
