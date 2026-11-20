@@ -43,7 +43,7 @@ export const MONITORING_NODES = [
   {
     id: 'devices',
     stage: 'SOURCE',
-    displayName: 'Network and storage gear',
+    displayName: 'Network & storage gear',
     location: 'Routers, NAS units, UPS, Garage, WireGuard',
     role: 'Things that are not Kubernetes: router and NAS metrics over SNMP and node_exporter, UPS state, Garage and WireGuard exporters, the DNS filter.',
   },
