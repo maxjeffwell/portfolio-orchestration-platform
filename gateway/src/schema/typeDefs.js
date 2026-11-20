@@ -24,6 +24,7 @@ export const typeDefs = /* GraphQL */ `
     networkTopology: NetworkTopology!
     databaseTopology: DatabaseTopology!
     dnsTopology: DnsTopology!
+    monitoringTopology: MonitoringTopology!
   }
 
   type Pod {
@@ -290,6 +291,36 @@ export const typeDefs = /* GraphQL */ `
     HEALTHY
     OFFLINE
     UNKNOWN
+  }
+
+  type MonitoringTopology {
+    stages: [MonitoringStage!]!
+    nodes: [MonitoringNode!]!
+    flows: [MonitoringFlow!]!
+    lastUpdated: String!
+  }
+
+  type MonitoringStage {
+    id: ID!
+    label: String!
+  }
+
+  type MonitoringNode {
+    id: ID!
+    stage: ID!
+    displayName: String!
+    location: String!
+    role: String!
+    health: HealthStatus
+    stat: String
+    inferred: Boolean!
+  }
+
+  type MonitoringFlow {
+    from: ID!
+    to: ID!
+    signal: String!
+    note: String!
   }
 
   type DnsTopology {
