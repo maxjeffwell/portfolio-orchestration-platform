@@ -187,6 +187,9 @@ export const MAYASTOR_NODE = {
 
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
+// Nodes running the Mayastor CSI node plugin: they mount volumes over NVMe-oF.
+// The servers also host the pools; the GPU workers are clients only.
+const MAYASTOR_CLIENTS = [...CONTROL_PLANE, 'gpu-1', 'gpu-2'];
 const NAS = ['asustor', 'synology'];
 const GARAGE_MEMBERS = NODE_DEFINITIONS.filter((n) => n.garageInstance).map((n) => n.id);
 
@@ -196,8 +199,8 @@ export const LINK_DEFINITIONS = [
   ...CONTROL_PLANE.map((cp) => ({ source: 'edge-vps', target: cp, type: 'WIREGUARD' })),
 
   // Mayastor pools sit on the three servers; volumes are replicated between
-  // them and served to pods over NVMe-oF.
-  ...CONTROL_PLANE.map((cp) => ({ source: cp, target: MAYASTOR_NODE.id, type: 'NVME_OF' })),
+  // them and served over NVMe-oF to every node that mounts one.
+  ...MAYASTOR_CLIENTS.map((id) => ({ source: id, target: MAYASTOR_NODE.id, type: 'NVME_OF' })),
 
   // Garage is a full mesh of seven members. Drawing all 21 pairs is
   // unreadable, so each member is drawn to the two NAS members only.
