@@ -6,6 +6,7 @@ import {
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
   HEADSCALE_NODE,
+  OFFSITE_NODE,
 } from '../config/networkNodes.js';
 
 const EMPTY_METRICS = {
@@ -36,6 +37,7 @@ const STORAGE_OK = {
 
 const OVERLAY_OK = {
   headscale: { primaryUp: true, publicUp: true, standbySynced: true },
+  offsite: { veleroAgeS: 5 * 86400, garageSyncAgeS: 5 * 86400, postgresAgeS: 900 },
   wireguardHandshakes: { '10.0.0.9': 40, '10.0.0.4': 60, '10.0.0.5': 90, '10.0.0.6': 120 },
 };
 
@@ -46,6 +48,7 @@ test('every link references a defined node', () => {
     ...NODE_DEFINITIONS.map((n) => n.id),
     MAYASTOR_NODE.id,
     HEADSCALE_NODE.id,
+    OFFSITE_NODE.id,
   ]);
   for (const link of LINK_DEFINITIONS) {
     assert.ok(ids.has(link.source), `unknown source ${link.source}`);
@@ -55,7 +58,7 @@ test('every link references a defined node', () => {
 
 test('all targets up: every node and link is healthy', () => {
   const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
-  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 2);
+  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 3);
   assert.ok(topology.nodes.every((n) => n.health === 'HEALTHY'));
   assert.ok(topology.links.every((l) => l.status === 'HEALTHY'));
 });
@@ -214,4 +217,20 @@ test('mesh addresses used for lookups are never published', () => {
   const out = JSON.stringify(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK));
   assert.ok(!/\b10\.0\.0\.\d+\b/.test(out));
   assert.ok(!out.includes('wgPeer'));
+});
+
+test('off-site backup is degraded when a job is overdue or unknown, and names the stale job', () => {
+  const node = (offsite) =>
+    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { offsite }), 'offsite-backup');
+  const status = (n, name) => n.services.find((s) => s.name === name).status;
+
+  assert.equal(node(OVERLAY_OK.offsite).health, 'HEALTHY');
+
+  const stale = node({ ...OVERLAY_OK.offsite, postgresAgeS: 5 * 3600 });
+  assert.equal(stale.health, 'DEGRADED');
+  assert.equal(status(stale, 'Postgres Hourly'), 'OFFLINE');
+  assert.equal(status(stale, 'Velero Weekly'), 'HEALTHY');
+
+  assert.equal(node(null).health, 'DEGRADED');
+  assert.equal(node({ ...OVERLAY_OK.offsite, veleroAgeS: null }).health, 'DEGRADED');
 });

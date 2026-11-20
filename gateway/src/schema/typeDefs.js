@@ -227,6 +227,7 @@ export const typeDefs = /* GraphQL */ `
     ROUTER
     REPLICATED_STORAGE
     OVERLAY_CONTROL
+    OFFSITE_BACKUP
   }
 
   enum ZoneType {
@@ -244,6 +245,7 @@ export const typeDefs = /* GraphQL */ `
     GARAGE_REPLICATION
     LOKI
     NFS
+    OFFSITE_BACKUP
   }
 
   enum HealthStatus {

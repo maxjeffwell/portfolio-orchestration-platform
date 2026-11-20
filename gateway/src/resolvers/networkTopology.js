@@ -5,12 +5,14 @@ import {
   formatUptime,
 } from '../lib/mimirClient.js';
 import { fetchMayastorStatus } from '../lib/storageClient.js';
+import { fetchOffsiteBackupStatus } from '../lib/backupClient.js';
 import { fetchHeadscaleStatus, fetchWireguardHandshakes } from '../lib/overlayClient.js';
 import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
   HEADSCALE_NODE,
+  OFFSITE_NODE,
 } from '../config/networkNodes.js';
 
 const TOPOLOGY_INTERVAL_MS = parseInt(
@@ -163,6 +165,40 @@ function buildHeadscaleNode(headscale) {
   };
 }
 
+const HOUR = 3600;
+const DAY = 86400;
+
+// One entry per job that writes to B2: a job is healthy while its last
+// success is within its schedule plus slack.
+const OFFSITE_JOBS = [
+  { key: 'veleroAgeS', name: 'Velero Weekly', maxAgeS: 8 * DAY },
+  { key: 'garageSyncAgeS', name: 'DB Dumps Weekly', maxAgeS: 8 * DAY },
+  { key: 'postgresAgeS', name: 'Postgres Hourly', maxAgeS: 3 * HOUR },
+];
+
+// B2 itself is not probed. The node is HEALTHY when every job is fresh and
+// DEGRADED when any is overdue or unknown: stale backups, not an outage.
+function buildOffsiteNode(offsite) {
+  const services = OFFSITE_JOBS.map((job) => {
+    const age = offsite?.[job.key];
+    let status = 'DEGRADED';
+    if (age != null) status = age <= job.maxAgeS ? 'HEALTHY' : 'OFFLINE';
+    return { name: job.name, status, port: null };
+  });
+
+  return {
+    id: OFFSITE_NODE.id,
+    hostname: OFFSITE_NODE.displayName,
+    displayName: OFFSITE_NODE.displayName,
+    type: OFFSITE_NODE.type,
+    zone: OFFSITE_NODE.zone,
+    wireguardIp: null,
+    health: services.every((svc) => svc.status === 'HEALTHY') ? 'HEALTHY' : 'DEGRADED',
+    services,
+    metrics: null,
+  };
+}
+
 // A WireGuard peer re-handshakes at least every ~2 minutes while traffic
 // flows; allow some slack before calling the tunnel down.
 const WG_HANDSHAKE_MAX_AGE_S = 300;
@@ -199,6 +235,10 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   const headscale = buildHeadscaleNode(overlay?.headscale ?? null);
   healthById[headscale.id] = headscale.health;
   nodes.push(headscale);
+
+  const offsite = buildOffsiteNode(overlay?.offsite ?? null);
+  healthById[offsite.id] = offsite.health;
+  nodes.push(offsite);
 
   const handshakes = overlay?.wireguardHandshakes ?? {};
   const haveHandshakes = Object.keys(handshakes).length > 0;
@@ -239,15 +279,21 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up, storage, ports, headscale, wireguardHandshakes] = await Promise.all([
+  const [metrics, up, storage, ports, headscale, wireguardHandshakes, offsite] =
+    await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
     fetchMayastorStatus().catch(() => null),
     fetchPortStatus().catch(() => ({})),
     fetchHeadscaleStatus().catch(() => null),
     fetchWireguardHandshakes().catch(() => ({})),
+    fetchOffsiteBackupStatus().catch(() => null),
   ]);
-  return buildTopology(metrics, up, storage, ports, { headscale, wireguardHandshakes });
+  return buildTopology(metrics, up, storage, ports, {
+    headscale,
+    wireguardHandshakes,
+    offsite,
+  });
 }
 
 export const networkTopologyResolvers = {

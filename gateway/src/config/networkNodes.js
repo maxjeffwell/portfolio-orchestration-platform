@@ -211,6 +211,15 @@ export const HEADSCALE_NODE = {
 // drawn. Both routers also advertise the home LAN to the tailnet.
 const TAILNET_MEMBERS = NODE_DEFINITIONS.map((n) => n.id);
 
+// Backblaze B2 holds the off-site copies. It is a service, not a machine; its
+// health is the freshness of the jobs that write to it (lib/backupClient.js).
+export const OFFSITE_NODE = {
+  id: 'offsite-backup',
+  displayName: 'Backblaze B2',
+  type: 'OFFSITE_BACKUP',
+  zone: 'CLOUD',
+};
+
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
 // Nodes running the Mayastor CSI node plugin: they mount volumes over NVMe-oF.
@@ -267,6 +276,10 @@ export const LINK_DEFINITIONS = [
     type: 'BACKHAUL',
     port: { instance: 'ax86u-pro', device: 'eth5' },
   },
+
+  // Off-site backups leave from the three servers: Velero and the Garage dump
+  // sync run in the cluster, and the Postgres mirror runs on the HA leader.
+  ...CONTROL_PLANE.map((cp) => ({ source: cp, target: OFFSITE_NODE.id, type: 'OFFSITE_BACKUP' })),
 
   // One remaining iSCSI volume lives on the Synology.
   { source: 'cp-1', target: 'synology', type: 'ISCSI' },
