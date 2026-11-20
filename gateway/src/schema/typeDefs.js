@@ -264,12 +264,15 @@ export const typeDefs = /* GraphQL */ `
     MONGODB
     REDIS
     QDRANT
+    INFLUXDB
+    KAFKA
   }
 
   enum DatabaseStorage {
     MAYASTOR
     LVM_LOCAL
     HOST_DISK
+    NONE
   }
 
   enum BackupTarget {
