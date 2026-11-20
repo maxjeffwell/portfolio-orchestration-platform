@@ -10,6 +10,7 @@ import { githubResolvers } from './githubRuns.js';
 import { contactFormResolvers } from './contactForm.js';
 import { networkTopologyResolvers } from './networkTopology.js';
 import { databaseTopologyResolvers } from './databaseTopology.js';
+import { dnsTopologyResolvers } from './dnsTopology.js';
 
 export const resolvers = {
   Query: {
@@ -24,6 +25,7 @@ export const resolvers = {
     ...githubResolvers.Query,
     ...networkTopologyResolvers.Query,
     ...databaseTopologyResolvers.Query,
+    ...dnsTopologyResolvers.Query,
   },
   Mutation: {
     ...contactFormResolvers.Mutation,

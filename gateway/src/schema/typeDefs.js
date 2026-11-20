@@ -23,6 +23,7 @@ export const typeDefs = /* GraphQL */ `
     recentGitHubRuns: [GitHubRun!]!
     networkTopology: NetworkTopology!
     databaseTopology: DatabaseTopology!
+    dnsTopology: DnsTopology!
   }
 
   type Pod {
@@ -281,6 +282,50 @@ export const typeDefs = /* GraphQL */ `
     HEALTHY
     OFFLINE
     UNKNOWN
+  }
+
+  type DnsTopology {
+    resolvers: [DnsResolver!]!
+    clients: [DnsClient!]!
+    nameKinds: [DnsNameKind!]!
+    paths: [DnsPath!]!
+    lastUpdated: String!
+  }
+
+  type DnsResolver {
+    id: ID!
+    displayName: String!
+    location: String!
+    role: String!
+    health: HealthStatus
+    stat: String
+  }
+
+  type DnsClient {
+    id: ID!
+    displayName: String!
+    detail: String
+  }
+
+  type DnsNameKind {
+    id: ID!
+    label: String!
+    example: String!
+  }
+
+  type DnsPath {
+    client: ID!
+    nameKind: ID!
+    resolves: Boolean!
+    summary: String!
+    hops: [DnsHop!]!
+  }
+
+  type DnsHop {
+    from: ID!
+    to: ID!
+    note: String!
+    fallback: Boolean!
   }
 
   type DatabaseTopology {
