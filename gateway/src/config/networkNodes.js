@@ -258,6 +258,17 @@ const TAILNET_MEMBERS = NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
   .map((n) => n.id)
   .filter((id) => id !== TAILNET_HOST);
 
+// OpenEBS LVM LocalPV: volumes carved from an LVM volume group on one server
+// and usable only on that server. Not replicated; the databases that use them
+// replicate at their own level. Like Mayastor it is a volume layer, not a
+// machine, with status from Prometheus (lib/storageClient.js).
+export const LVM_NODE = {
+  id: 'lvm-local',
+  displayName: 'LVM Local Volumes',
+  type: 'LOCAL_STORAGE',
+  zone: 'STORAGE',
+};
+
 // Backblaze B2 holds the off-site copies. It is a service, not a machine; its
 // health is the freshness of the jobs that write to it (lib/backupClient.js).
 export const OFFSITE_NODE = {
@@ -295,6 +306,10 @@ export const LINK_DEFINITIONS = [
   // Mayastor pools sit on the three servers; volumes are replicated between
   // them and served over NVMe-oF to every node that mounts one.
   ...MAYASTOR_CLIENTS.map((id) => ({ source: id, target: MAYASTOR_NODE.id, type: 'NVME_OF' })),
+
+  // LVM local volumes exist on the three servers only, each carved from that
+  // server's own disks.
+  ...CONTROL_PLANE.map((cp) => ({ source: cp, target: LVM_NODE.id, type: 'LOCAL_VOLUME' })),
 
   // Garage is a full mesh of seven members. Drawing all 21 pairs is
   // unreadable, so each member is drawn to the two NAS members only.
