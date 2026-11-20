@@ -5,7 +5,6 @@ import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
-  HEADSCALE_NODE,
   OFFSITE_NODE,
 } from '../config/networkNodes.js';
 
@@ -47,7 +46,6 @@ test('every link references a defined node', () => {
   const ids = new Set([
     ...NODE_DEFINITIONS.map((n) => n.id),
     MAYASTOR_NODE.id,
-    HEADSCALE_NODE.id,
     OFFSITE_NODE.id,
   ]);
   for (const link of LINK_DEFINITIONS) {
@@ -58,7 +56,7 @@ test('every link references a defined node', () => {
 
 test('all targets up: every node and link is healthy', () => {
   const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
-  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 3);
+  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 2);
   assert.ok(topology.nodes.every((n) => n.health === 'HEALTHY'));
   assert.ok(topology.links.every((l) => l.status === 'HEALTHY'));
 });
@@ -175,28 +173,41 @@ test('mesh backhaul follows its uplink port: speed when up, offline when carrier
   assert.equal(unknown.bandwidthBps, null);
 });
 
-test('the cluster overlay is the tailnet: every machine links to Headscale, none by WireGuard to the control plane', () => {
-  const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
+test('the tailnet is drawn as links from the cloud node to every machine at home, with no node of its own', () => {
+  const { nodes, links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
   const tailnet = links.filter((l) => l.type === 'TAILSCALE');
 
-  assert.ok(tailnet.every((l) => l.target === 'headscale'));
+  assert.ok(!nodes.some((n) => /headscale|tailnet/i.test(n.id)));
+  assert.ok(tailnet.every((l) => l.source === 'edge-vps'));
   assert.deepEqual(
-    tailnet.map((l) => l.source).sort(),
-    NODE_DEFINITIONS.map((n) => n.id).sort(),
+    tailnet.map((l) => l.target).sort(),
+    NODE_DEFINITIONS.map((n) => n.id).filter((id) => id !== 'edge-vps').sort(),
   );
   assert.ok(
     !links.some((l) => l.type === 'WIREGUARD' && ['cp-1', 'cp-2', 'cp-3'].includes(l.target)),
   );
 });
 
-test('Headscale health: primary down is offline, public endpoint down or unknown is degraded', () => {
-  const health = (headscale) =>
-    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { headscale }), 'headscale').health;
+test('Headscale is a service on its host: primary down is offline, public endpoint down or unknown is degraded', () => {
+  const service = (headscale, id, name) =>
+    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { headscale }), id).services.find(
+      (s) => s.name === name,
+    ).status;
+  const primary = (h) => service(h, 'gpu-1', 'Headscale');
 
-  assert.equal(health({ primaryUp: true, publicUp: true, standbySynced: true }), 'HEALTHY');
-  assert.equal(health({ primaryUp: true, publicUp: false, standbySynced: true }), 'DEGRADED');
-  assert.equal(health({ primaryUp: false, publicUp: false, standbySynced: true }), 'OFFLINE');
-  assert.equal(health(null), 'DEGRADED');
+  assert.equal(primary({ primaryUp: true, publicUp: true, standbySynced: true }), 'HEALTHY');
+  assert.equal(primary({ primaryUp: true, publicUp: false, standbySynced: true }), 'DEGRADED');
+  assert.equal(primary({ primaryUp: false, publicUp: false, standbySynced: true }), 'OFFLINE');
+  assert.equal(primary(null), 'DEGRADED');
+
+  const standby = (h) => service(h, 'cp-1', 'Headscale Standby');
+  assert.equal(standby({ primaryUp: true, publicUp: true, standbySynced: true }), 'HEALTHY');
+  assert.equal(standby({ primaryUp: true, publicUp: true, standbySynced: false }), 'OFFLINE');
+  // The host's own health is unaffected by the service.
+  assert.equal(
+    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { headscale: null }), 'gpu-1').health,
+    'HEALTHY',
+  );
 });
 
 test('a WireGuard link is offline when its peer handshake is stale or missing', () => {
