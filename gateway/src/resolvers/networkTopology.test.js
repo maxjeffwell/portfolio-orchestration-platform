@@ -173,17 +173,18 @@ test('mesh backhaul follows its uplink port: speed when up, offline when carrier
   assert.equal(unknown.bandwidthBps, null);
 });
 
-test('the tailnet is drawn as links from the cloud node to every machine at home, with no node of its own', () => {
+test('the tailnet is drawn as links from the Headscale host to every other member, with no node of its own', () => {
   const { nodes, links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
   const tailnet = links.filter((l) => l.type === 'TAILSCALE');
 
   assert.ok(!nodes.some((n) => /headscale|tailnet/i.test(n.id)));
-  assert.ok(tailnet.every((l) => l.source === 'edge-vps'));
+  assert.ok(byId({ nodes }, 'gpu-1').services.some((s) => s.name === 'Headscale'));
+  assert.ok(tailnet.every((l) => l.source === 'gpu-1'));
   assert.deepEqual(
     tailnet.map((l) => l.target).sort(),
     NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
       .map((n) => n.id)
-      .filter((id) => id !== 'edge-vps')
+      .filter((id) => id !== 'gpu-1')
       .sort(),
   );
   assert.ok(
