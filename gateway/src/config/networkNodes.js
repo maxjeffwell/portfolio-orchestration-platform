@@ -249,13 +249,14 @@ export const MAYASTOR_NODE = {
 // network runs on. Client devices on the tailnet are not infrastructure and
 // are not drawn. Both routers also advertise the home LAN to the tailnet.
 //
-// The tailnet is a full mesh, which is unreadable as lines. Machines on the
-// home LAN reach each other directly, so the tunnels that carry traffic are
-// the ones between the cloud node and everything at home: those are drawn.
-const TAILNET_REMOTE = 'edge-vps';
-const TAILNET_HOME = NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
+// The tailnet is a full mesh, which is unreadable as lines. It is drawn from
+// the machine that hosts Headscale, its coordination server, to every other
+// member: the lines mean "registered with this tailnet", not "traffic flows
+// through this machine" (members talk to each other directly).
+const TAILNET_HOST = 'gpu-1';
+const TAILNET_MEMBERS = NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
   .map((n) => n.id)
-  .filter((id) => id !== TAILNET_REMOTE);
+  .filter((id) => id !== TAILNET_HOST);
 
 // Backblaze B2 holds the off-site copies. It is a service, not a machine; its
 // health is the freshness of the jobs that write to it (lib/backupClient.js).
@@ -279,7 +280,7 @@ export const LINK_DEFINITIONS = [
   // Tailscale is the cluster overlay: every k3s node uses its tailnet address
   // as its node address, so pod and API traffic between the cloud node and
   // home rides the tailnet.
-  ...TAILNET_HOME.map((id) => ({ source: TAILNET_REMOTE, target: id, type: 'TAILSCALE' })),
+  ...TAILNET_MEMBERS.map((id) => ({ source: TAILNET_HOST, target: id, type: 'TAILSCALE' })),
 
   // WireGuard is the older, separate mesh. It still carries what must not
   // depend on the tailnet: the public front door to Headscale itself (edge
