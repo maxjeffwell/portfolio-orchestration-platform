@@ -226,6 +226,7 @@ export const typeDefs = /* GraphQL */ `
     NAS
     ROUTER
     REPLICATED_STORAGE
+    OVERLAY_CONTROL
   }
 
   enum ZoneType {
@@ -235,6 +236,7 @@ export const typeDefs = /* GraphQL */ `
   }
 
   enum LinkType {
+    TAILSCALE
     WIREGUARD
     BACKHAUL
     NVME_OF

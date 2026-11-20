@@ -5,10 +5,12 @@ import {
   formatUptime,
 } from '../lib/mimirClient.js';
 import { fetchMayastorStatus } from '../lib/storageClient.js';
+import { fetchHeadscaleStatus, fetchWireguardHandshakes } from '../lib/overlayClient.js';
 import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
+  HEADSCALE_NODE,
 } from '../config/networkNodes.js';
 
 const TOPOLOGY_INTERVAL_MS = parseInt(
@@ -128,7 +130,44 @@ function buildMayastorNode(storage) {
   };
 }
 
-export function buildTopology(metrics, up, storage = null, ports = {}) {
+// The tailnet keeps working without its coordination server (sessions and
+// keys persist), so a stopped primary is OFFLINE for the control service but
+// an unreachable public endpoint alone is only DEGRADED. No answer from
+// Prometheus is unknown, shown as DEGRADED.
+function buildHeadscaleNode(headscale) {
+  let health = 'DEGRADED';
+  if (headscale) {
+    if (headscale.primaryUp === false) health = 'OFFLINE';
+    else if (headscale.primaryUp === true && headscale.publicUp !== false) health = 'HEALTHY';
+  }
+
+  const flag = (value) => {
+    if (value === true) return 'HEALTHY';
+    return value === false ? 'OFFLINE' : 'DEGRADED';
+  };
+
+  return {
+    id: HEADSCALE_NODE.id,
+    hostname: HEADSCALE_NODE.displayName,
+    displayName: HEADSCALE_NODE.displayName,
+    type: HEADSCALE_NODE.type,
+    zone: HEADSCALE_NODE.zone,
+    wireguardIp: null,
+    health,
+    services: [
+      { name: 'Coordination Server', status: flag(headscale?.primaryUp), port: null },
+      { name: 'Public Endpoint', status: flag(headscale?.publicUp), port: 443 },
+      { name: 'Cold Standby Sync', status: flag(headscale?.standbySynced), port: null },
+    ],
+    metrics: null,
+  };
+}
+
+// A WireGuard peer re-handshakes at least every ~2 minutes while traffic
+// flows; allow some slack before calling the tunnel down.
+const WG_HANDSHAKE_MAX_AGE_S = 300;
+
+export function buildTopology(metrics, up, storage = null, ports = {}, overlay = {}) {
   const mimirAnswered = Object.keys(up ?? {}).length > 0;
   const healthById = {};
 
@@ -157,13 +196,24 @@ export function buildTopology(metrics, up, storage = null, ports = {}) {
   healthById[mayastor.id] = mayastor.health;
   nodes.push(mayastor);
 
+  const headscale = buildHeadscaleNode(overlay?.headscale ?? null);
+  healthById[headscale.id] = headscale.health;
+  nodes.push(headscale);
+
+  const handshakes = overlay?.wireguardHandshakes ?? {};
+  const haveHandshakes = Object.keys(handshakes).length > 0;
+
   // A link is only as healthy as its less healthy end. A link that names the
   // port carrying it is also down when that port has lost carrier, and reports
-  // the port's negotiated speed.
+  // the port's negotiated speed. A WireGuard link is also down when its peer
+  // has not completed a handshake recently.
   const links = LINK_DEFINITIONS.map((link) => {
     const port = link.port ? ports?.[`${link.port.instance}|${link.port.device}`] : null;
     const ends = worst(healthById[link.source], healthById[link.target]);
-    const linkUp = !port || port.carrier;
+    const age = link.wgPeer ? handshakes[link.wgPeer] : null;
+    const tunnelDown =
+      link.wgPeer && haveHandshakes && (age == null || age > WG_HANDSHAKE_MAX_AGE_S);
+    const linkUp = (!port || port.carrier) && !tunnelDown;
 
     return {
       source: link.source,
@@ -172,7 +222,16 @@ export function buildTopology(metrics, up, storage = null, ports = {}) {
       status: linkUp ? ends : 'OFFLINE',
       bandwidthBps: port?.carrier ? port.speedBps : null,
       latencyMs: null,
-      metadata: null,
+      metadata:
+        age != null
+          ? {
+              lastHandshake: new Date(Date.now() - age * 1000).toISOString(),
+              transferRxBytes: null,
+              transferTxBytes: null,
+              targetIqn: null,
+              partitionsShared: null,
+            }
+          : null,
     };
   });
 
@@ -180,13 +239,15 @@ export function buildTopology(metrics, up, storage = null, ports = {}) {
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up, storage, ports] = await Promise.all([
+  const [metrics, up, storage, ports, headscale, wireguardHandshakes] = await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
     fetchMayastorStatus().catch(() => null),
     fetchPortStatus().catch(() => ({})),
+    fetchHeadscaleStatus().catch(() => null),
+    fetchWireguardHandshakes().catch(() => ({})),
   ]);
-  return buildTopology(metrics, up, storage, ports);
+  return buildTopology(metrics, up, storage, ports, { headscale, wireguardHandshakes });
 }
 
 export const networkTopologyResolvers = {

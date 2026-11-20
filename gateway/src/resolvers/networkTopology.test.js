@@ -5,6 +5,7 @@ import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
+  HEADSCALE_NODE,
 } from '../config/networkNodes.js';
 
 const EMPTY_METRICS = {
@@ -33,10 +34,19 @@ const STORAGE_OK = {
   enginesDesired: 3,
 };
 
+const OVERLAY_OK = {
+  headscale: { primaryUp: true, publicUp: true, standbySynced: true },
+  wireguardHandshakes: { '10.0.0.9': 40, '10.0.0.4': 60, '10.0.0.5': 90, '10.0.0.6': 120 },
+};
+
 const byId = (topology, id) => topology.nodes.find((n) => n.id === id);
 
 test('every link references a defined node', () => {
-  const ids = new Set([...NODE_DEFINITIONS.map((n) => n.id), MAYASTOR_NODE.id]);
+  const ids = new Set([
+    ...NODE_DEFINITIONS.map((n) => n.id),
+    MAYASTOR_NODE.id,
+    HEADSCALE_NODE.id,
+  ]);
   for (const link of LINK_DEFINITIONS) {
     assert.ok(ids.has(link.source), `unknown source ${link.source}`);
     assert.ok(ids.has(link.target), `unknown target ${link.target}`);
@@ -44,8 +54,8 @@ test('every link references a defined node', () => {
 });
 
 test('all targets up: every node and link is healthy', () => {
-  const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK);
-  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 1);
+  const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
+  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 2);
   assert.ok(topology.nodes.every((n) => n.health === 'HEALTHY'));
   assert.ok(topology.links.every((l) => l.status === 'HEALTHY'));
 });
@@ -160,4 +170,46 @@ test('mesh backhaul follows its uplink port: speed when up, offline when carrier
   const unknown = backhaul({});
   assert.equal(unknown.status, 'HEALTHY');
   assert.equal(unknown.bandwidthBps, null);
+});
+
+test('the cluster overlay is the tailnet: every k3s node links to Headscale, none by WireGuard to the control plane', () => {
+  const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
+  const tailnet = links.filter((l) => l.type === 'TAILSCALE');
+  const k8s = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
+
+  assert.ok(tailnet.every((l) => l.target === 'headscale'));
+  for (const id of k8s) assert.ok(tailnet.some((l) => l.source === id), `${id} not on tailnet`);
+  assert.ok(
+    !links.some((l) => l.type === 'WIREGUARD' && ['cp-1', 'cp-2', 'cp-3'].includes(l.target)),
+  );
+});
+
+test('Headscale health: primary down is offline, public endpoint down or unknown is degraded', () => {
+  const health = (headscale) =>
+    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { headscale }), 'headscale').health;
+
+  assert.equal(health({ primaryUp: true, publicUp: true, standbySynced: true }), 'HEALTHY');
+  assert.equal(health({ primaryUp: true, publicUp: false, standbySynced: true }), 'DEGRADED');
+  assert.equal(health({ primaryUp: false, publicUp: false, standbySynced: true }), 'OFFLINE');
+  assert.equal(health(null), 'DEGRADED');
+});
+
+test('a WireGuard link is offline when its peer handshake is stale or missing', () => {
+  const wg = (wireguardHandshakes) =>
+    buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { wireguardHandshakes }).links.find(
+      (l) => l.type === 'WIREGUARD' && l.target === 'gpu-1',
+    );
+
+  assert.equal(wg(OVERLAY_OK.wireguardHandshakes).status, 'HEALTHY');
+  assert.ok(wg(OVERLAY_OK.wireguardHandshakes).metadata.lastHandshake);
+  assert.equal(wg({ '10.0.0.9': 900 }).status, 'OFFLINE');
+  assert.equal(wg({ '10.0.0.4': 30 }).status, 'OFFLINE');
+  // No handshake data at all: fall back to the health of the two ends.
+  assert.equal(wg({}).status, 'HEALTHY');
+});
+
+test('mesh addresses used for lookups are never published', () => {
+  const out = JSON.stringify(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK));
+  assert.ok(!/\b10\.0\.0\.\d+\b/.test(out));
+  assert.ok(!out.includes('wgPeer'));
 });

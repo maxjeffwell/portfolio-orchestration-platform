@@ -192,6 +192,18 @@ export const MAYASTOR_NODE = {
   zone: 'STORAGE',
 };
 
+// Headscale is the coordination server of the tailnet that the cluster's node
+// network runs on. It is a service, not a machine (it runs natively on GPU
+// Worker 1 with a cold standby on Control Plane 1), drawn as one node so the
+// tailnet reads as "members of one overlay" instead of a 28-line full mesh.
+// Health comes from Prometheus (see lib/overlayClient.js).
+export const HEADSCALE_NODE = {
+  id: 'headscale',
+  displayName: 'Headscale Tailnet',
+  type: 'OVERLAY_CONTROL',
+  zone: 'HOME_NETWORK',
+};
+
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
 // Nodes running the Mayastor CSI node plugin: they mount volumes over NVMe-oF.
@@ -202,8 +214,24 @@ const GARAGE_MEMBERS = NODE_DEFINITIONS.filter((n) => n.garageInstance).map((n) 
 
 
 export const LINK_DEFINITIONS = [
-  // Encrypted overlay: the cloud node joins the home control plane over it.
-  ...CONTROL_PLANE.map((cp) => ({ source: 'edge-vps', target: cp, type: 'WIREGUARD' })),
+  // Tailscale is the cluster overlay: every k3s node uses its tailnet address
+  // as its node address, so pod and API traffic between the cloud node and
+  // home rides the tailnet. Members are drawn to the coordination server.
+  ...[...K8S_NODES, 'asustor'].map((id) => ({
+    source: id,
+    target: HEADSCALE_NODE.id,
+    type: 'TAILSCALE',
+  })),
+
+  // WireGuard is the older, separate mesh. It still carries what must not
+  // depend on the tailnet: the public front door to Headscale itself (edge
+  // Traefik -> GPU Worker 1) and the edge node's reach to hosts outside k3s.
+  // `wgPeer` is the peer's address on that mesh; its last handshake in Mimir
+  // decides whether the tunnel is up.
+  { source: 'edge-vps', target: 'gpu-1', type: 'WIREGUARD', wgPeer: '10.0.0.9' },
+  { source: 'edge-vps', target: 'asustor', type: 'WIREGUARD', wgPeer: '10.0.0.4' },
+  { source: 'edge-vps', target: 'synology', type: 'WIREGUARD', wgPeer: '10.0.0.5' },
+  { source: 'edge-vps', target: 'mesh-node', type: 'WIREGUARD', wgPeer: '10.0.0.6' },
 
   // Mayastor pools sit on the three servers; volumes are replicated between
   // them and served over NVMe-oF to every node that mounts one.
