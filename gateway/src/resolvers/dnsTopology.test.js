@@ -47,6 +47,10 @@ test('internet names from a pod skip CoreDNS; cluster names never leave the clus
   assert.ok(!targets('pod|internet').includes('coredns'));
   assert.deepEqual(targets('pod|cluster'), ['node-local', 'coredns', 'kube-api']);
   assert.equal(DNS_PATHS['lan|cluster'].resolves, false);
+  // Every internet lookup made at home ends at the primary router's Unbound.
+  for (const client of ['pod', 'pod-cp1', 'lan', 'blocky-client', 'tailscale-host']) {
+    assert.ok(targets(`${client}|internet`).includes('router-unbound'), client);
+  }
 });
 
 test('live figures: replica counts, query rate and cache share', () => {
@@ -62,7 +66,7 @@ test('health: fewer replicas is degraded, none or a down target is offline, no d
   assert.equal(resolver({ ...OK, blockyUp: 0 }, 'blocky').health, 'OFFLINE');
   assert.equal(resolver({ ...OK, meshNodeUp: 0 }, 'mesh-unbound').health, 'OFFLINE');
   assert.equal(resolver({}, 'coredns').health, 'DEGRADED');
-  assert.equal(resolver(OK, 'cloudflare').health, null);
+  assert.equal(resolver(OK, 'tailscale').health, null);
 });
 
 test('no addresses are published', () => {

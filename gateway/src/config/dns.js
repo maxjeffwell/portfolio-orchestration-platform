@@ -2,7 +2,8 @@
 //
 // Hand-maintained from the live configuration (CoreDNS and node-local-dns
 // Corefiles, each node's resolv.conf, the routers' dnsmasq and Unbound
-// settings, Blocky's config, Headscale's DNS section), read on 2026-11-20.
+// settings, Blocky's config, Headscale's DNS section), read on 2026-11-20,
+// and from a test of where queries sent through Tailscale's forwarder exit.
 // Nothing here is discovered at runtime except the health figures; update it
 // when a resolver's settings change. No addresses are listed.
 
@@ -59,13 +60,7 @@ export const DNS_RESOLVERS = [
     id: 'tailscale',
     displayName: 'Tailscale resolver',
     location: 'On each device that lets Tailscale manage its DNS',
-    role: 'Splits by name, as set in Headscale: home.arpa goes to the two routers, everything else to Cloudflare.',
-  },
-  {
-    id: 'cloudflare',
-    displayName: 'Cloudflare',
-    location: 'Internet',
-    role: 'A public resolver.',
+    role: 'A small forwarder that Tailscale puts in front of the system resolver on hosts without systemd-resolved. It answers tailnet names itself and passes everything else on; those queries end up at the primary router like any other.',
   },
   {
     id: 'provider',
@@ -87,7 +82,7 @@ export const DNS_CLIENTS = [
     displayName: 'A pod on most home nodes',
     detail: 'Control Plane 2 and 3, both GPU workers, GPU Workstation',
   },
-  { id: 'pod-cp1', displayName: 'A pod on Control Plane 1', detail: 'That node resolves through Tailscale' },
+  { id: 'pod-cp1', displayName: 'A pod on Control Plane 1', detail: "That node asks through Tailscale's forwarder" },
   { id: 'pod-vps', displayName: 'A pod on the Edge VPS', detail: 'The one node outside the home' },
   { id: 'lan', displayName: 'A device on the home LAN', detail: 'Using the DNS the router hands out' },
   { id: 'blocky-client', displayName: 'A device pointed at Blocky', detail: 'Opt-in ad blocking' },
@@ -154,12 +149,12 @@ export const DNS_PATHS = {
     hops: POD_HOME,
   },
   'pod-cp1|internet': {
-    summary: "Leaves through Tailscale to Cloudflare, bypassing the home routers, because this node's resolver is Tailscale's.",
+    summary: "One extra hop through Tailscale's forwarder, then the same route as every other home node.",
     hops: [
       POD_ASKS,
-      hop('node-local', 'tailscale', "Names that are not special go to the node's own resolver, which on this node is Tailscale's."),
-      hop('tailscale', 'cloudflare', 'Headscale sets Cloudflare as the resolver for everything except home.arpa.'),
-      hop('cloudflare', 'authoritative', 'Cloudflare resolves it.'),
+      hop('node-local', 'tailscale', "Names that are not special go to the node's own resolver, which on this node is Tailscale's forwarder."),
+      hop('tailscale', 'router-dnsmasq', 'The forwarder passes it on, and it arrives at the primary router. Measured, not assumed: the answer leaves the network by the same exit as a query sent to the router directly.'),
+      ...RECURSE('router-dnsmasq'),
     ],
   },
 
@@ -232,11 +227,11 @@ export const DNS_PATHS = {
     ],
   },
   'tailscale-host|internet': {
-    summary: 'Tailscale sends it to Cloudflare, bypassing the home routers.',
+    summary: "Through Tailscale's forwarder, then resolved by the primary router like any LAN device's query.",
     hops: [
-      hop('client', 'tailscale', "The host's resolver is Tailscale's local one."),
-      hop('tailscale', 'cloudflare', 'Headscale sets Cloudflare as the resolver for everything except home.arpa.'),
-      hop('cloudflare', 'authoritative', 'Cloudflare resolves it.'),
+      hop('client', 'tailscale', "The host's resolver is Tailscale's local forwarder."),
+      hop('tailscale', 'router-dnsmasq', 'The forwarder passes it on, and it arrives at the primary router.'),
+      ...RECURSE('router-dnsmasq'),
     ],
   },
 };
