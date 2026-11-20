@@ -126,14 +126,18 @@ test('Mayastor is degraded with an io-engine down, offline with none, degraded w
   assert.equal(health(null), 'DEGRADED');
 });
 
-test('Mayastor links are only as healthy as the server hosting the pool', () => {
+test('Mayastor links cover every node that mounts volumes and follow node health', () => {
   const up = allUp();
   up['integrations/unix|m720q'] = false;
   const links = buildTopology(EMPTY_METRICS, up, STORAGE_OK).links.filter(
     (l) => l.target === 'mayastor',
   );
 
-  assert.equal(links.length, 3);
+  assert.deepEqual(
+    links.map((l) => l.source).sort(),
+    ['cp-1', 'cp-2', 'cp-3', 'gpu-1', 'gpu-2'],
+  );
   assert.equal(links.find((l) => l.source === 'cp-3').status, 'OFFLINE');
+  assert.equal(links.find((l) => l.source === 'gpu-1').status, 'HEALTHY');
   assert.equal(links.find((l) => l.source === 'cp-1').status, 'HEALTHY');
 });
