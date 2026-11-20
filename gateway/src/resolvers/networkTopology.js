@@ -11,7 +11,6 @@ import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
   MAYASTOR_NODE,
-  HEADSCALE_NODE,
   OFFSITE_NODE,
 } from '../config/networkNodes.js';
 
@@ -73,8 +72,9 @@ function nodeHealth(def, up, mimirAnswered) {
   return 'HEALTHY';
 }
 
-function serviceStatus(svc, def, health, up, mimirAnswered) {
+function serviceStatus(svc, def, health, up, mimirAnswered, headscale) {
   if (health === 'OFFLINE') return 'OFFLINE';
+  if (svc.signal) return signalStatus(svc.signal, headscale);
   if (svc.name === GARAGE_SERVICE && def.garageInstance && mimirAnswered) {
     return up[`garage|${def.garageInstance}`] === true ? 'HEALTHY' : 'OFFLINE';
   }
@@ -132,37 +132,21 @@ function buildMayastorNode(storage) {
   };
 }
 
-// The tailnet keeps working without its coordination server (sessions and
-// keys persist), so a stopped primary is OFFLINE for the control service but
-// an unreachable public endpoint alone is only DEGRADED. No answer from
-// Prometheus is unknown, shown as DEGRADED.
-function buildHeadscaleNode(headscale) {
-  let health = 'DEGRADED';
-  if (headscale) {
-    if (headscale.primaryUp === false) health = 'OFFLINE';
-    else if (headscale.primaryUp === true && headscale.publicUp !== false) health = 'HEALTHY';
+// Live state of services that name a `signal`. The tailnet keeps working
+// without its coordination server (sessions and keys persist), so an
+// unreachable public endpoint alone is DEGRADED and only a stopped primary is
+// OFFLINE. No answer from Prometheus is unknown, shown as DEGRADED.
+function signalStatus(signal, headscale) {
+  if (signal === 'headscale') {
+    if (!headscale || headscale.primaryUp == null) return 'DEGRADED';
+    if (headscale.primaryUp === false) return 'OFFLINE';
+    return headscale.publicUp === false ? 'DEGRADED' : 'HEALTHY';
   }
-
-  const flag = (value) => {
-    if (value === true) return 'HEALTHY';
-    return value === false ? 'OFFLINE' : 'DEGRADED';
-  };
-
-  return {
-    id: HEADSCALE_NODE.id,
-    hostname: HEADSCALE_NODE.displayName,
-    displayName: HEADSCALE_NODE.displayName,
-    type: HEADSCALE_NODE.type,
-    zone: HEADSCALE_NODE.zone,
-    wireguardIp: null,
-    health,
-    services: [
-      { name: 'Coordination Server', status: flag(headscale?.primaryUp), port: null },
-      { name: 'Public Endpoint', status: flag(headscale?.publicUp), port: 443 },
-      { name: 'Cold Standby Sync', status: flag(headscale?.standbySynced), port: null },
-    ],
-    metrics: null,
-  };
+  if (signal === 'headscaleStandby') {
+    if (headscale?.standbySynced == null) return 'DEGRADED';
+    return headscale.standbySynced ? 'HEALTHY' : 'OFFLINE';
+  }
+  return null;
 }
 
 const HOUR = 3600;
@@ -221,7 +205,7 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
       health,
       services: def.services.map((svc) => ({
         name: svc.name,
-        status: serviceStatus(svc, def, health, up ?? {}, mimirAnswered),
+        status: serviceStatus(svc, def, health, up ?? {}, mimirAnswered, overlay?.headscale),
         port: svc.port,
       })),
       metrics: buildNodeMetrics(metrics, def.metricsInstance),
@@ -231,10 +215,6 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   const mayastor = buildMayastorNode(storage);
   healthById[mayastor.id] = mayastor.health;
   nodes.push(mayastor);
-
-  const headscale = buildHeadscaleNode(overlay?.headscale ?? null);
-  healthById[headscale.id] = headscale.health;
-  nodes.push(headscale);
 
   const offsite = buildOffsiteNode(overlay?.offsite ?? null);
   healthById[offsite.id] = offsite.health;

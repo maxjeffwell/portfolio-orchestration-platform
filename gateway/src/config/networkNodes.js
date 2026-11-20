@@ -12,6 +12,10 @@
 //                    whether the node is reachable
 //   garageInstance   `instance` label under job="garage" for Garage members
 //
+// A service may name a `signal` whose live state replaces the default
+// "healthy while the machine is up": `headscale` (the tailnet coordination
+// server) or `headscaleStandby` (its cold standby's sync).
+//
 // A link may name a `port` ({ instance, device }): the network interface that
 // carries it. Its carrier and negotiated speed then drive the link's status
 // and bandwidth instead of the link being inferred from its two ends alone.
@@ -47,6 +51,7 @@ export const NODE_DEFINITIONS = [
       { name: 'Mimir', port: 8080 },
       { name: 'Mayastor', port: null },
       { name: 'Garage S3', port: 3900 },
+      { name: 'Headscale Standby', port: null, signal: 'headscaleStandby' },
     ],
   },
   {
@@ -92,6 +97,7 @@ export const NODE_DEFINITIONS = [
     garageInstance: 'debian-marmoset',
     services: [
       { name: 'K3s Agent', port: null },
+      { name: 'Headscale', port: null, signal: 'headscale' },
       { name: 'Intel Xe GPU', port: null },
       { name: 'Garage S3', port: 3900 },
     ],
@@ -194,22 +200,16 @@ export const MAYASTOR_NODE = {
   zone: 'STORAGE',
 };
 
-// Headscale is the coordination server of the tailnet that the cluster's node
-// network runs on. It is a service, not a machine (it runs natively on GPU
-// Worker 1 with a cold standby on Control Plane 1), drawn as one node so the
-// tailnet reads as "members of one overlay" instead of a 28-line full mesh.
-// Health comes from Prometheus (see lib/overlayClient.js).
-export const HEADSCALE_NODE = {
-  id: 'headscale',
-  displayName: 'Headscale Tailnet',
-  type: 'OVERLAY_CONTROL',
-  zone: 'HOME_NETWORK',
-};
-
 // Every machine on the map is registered with Headscale (checked against its
-// node list). Client devices on the tailnet are not infrastructure and are not
-// drawn. Both routers also advertise the home LAN to the tailnet.
-const TAILNET_MEMBERS = NODE_DEFINITIONS.map((n) => n.id);
+// node list), the coordination server of the tailnet the cluster's node
+// network runs on. Client devices on the tailnet are not infrastructure and
+// are not drawn. Both routers also advertise the home LAN to the tailnet.
+//
+// The tailnet is a full mesh, which is unreadable as lines. Machines on the
+// home LAN reach each other directly, so the tunnels that carry traffic are
+// the ones between the cloud node and everything at home: those are drawn.
+const TAILNET_REMOTE = 'edge-vps';
+const TAILNET_HOME = NODE_DEFINITIONS.map((n) => n.id).filter((id) => id !== TAILNET_REMOTE);
 
 // Backblaze B2 holds the off-site copies. It is a service, not a machine; its
 // health is the freshness of the jobs that write to it (lib/backupClient.js).
@@ -232,12 +232,8 @@ const GARAGE_MEMBERS = NODE_DEFINITIONS.filter((n) => n.garageInstance).map((n) 
 export const LINK_DEFINITIONS = [
   // Tailscale is the cluster overlay: every k3s node uses its tailnet address
   // as its node address, so pod and API traffic between the cloud node and
-  // home rides the tailnet. Members are drawn to the coordination server.
-  ...TAILNET_MEMBERS.map((id) => ({
-    source: id,
-    target: HEADSCALE_NODE.id,
-    type: 'TAILSCALE',
-  })),
+  // home rides the tailnet.
+  ...TAILNET_HOME.map((id) => ({ source: TAILNET_REMOTE, target: id, type: 'TAILSCALE' })),
 
   // WireGuard is the older, separate mesh. It still carries what must not
   // depend on the tailnet: the public front door to Headscale itself (edge
