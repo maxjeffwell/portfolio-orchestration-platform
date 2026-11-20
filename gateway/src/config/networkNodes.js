@@ -135,6 +135,7 @@ export const NODE_DEFINITIONS = [
     services: [
       { name: 'Gateway', port: null },
       { name: 'DHCP / DNS', port: null },
+      { name: 'Tailnet Subnet Router', port: null },
     ],
   },
   {
@@ -148,6 +149,7 @@ export const NODE_DEFINITIONS = [
     services: [
       { name: 'Wi-Fi Access Point', port: null },
       { name: 'Wired Backhaul', port: null },
+      { name: 'Tailnet Subnet Router', port: null },
     ],
   },
   {
@@ -204,6 +206,11 @@ export const HEADSCALE_NODE = {
   zone: 'HOME_NETWORK',
 };
 
+// Every machine on the map is registered with Headscale (checked against its
+// node list). Client devices on the tailnet are not infrastructure and are not
+// drawn. Both routers also advertise the home LAN to the tailnet.
+const TAILNET_MEMBERS = NODE_DEFINITIONS.map((n) => n.id);
+
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
 // Nodes running the Mayastor CSI node plugin: they mount volumes over NVMe-oF.
@@ -217,7 +224,7 @@ export const LINK_DEFINITIONS = [
   // Tailscale is the cluster overlay: every k3s node uses its tailnet address
   // as its node address, so pod and API traffic between the cloud node and
   // home rides the tailnet. Members are drawn to the coordination server.
-  ...[...K8S_NODES, 'asustor'].map((id) => ({
+  ...TAILNET_MEMBERS.map((id) => ({
     source: id,
     target: HEADSCALE_NODE.id,
     type: 'TAILSCALE',

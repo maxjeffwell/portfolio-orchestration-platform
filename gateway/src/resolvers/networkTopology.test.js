@@ -172,13 +172,15 @@ test('mesh backhaul follows its uplink port: speed when up, offline when carrier
   assert.equal(unknown.bandwidthBps, null);
 });
 
-test('the cluster overlay is the tailnet: every k3s node links to Headscale, none by WireGuard to the control plane', () => {
+test('the cluster overlay is the tailnet: every machine links to Headscale, none by WireGuard to the control plane', () => {
   const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
   const tailnet = links.filter((l) => l.type === 'TAILSCALE');
-  const k8s = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 
   assert.ok(tailnet.every((l) => l.target === 'headscale'));
-  for (const id of k8s) assert.ok(tailnet.some((l) => l.source === id), `${id} not on tailnet`);
+  assert.deepEqual(
+    tailnet.map((l) => l.source).sort(),
+    NODE_DEFINITIONS.map((n) => n.id).sort(),
+  );
   assert.ok(
     !links.some((l) => l.type === 'WIREGUARD' && ['cp-1', 'cp-2', 'cp-3'].includes(l.target)),
   );
