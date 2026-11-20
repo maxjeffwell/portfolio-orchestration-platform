@@ -25,6 +25,7 @@ export const typeDefs = /* GraphQL */ `
     databaseTopology: DatabaseTopology!
     dnsTopology: DnsTopology!
     monitoringTopology: MonitoringTopology!
+    llmTopology: LlmTopology!
   }
 
   type Pod {
@@ -317,6 +318,35 @@ export const typeDefs = /* GraphQL */ `
   }
 
   type MonitoringFlow {
+    from: ID!
+    to: ID!
+    signal: String!
+    note: String!
+  }
+
+  type LlmTopology {
+    stages: [LlmStage!]!
+    nodes: [LlmNode!]!
+    flows: [LlmFlow!]!
+    lastUpdated: String!
+  }
+
+  type LlmStage {
+    id: ID!
+    label: String!
+  }
+
+  type LlmNode {
+    id: ID!
+    stage: ID!
+    displayName: String!
+    location: String!
+    role: String!
+    health: HealthStatus
+    stat: String
+  }
+
+  type LlmFlow {
     from: ID!
     to: ID!
     signal: String!
