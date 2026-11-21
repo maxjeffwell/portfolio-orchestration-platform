@@ -19,6 +19,14 @@
 // A link may name a `port` ({ instance, device }): the network interface that
 // carries it. Its carrier and negotiated speed then drive the link's status
 // and bandwidth instead of the link being inferred from its two ends alone.
+// `instance` is a router's scrape instance, or a machine's hostname.
+//
+// The house has a SECOND NETWORK with its own router, deliberately separate
+// from the homelab: no cluster traffic uses it. Five
+// machines have one extra interface on it, as a management and backup path.
+// Its devices and links are published like the rest (by role, never by make
+// or address); links carry the type SECOND_NETWORK so the page can show the
+// whole layer or hide it. A node with `tailnet: false` is not a tailnet member.
 
 const UNIX = 'integrations/unix';
 
@@ -202,6 +210,76 @@ export const NODE_DEFINITIONS = [
     inferFrom: ['cp-3', 'gpu-workstation'],
     services: [{ name: 'MoCA Uplink', port: null }],
   },
+  // ── Second network ──────────────────────────────────────────────────────
+  // Only the access point has a signal of its own: an ICMP probe to its
+  // tailnet address, which it can only answer through its switch, the second
+  // router and that router's uplink. The router and that switch are therefore
+  // inferred from it. `up.optional`: a missing probe result is unknown, not
+  // down (probes come from Prometheus, the rest of `up` from Mimir).
+  {
+    id: 'second-router',
+    hostname: 'OpenMPTCProuter',
+    displayName: 'Second Network Router',
+    type: 'ROUTER',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFrom: ['access-point'],
+    tailnet: false,
+    // How this router reaches the internet is deliberately not described
+    // or drawn (owner's decision, 2026-11-21): the map stops at the router.
+    services: [{ name: 'Gateway', port: null }],
+  },
+  {
+    id: 'access-point',
+    hostname: 'RT-AXE7800',
+    displayName: 'Access Point',
+    type: 'ROUTER',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    up: { job: 'icmp-infra', instance: '100.64.0.13', optional: true },
+    services: [{ name: 'Wi-Fi Access Point', port: null }],
+  },
+  // The three switches of the second network. Like the homelab switches they
+  // expose no metrics. The one at the router is inferred from the access
+  // point; the other two are judged by the carrier of the machine ports
+  // cabled to them (`inferFromPorts`), because those machines being reachable
+  // over the homelab says nothing about this network.
+  // Listed in the order they are drawn, left to right: the two room switches
+  // above their machines, the one at the router last, below the router.
+  {
+    id: 'switch-s2',
+    hostname: 'Unmanaged-second-b',
+    displayName: 'Access Switch 6',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFromPorts: [
+      { instance: 'm920s', device: 'eno1' },
+      { instance: 'debian-marmoset', device: 'enx3c8cf861771b' },
+      { instance: 'neonmarmoset', device: 'enx00e04c6707fd' },
+    ],
+    services: [{ name: 'MoCA Uplink', port: null }],
+  },
+  {
+    id: 'switch-s3',
+    hostname: 'MoCA-adapter-second-a',
+    displayName: 'Access Switch 7',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFromPorts: [{ instance: 'marmoset', device: 'enx8cae4cb97d51' }],
+    services: [{ name: 'Built Into a MoCA Adapter', port: null }],
+  },
+  {
+    id: 'switch-s1',
+    hostname: 'TRENDnet-second',
+    displayName: 'Access Switch 5',
+    type: 'SWITCH',
+    zone: 'HOME_NETWORK',
+    metricsInstance: null,
+    inferFrom: ['access-point'],
+    services: [{ name: 'Router Uplink', port: null }],
+  },
   {
     id: 'asustor',
     hostname: 'AS5402T-A7F3',
@@ -254,7 +332,7 @@ export const MAYASTOR_NODE = {
 // member: the lines mean "registered with this tailnet", not "traffic flows
 // through this machine" (members talk to each other directly).
 const TAILNET_HOST = 'gpu-1';
-const TAILNET_MEMBERS = NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
+const TAILNET_MEMBERS = NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH' && n.tailnet !== false)
   .map((n) => n.id)
   .filter((id) => id !== TAILNET_HOST);
 
@@ -379,6 +457,30 @@ export const LINK_DEFINITIONS = [
     via: 'MoCA coax',
     port: { instance: 'ax86u-pro', device: 'eth5' },
   },
+
+  // Second network, as cabled (confirmed by the owner 2026-11-21):
+  //
+  //   Second Network Router -> Access Switch 5 (at the router)
+  //   Access Switch 5    Access Point; MoCA coax to the two rooms below
+  //   Access Switch 6    Control Plane 1, GPU Worker 1 and 2, ASUSTOR
+  //   Access Switch 7    GPU Workstation (the switch is built into the MoCA
+  //                      adapter in that room)
+  //
+  // No machine is cabled to the second router itself. As on the homelab side
+  // the MoCA adapters are not drawn: the coax hop runs switch to switch.
+  // Machine links name the port that carries them, so each shows its own
+  // carrier and speed. The ASUSTOR's port has no metric in Prometheus.
+  ...[
+    ['second-router', 'switch-s1'],
+    ['switch-s1', 'access-point'],
+    ['switch-s1', 'switch-s2', { via: 'MoCA coax' }],
+    ['switch-s1', 'switch-s3', { via: 'MoCA coax' }],
+    ['cp-1', 'switch-s2', { port: { instance: 'm920s', device: 'eno1' } }],
+    ['gpu-1', 'switch-s2', { port: { instance: 'debian-marmoset', device: 'enx3c8cf861771b' } }],
+    ['gpu-2', 'switch-s2', { port: { instance: 'neonmarmoset', device: 'enx00e04c6707fd' } }],
+    ['asustor', 'switch-s2'],
+    ['gpu-workstation', 'switch-s3', { port: { instance: 'marmoset', device: 'enx8cae4cb97d51' } }],
+  ].map(([source, target, extra]) => ({ source, target, type: 'SECOND_NETWORK', ...extra })),
 
   // Off-site backups leave from the three servers: Velero and the Garage dump
   // sync run in the cluster, and the Postgres mirror runs on the HA leader.

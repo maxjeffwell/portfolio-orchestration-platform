@@ -248,6 +248,7 @@ export const typeDefs = /* GraphQL */ `
     ETHERNET
     MOCA
     BACKHAUL
+    SECOND_NETWORK
     NVME_OF
     LOCAL_VOLUME
     ISCSI
