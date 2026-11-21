@@ -105,13 +105,36 @@ test('backup status: fresh is healthy, overdue is offline, no signal is unknown'
     db(buildDatabaseTopology(cnpgPods(), signals, now), 'pg-bookmarked').backups;
   const base = (signals) => backups(signals).find((b) => b.target === 'BACKBLAZE_B2');
 
-  const fresh = base({ cnpgBackupAge: { 'cnpg-bookmarked-4': 3600, 'cnpg-bookmarked-2': 9e8 } });
+  const fresh = base({ cnpgBarmanAge: { 'cnpg-bookmarked-4': 3600, 'cnpg-bookmarked-2': 9e8 } });
   assert.equal(fresh.status, 'HEALTHY');
   assert.equal(fresh.lastSuccess, new Date(now - 3600 * 1000).toISOString());
 
-  assert.equal(base({ cnpgBackupAge: { 'cnpg-bookmarked-4': 3 * 86400 } }).status, 'OFFLINE');
+  assert.equal(base({ cnpgBarmanAge: { 'cnpg-bookmarked-4': 3 * 86400 } }).status, 'OFFLINE');
   assert.equal(base({}).status, 'UNKNOWN');
   assert.equal(backups({}).find((b) => b.target === 'VOLUME_SNAPSHOT').status, 'UNKNOWN');
+});
+
+test('the B2 backup and the volume snapshot of a CNPG cluster each read their own signal', () => {
+  const now = Date.UTC(2026, 10, 20, 12);
+  const backups = (signals) =>
+    db(buildDatabaseTopology(cnpgPods(), signals, now), 'pg-bookmarked').backups;
+  const b2 = (signals) => backups(signals).find((b) => b.target === 'BACKBLAZE_B2');
+  const snapshot = (signals) => backups(signals).find((b) => b.target === 'VOLUME_SNAPSHOT');
+
+  // A fresh snapshot says nothing about the off-site backup, and the reverse.
+  const onlySnapshot = { cnpgSnapshotAge: { 'cnpg-bookmarked-4': 3600 } };
+  assert.equal(snapshot(onlySnapshot).status, 'HEALTHY');
+  assert.equal(snapshot(onlySnapshot).lastSuccess, new Date(now - 3600 * 1000).toISOString());
+  assert.equal(b2(onlySnapshot).status, 'UNKNOWN');
+
+  const onlyBarman = { cnpgBarmanAge: { 'cnpg-bookmarked-4': 3600 } };
+  assert.equal(b2(onlyBarman).status, 'HEALTHY');
+  assert.equal(snapshot(onlyBarman).status, 'UNKNOWN');
+
+  // Only the primary reports a snapshot time; an overdue one is offline.
+  assert.equal(snapshot({ cnpgSnapshotAge: { 'cnpg-bookmarked-4': 3 * 86400 } }).status, 'OFFLINE');
+  // Another cluster's signal is not picked up.
+  assert.equal(snapshot({ cnpgSnapshotAge: { 'cnpg-codetalk-4': 3600 } }).status, 'UNKNOWN');
 });
 
 test('a hosted database has no instances here and is not reported as down', () => {

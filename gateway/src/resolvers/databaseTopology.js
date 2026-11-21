@@ -63,7 +63,8 @@ function backupAge(source, signals) {
   if (source.type === 'pgha') return signals.pghaAge?.[source.kind] ?? null;
   if (source.type === 'cnpg') {
     // Reported per instance; the freshest instance of the cluster counts.
-    const ages = Object.entries(signals.cnpgBackupAge ?? {})
+    const byPod = source.kind === 'snapshot' ? signals.cnpgSnapshotAge : signals.cnpgBarmanAge;
+    const ages = Object.entries(byPod ?? {})
       .filter(([pod]) => pod.startsWith(`${source.cluster}-`))
       .map(([, age]) => age);
     return ages.length ? Math.min(...ages) : null;
