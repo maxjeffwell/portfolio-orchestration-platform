@@ -68,7 +68,7 @@ export const LLM_NODES = [
     stage: 'APP',
     displayName: 'IntervalAI',
     location: 'Spaced-repetition flashcards',
-    role: 'Asks a small trained model when a card should next be reviewed, finds related cards by meaning, and has a study chat that explains cards.',
+    role: 'Uses three models. Its own neural network decides when a card should next be reviewed. E5 Large turns each card into a vector so related cards can be found. The study chat is answered by Qwen2.5 1.5B on my hardware, with Groq GPT-OSS 120B as the backup.',
     signal: { workloads: ['intervalai-server'] },
   },
   {
@@ -149,9 +149,11 @@ export const LLM_NODES = [
   {
     id: 'interval-model',
     stage: 'LOCAL',
-    displayName: 'Interval predictor',
+    displayName: 'IntervalAI neural net',
     location: OVMS_EMBED,
-    role: 'Not a language model: a small network trained on review history that predicts how long until a card is forgotten. It shares the model server with the embedding models.',
+    // Figures from the app's ml/saved-model/metadata.json (model 5.0.0-v2-growth)
+    // and from OVMS itself, which reports interval_ai version 2, input [-1, 24].
+    role: 'Not a language model: IntervalAI’s own neural network, a plain feed-forward net with four hidden layers (128, 64, 32 and 16 units) and about 14,700 weights. It takes 24 numbers describing a card, such as how strong the memory is, how hard the card has been, the success rate and whether the answer just given was right, and returns the number of days until the next review. Trained in TensorFlow on 41,725 examples in October 2026, converted to OpenVINO, and served as interval_ai version 2 on the same model server as the embedding models.',
     signal: { workloads: ['ovms-embeddings'], model: 'interval_ai' },
   },
   {
@@ -245,7 +247,7 @@ export const LLM_FLOWS = [
   flow('code-talk', 'gateway', 'CHAT', 'Chat replies, code explanations and quizzes.'),
   flow('educationelly', 'gateway', 'CHAT', 'Assistant chat, flashcards, quizzes and study recommendations.'),
   flow('educationelly-graphql', 'gateway', 'CHAT', 'Assistant chat, flashcards and quizzes.'),
-  flow('intervalai', 'gateway', 'CHAT', 'Study chat and explanations of a card.'),
+  flow('intervalai', 'gateway', 'CHAT', 'Study chat and explanations of a card. Answered by Qwen2.5 1.5B on my hardware; Groq GPT-OSS 120B takes over if the local model is down or its answer is unusable.'),
   flow('pop-portfolio', 'gateway', 'CHAT', 'Dashboard assistant: chat and text generation.'),
   flow('tenants', 'gateway', 'CHAT', 'Text generation, allowed in by a network policy for tenant namespaces only.'),
   flow('public', 'gateway', 'CHAT', 'Through the Cloudflare Tunnel to a separate listener that requires a client key.'),
@@ -255,8 +257,8 @@ export const LLM_FLOWS = [
   flow('bookmarked', 'pgvector', 'STORE', 'Saves the vector beside the bookmark and searches by cosine distance.'),
   flow('immich', 'immich-ml', 'VISION', 'Each new photo, and each search phrase, goes to Immich’s own service.'),
   flow('bookmarked', 'openai', 'FALLBACK', 'Idle today: used only if the gateway setting is removed.'),
-  flow('intervalai', 'interval-model', 'PREDICT', 'Sends a card’s review history and gets back a predicted interval. Falls back to a copy of the model inside the app, then to the classic SM-2 formula.'),
-  flow('intervalai', 'e5', 'EMBED', 'Embeds each flashcard to find related ones.'),
+  flow('intervalai', 'interval-model', 'PREDICT', 'After each answer, sends 24 numbers describing the card and gets back the days until the next review. If the model server is down the app runs its own TensorFlow.js copy of the same network, and if that fails too it uses the classic SM-2 formula.'),
+  flow('intervalai', 'e5', 'EMBED', 'Embeds each flashcard with E5 Large to find related ones.'),
   flow('intervalai', 'qdrant', 'STORE', 'Indexes card vectors and asks for the nearest neighbours.'),
 
   // gateway -> models
