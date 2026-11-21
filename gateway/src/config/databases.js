@@ -66,10 +66,15 @@ const cnpg = ({ id, displayName, namespace, cluster, scraped = true, offsite = t
       target: 'BACKBLAZE_B2',
       // A cluster in a namespace Prometheus does not scrape has no live signal
       // (pass scraped: false). None is in that position at the moment.
-      source: scraped ? { type: 'cnpg', cluster } : null,
+      source: scraped ? { type: 'cnpg', kind: 'barman', cluster } : null,
       maxAgeS: 26 * HOUR,
     },
-    { name: 'Daily volume snapshot', target: 'VOLUME_SNAPSHOT', source: null, maxAgeS: null },
+    {
+      name: 'Daily volume snapshot',
+      target: 'VOLUME_SNAPSHOT',
+      source: scraped ? { type: 'cnpg', kind: 'snapshot', cluster } : null,
+      maxAgeS: 26 * HOUR,
+    },
     VELERO_DAILY,
     ...(offsite ? [VELERO_OFFSITE] : []),
     ...extra,
