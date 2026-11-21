@@ -44,7 +44,7 @@ spec:
                     values: [elitedesk, m720q, m920s]
       containers:
       - name: portfolio-api
-        image: maxjeffwell/portfolio-api:20261120-051510-4d8b617
+        image: maxjeffwell/portfolio-api:20261121-021115-fdb11a4
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
