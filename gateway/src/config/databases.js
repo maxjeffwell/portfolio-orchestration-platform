@@ -52,12 +52,11 @@ const dailyDump = (cronjob, name = 'Daily dump (restore-tested weekly)') => ({
   maxAgeS: 26 * HOUR,
 });
 
-const cnpg = ({ id, displayName, namespace, cluster, scraped = true, offsite = true, unused = false, extra = [] }) => ({
+const cnpg = ({ id, displayName, namespace, cluster, scraped = true, offsite = true, extra = [] }) => ({
   id,
   displayName,
   engine: 'POSTGRES',
-  // Three clusters are still running but their databases moved to HA Postgres.
-  manager: unused ? 'CloudNativePG · unused' : 'CloudNativePG',
+  manager: 'CloudNativePG',
   expectedInstances: 2,
   pods: { namespace, labels: { 'cnpg.io/cluster': cluster }, roleLabel: 'cnpg.io/instanceRole' },
   storage: 'MAYASTOR',
@@ -65,7 +64,8 @@ const cnpg = ({ id, displayName, namespace, cluster, scraped = true, offsite = t
     {
       name: 'Base backup + WAL archive',
       target: 'BACKBLAZE_B2',
-      // The vaultwarden namespace is not scraped, so there is no live signal.
+      // A cluster in a namespace Prometheus does not scrape has no live signal
+      // (pass scraped: false). None is in that position at the moment.
       source: scraped ? { type: 'cnpg', cluster } : null,
       maxAgeS: 26 * HOUR,
     },
@@ -125,16 +125,6 @@ export const DATABASES = [
       },
     ],
   },
-  cnpg({ id: 'pg-auth', displayName: 'Auth (old)', namespace: 'default', cluster: 'cnpg-auth', unused: true }),
-  cnpg({ id: 'pg-lunary', displayName: 'Lunary (old)', namespace: 'default', cluster: 'cnpg-lunary', unused: true }),
-  cnpg({
-    id: 'pg-vaultwarden',
-    displayName: 'Vaultwarden (old)',
-    namespace: 'vaultwarden',
-    cluster: 'cnpg-vaultwarden',
-    scraped: false,
-    unused: true,
-  }),
   {
     id: 'neon-tenantflow',
     displayName: 'TenantFlow (Neon)',
@@ -291,4 +281,8 @@ export const DATABASE_APPS = [
 ];
 
 // Databases that are running but that no application points at any more.
-export const UNUSED_DATABASES = ['pg-auth', 'pg-lunary', 'pg-vaultwarden'];
+// Empty since 2026-11-21: the three old CloudNativePG clusters (auth, lunary,
+// vaultwarden), kept as rollback copies after the move to HA Postgres, were
+// retired. The test asserts this list matches the catalog, so a database that
+// loses its last application has to be listed here or removed.
+export const UNUSED_DATABASES = [];
