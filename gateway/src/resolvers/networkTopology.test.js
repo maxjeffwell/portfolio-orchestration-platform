@@ -66,7 +66,8 @@ test('every link references a defined node', () => {
 });
 
 test('all targets up: every node and link is healthy', () => {
-  const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, OVERLAY_OK);
+  // SECOND_PORTS: the second network's remote switches are judged by ports.
+  const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, SECOND_PORTS, OVERLAY_OK);
   assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 3);
   assert.ok(topology.nodes.every((n) => n.health === 'HEALTHY'));
   assert.ok(topology.links.every((l) => l.status === 'HEALTHY'));
@@ -193,11 +194,14 @@ test('the tailnet is drawn as links from the Headscale host to every other membe
   assert.ok(tailnet.every((l) => l.source === 'gpu-1'));
   assert.deepEqual(
     tailnet.map((l) => l.target).sort(),
-    NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH')
+    NODE_DEFINITIONS.filter((n) => n.type !== 'SWITCH' && n.tailnet !== false)
       .map((n) => n.id)
       .filter((id) => id !== 'gpu-1')
       .sort(),
   );
+  // The second router is not registered with the tailnet; its access point is.
+  assert.ok(!tailnet.some((l) => l.target === 'second-router'));
+  assert.ok(tailnet.some((l) => l.target === 'access-point'));
   assert.ok(
     !links.some((l) => l.type === 'WIREGUARD' && ['cp-1', 'cp-2', 'cp-3'].includes(l.target)),
   );
@@ -338,4 +342,116 @@ test('LVM local volumes: a storage node linked from the three servers, with heal
   assert.equal(byId(build({ ...LVM_OK, pluginsReady: 3 }), 'lvm-local').health, 'DEGRADED');
   assert.equal(byId(build({ ...LVM_OK, pluginsReady: 0 }), 'lvm-local').health, 'OFFLINE');
   assert.equal(byId(build(null), 'lvm-local').health, 'DEGRADED');
+});
+
+// The second network: its own router, an access point and three switches.
+// Five machines have a leg on it besides their homelab cabling.
+const SECOND_PORTS = {
+  'm920s|eno1': { carrier: true, speedBps: 1e9 },
+  'debian-marmoset|enx3c8cf861771b': { carrier: true, speedBps: 2.5e9 },
+  'neonmarmoset|enx00e04c6707fd': { carrier: true, speedBps: 2.5e9 },
+  'marmoset|enx8cae4cb97d51': { carrier: true, speedBps: 2.5e9 },
+};
+const second = (links) => links.filter((l) => l.type === 'SECOND_NETWORK');
+const pair = (l) => [l.source, l.target].sort().join(' <-> ');
+
+test('second network: every machine reaches the second router through an access switch', () => {
+  const { nodes, links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, SECOND_PORTS, OVERLAY_OK);
+
+  assert.equal(byId({ nodes }, 'second-router').type, 'ROUTER');
+  assert.equal(byId({ nodes }, 'second-router').displayName, 'Second Network Router');
+  // Not to be mistaken for the homelab's mesh node, which stays as it was.
+  assert.equal(byId({ nodes }, 'mesh-node').displayName, 'Mesh Node');
+  assert.ok(!second(links).some((l) => l.source === 'mesh-node' || l.target === 'mesh-node'));
+  assert.equal(byId({ nodes }, 'access-point').displayName, 'Access Point');
+  for (const id of ['switch-s1', 'switch-s2', 'switch-s3']) {
+    assert.equal(byId({ nodes }, id).type, 'SWITCH');
+  }
+
+  assert.deepEqual(second(links).map(pair).sort(), [
+    'access-point <-> switch-s1',
+    'asustor <-> switch-s2',
+    'cp-1 <-> switch-s2',
+    'gpu-1 <-> switch-s2',
+    'gpu-2 <-> switch-s2',
+    'gpu-workstation <-> switch-s3',
+    'second-router <-> switch-s1',
+    'switch-s1 <-> switch-s2',
+    'switch-s1 <-> switch-s3',
+  ]);
+
+  // Its internet uplinks are not part of the map, in links or in service names.
+  assert.deepEqual(byId({ nodes }, 'second-router').services.map((s) => s.name), ['Gateway']);
+  // Only the switch at the router is cabled to it; nothing else is.
+  assert.deepEqual(
+    links.filter((l) => l.source === 'second-router' || l.target === 'second-router').map(pair),
+    ['second-router <-> switch-s1'],
+  );
+  // The two remote switches reach it over coax.
+  const via = (a, b) => second(links).find((l) => pair(l) === `${a} <-> ${b}`).metadata?.via;
+  assert.equal(via('switch-s1', 'switch-s2'), 'MoCA coax');
+  assert.equal(via('switch-s1', 'switch-s3'), 'MoCA coax');
+  // Control Plane 2 and 3 and the Synology have no leg on the second network.
+  for (const id of ['cp-2', 'cp-3', 'synology']) {
+    assert.ok(!second(links).some((l) => l.source === id || l.target === id), id);
+  }
+});
+
+test('second network: a machine link follows its own port, with the negotiated speed', () => {
+  const link = (ports) =>
+    second(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, ports, OVERLAY_OK).links).find(
+      (l) => pair(l) === 'cp-1 <-> switch-s2',
+    );
+
+  assert.equal(link(SECOND_PORTS).status, 'HEALTHY');
+  assert.equal(link(SECOND_PORTS).bandwidthBps, 1e9);
+
+  const unplugged = { ...SECOND_PORTS, 'm920s|eno1': { carrier: false, speedBps: null } };
+  assert.equal(link(unplugged).status, 'OFFLINE');
+  assert.equal(link(unplugged).bandwidthBps, null);
+});
+
+test('second network: a switch is judged by the ports cabled to it, not by whether the machines are up', () => {
+  const health = (ports, id = 'switch-s2') =>
+    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, ports, OVERLAY_OK), id).health;
+  const down = { carrier: false, speedBps: null };
+
+  assert.equal(health(SECOND_PORTS), 'HEALTHY');
+  // One port still lit is enough.
+  assert.equal(
+    health({ ...SECOND_PORTS, 'm920s|eno1': down, 'debian-marmoset|enx3c8cf861771b': down }),
+    'HEALTHY',
+  );
+  // Every machine is up on the homelab, but no port on this switch has carrier.
+  assert.equal(
+    health({
+      ...SECOND_PORTS,
+      'm920s|eno1': down,
+      'debian-marmoset|enx3c8cf861771b': down,
+      'neonmarmoset|enx00e04c6707fd': down,
+    }),
+    'OFFLINE',
+  );
+  // No port data at all is unknown, not down.
+  assert.equal(health({}), 'DEGRADED');
+  assert.equal(health({ ...SECOND_PORTS, 'marmoset|enx8cae4cb97d51': down }, 'switch-s3'), 'OFFLINE');
+});
+
+test('second network: the router and its switch follow the access point, the one device there with a probe', () => {
+  const topology = (probe) => {
+    const up = allUp();
+    if (probe === undefined) delete up['icmp-infra|100.64.0.13'];
+    else up['icmp-infra|100.64.0.13'] = probe;
+    return buildTopology(EMPTY_METRICS, up, STORAGE_OK, SECOND_PORTS, OVERLAY_OK);
+  };
+
+  for (const id of ['access-point', 'second-router', 'switch-s1']) {
+    assert.equal(byId(topology(true), id).health, 'HEALTHY', id);
+    assert.equal(byId(topology(false), id).health, 'OFFLINE', id);
+    // The probe result is missing: unknown, not down.
+    assert.equal(byId(topology(undefined), id).health, 'DEGRADED', id);
+  }
+  // The homelab is unaffected by the second network being down.
+  assert.equal(byId(topology(false), 'primary-router').health, 'HEALTHY');
+  assert.equal(byId(topology(false), 'cp-1').health, 'HEALTHY');
 });

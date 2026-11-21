@@ -4,7 +4,13 @@ import {
   fetchPortStatus,
   formatUptime,
 } from '../lib/mimirClient.js';
-import { fetchMayastorStatus, fetchLvmStatus, fetchUplinkSpeeds } from '../lib/storageClient.js';
+import {
+  fetchMayastorStatus,
+  fetchLvmStatus,
+  fetchUplinkSpeeds,
+  fetchHostPortStatus,
+  fetchProbeStatus,
+} from '../lib/storageClient.js';
 import { fetchOffsiteBackupStatus } from '../lib/backupClient.js';
 import { fetchHeadscaleStatus, fetchWireguardHandshakes } from '../lib/overlayClient.js';
 import {
@@ -66,7 +72,10 @@ function buildNodeMetrics(metrics, instance) {
 //   HEALTHY   otherwise
 function nodeHealth(def, up, mimirAnswered) {
   if (!mimirAnswered) return 'DEGRADED';
-  if (up[`${def.up.job}|${def.up.instance}`] !== true) return 'OFFLINE';
+  const key = `${def.up.job}|${def.up.instance}`;
+  // An optional signal comes from another source: missing is unknown, not down.
+  if (def.up.optional && !(key in up)) return 'DEGRADED';
+  if (up[key] !== true) return 'OFFLINE';
   if (def.garageInstance && up[`garage|${def.garageInstance}`] !== true) {
     return 'DEGRADED';
   }
@@ -78,6 +87,16 @@ function nodeHealth(def, up, mimirAnswered) {
 function inferredHealth(attached) {
   if (attached.includes('HEALTHY')) return 'HEALTHY';
   return attached.includes('DEGRADED') ? 'DEGRADED' : 'OFFLINE';
+}
+
+// A device judged by the ports cabled to it: one port with carrier means it is
+// passing traffic, none means it is not, and no port data is unknown.
+function portsHealth(portRefs, ports) {
+  const known = portRefs
+    .map((ref) => ports?.[`${ref.instance}|${ref.device}`])
+    .filter((port) => port != null);
+  if (known.length === 0) return 'DEGRADED';
+  return known.some((port) => port.carrier) ? 'HEALTHY' : 'OFFLINE';
 }
 
 function serviceStatus(svc, def, health, up, mimirAnswered, headscale) {
@@ -248,10 +267,13 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   const mimirAnswered = Object.keys(up ?? {}).length > 0;
   const healthById = {};
 
-  // Machines first: a switch's health is inferred from the machines on it.
-  const machineDefs = NODE_DEFINITIONS.filter((def) => !def.inferFrom);
-  machineDefs.forEach((def) => {
+  // Machines first: a switch's health is inferred from the machines on it,
+  // or from the ports cabled to it.
+  NODE_DEFINITIONS.filter((def) => def.up).forEach((def) => {
     healthById[def.id] = nodeHealth(def, up ?? {}, mimirAnswered);
+  });
+  NODE_DEFINITIONS.filter((def) => def.inferFromPorts).forEach((def) => {
+    healthById[def.id] = portsHealth(def.inferFromPorts, ports);
   });
   NODE_DEFINITIONS.filter((def) => def.inferFrom).forEach((def) => {
     healthById[def.id] = inferredHealth(def.inferFrom.map((id) => healthById[id]));
@@ -337,8 +359,19 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
 }
 
 async function fetchNetworkTopology() {
-  const [metrics, up, storage, ports, headscale, wireguardHandshakes, offsite, uplinkSpeeds, lvm] =
-    await Promise.all([
+  const [
+    metrics,
+    mimirUp,
+    storage,
+    routerPorts,
+    headscale,
+    wireguardHandshakes,
+    offsite,
+    uplinkSpeeds,
+    lvm,
+    hostPorts,
+    probes,
+  ] = await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
     fetchMayastorStatus().catch(() => null),
@@ -348,7 +381,13 @@ async function fetchNetworkTopology() {
     fetchOffsiteBackupStatus().catch(() => null),
     fetchUplinkSpeeds().catch(() => ({})),
     fetchLvmStatus().catch(() => null),
+    fetchHostPortStatus().catch(() => ({})),
+    fetchProbeStatus().catch(() => ({})),
   ]);
+  // Probe results join the liveness map only when Mimir answered: an empty
+  // map is how "Mimir could not be queried" is recognised downstream.
+  const up = Object.keys(mimirUp).length > 0 ? { ...mimirUp, ...probes } : mimirUp;
+  const ports = { ...routerPorts, ...hostPorts };
   return buildTopology(metrics, up, storage, ports, {
     headscale,
     wireguardHandshakes,

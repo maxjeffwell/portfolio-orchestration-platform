@@ -88,3 +88,54 @@ export async function fetchUplinkSpeeds() {
     return {};
   }
 }
+
+async function queryVector(promql, label) {
+  try {
+    const res = await fetch(`${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(promql)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data?.result ?? [];
+  } catch (err) {
+    console.error(`[storageClient] ${label} query failed:`, err.message);
+    return [];
+  }
+}
+
+// Carrier and negotiated speed of the machines' own network ports, keyed
+// "hostname|device" -> { carrier: bool, speedBps: number|null }: the same
+// shape as the routers' ports from Mimir, which does not carry these series.
+export async function fetchHostPortStatus() {
+  const byHost = ' * on (instance) group_left (nodename) node_uname_info';
+  const [carrier, speed] = await Promise.all([
+    queryVector(`node_network_carrier{device=~"en.*|eth.*"}${byHost}`, 'port carrier'),
+    queryVector(`(node_network_speed_bytes{device=~"en.*|eth.*"} * 8)${byHost}`, 'port speed'),
+  ]);
+  const map = {};
+  for (const r of carrier) {
+    const { nodename, device } = r.metric ?? {};
+    if (nodename && device) {
+      map[`${nodename}|${device}`] = { carrier: r.value?.[1] === '1', speedBps: null };
+    }
+  }
+  for (const r of speed) {
+    const { nodename, device } = r.metric ?? {};
+    const entry = map[`${nodename}|${device}`];
+    const bps = parseFloat(r.value?.[1]);
+    if (entry && bps > 0) entry.speedBps = bps;
+  }
+  return map;
+}
+
+// Results of the ICMP probes of devices that have no exporter, keyed like
+// scrape liveness: "job|instance" -> true/false.
+export async function fetchProbeStatus() {
+  const results = await queryVector('probe_success{job="icmp-infra"}', 'probe');
+  const map = {};
+  for (const r of results) {
+    const { job, instance } = r.metric ?? {};
+    if (job && instance) map[`${job}|${instance}`] = r.value?.[1] === '1';
+  }
+  return map;
+}
