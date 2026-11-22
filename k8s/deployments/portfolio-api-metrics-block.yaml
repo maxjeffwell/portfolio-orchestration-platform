@@ -1,0 +1,36 @@
+# /api/metrics on the public hostname answered without login (2026-11-22).
+# Prometheus scrapes portfolio-api in-cluster, so the public path is denied at
+# the edge: an allowlist of loopback only, matched on the TCP peer address,
+# means Traefik answers 403 for every client. Case-insensitive, and tolerant of
+# repeated slashes, because the API router is.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: portfolio-api-metrics-deny
+  namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  ipAllowList:
+    sourceRange:
+      - 127.0.0.1/32
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: portfolio-api-metrics-block
+  namespace: default
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`pop-portfolio.el-jefe.me`) && PathRegexp(`(?i)^/+api/+metrics`)
+      kind: Rule
+      priority: 1000
+      middlewares:
+        - name: portfolio-api-metrics-deny
+      services:
+        - name: portfolio-api
+          port: 5000
+  tls:
+    secretName: pop-portfolio-tls
