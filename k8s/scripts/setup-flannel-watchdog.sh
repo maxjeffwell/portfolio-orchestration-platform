@@ -10,6 +10,11 @@
 #
 # This watchdog:
 #  - Polls flannel.1 every 60s via systemd .timer
+#  - Also checks that routes to the other nodes' pod CIDRs exist on flannel.1
+#    (2026-11-25: a tailscaled restart left flannel.1 UP with zero routes; the
+#    node stayed Ready while its pods were cut off). Routes missing -> restart
+#    the K3s service only; tailscaled is left alone because restarting it is
+#    what causes this.
 #  - On missing/DOWN: restarts tailscaled first (it IS the flannel underlay on
 #    every node in this cluster - confirmed via `ip -d link show flannel.1`
 #    showing `dev tailscale0` on all 4 nodes), waits 15s, rechecks
@@ -19,8 +24,8 @@
 #  - Logs to systemd journal (tag flannel-watchdog) only; Loki collects via
 #    promtail if wired
 #
-# Hostname-aware: all 6 K3s nodes (vmi2951245, vmi3115606, debian-marmoset,
-# marmoset, elitedesk, m720q) get the same install - uniform pattern because the underlay
+# Hostname-aware: all 7 K3s nodes (vmi3610371, debian-marmoset, neonmarmoset,
+# marmoset, elitedesk, m720q, m920s) get the same install - uniform pattern because the underlay
 # (tailscale0) and detection (ip link show flannel.1) are universal.
 #
 # Source-of-truth files live in configs/flannel-watchdog/:
@@ -103,12 +108,12 @@ main() {
     echo ""
 
     case "$HOSTNAME" in
-        vmi2951245|vmi3115606|debian-marmoset|marmoset|elitedesk|m720q)
+        vmi3610371|debian-marmoset|neonmarmoset|marmoset|elitedesk|m720q|m920s)
             install_watchdog
             ;;
         *)
             echo "INFO: $HOSTNAME is not a configured K3s node for this watchdog." >&2
-            echo "Known nodes: vmi2951245, vmi3115606, debian-marmoset, marmoset, elitedesk, m720q." >&2
+            echo "Known nodes: vmi3610371, debian-marmoset, neonmarmoset, marmoset, elitedesk, m720q, m920s." >&2
             exit 0
             ;;
     esac
