@@ -374,6 +374,7 @@ export const OFFSITE_HOSTS = [
   { id: 'gpu-workstation', metric: 'host' },
   { id: 'edge-vps', metric: 'host' },
   { id: 'asustor', metric: 'nas', host: 'asustor' },
+  { id: 'synology', metric: 'nas', host: 'synology' },
 ];
 
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);

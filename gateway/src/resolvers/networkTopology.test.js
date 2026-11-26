@@ -52,7 +52,7 @@ const OVERLAY_OK = {
     garageSyncAgeS: 5 * 86400,
     postgresAgeS: 900,
     hostAgeS: { 'debian-marmoset': 3600, neonmarmoset: 3600, elitedesk: 3600, m720q: 3600, marmoset: 3600, vmi3610371: 3600 },
-    nasAgeS: { asustor: 3600 },
+    nasAgeS: { asustor: 3600, synology: 3600 },
   },
   wireguardHandshakes: { '10.0.0.9': 40, '10.0.0.4': 60, '10.0.0.5': 90, '10.0.0.6': 120 },
 };
@@ -594,7 +594,7 @@ test('off-site backup: each machine with its own Backblaze job is a service and 
   assert.ok(!JSON.stringify(byId(ok, 'offsite-backup')).includes('vmi3610371'));
 
   const sources = ok.links.filter((l) => l.type === 'OFFSITE_BACKUP').map((l) => l.source).sort();
-  assert.deepEqual(sources, ['asustor', 'cp-1', 'cp-2', 'cp-3', 'edge-vps', 'gpu-1', 'gpu-2', 'gpu-workstation']);
+  assert.deepEqual(sources, ['asustor', 'cp-1', 'cp-2', 'cp-3', 'edge-vps', 'gpu-1', 'gpu-2', 'gpu-workstation', 'synology']);
 
   // A daily job that has not succeeded for three days is overdue.
   const stale = build({
