@@ -371,6 +371,7 @@ export const OFFSITE_HOSTS = [
   { id: 'gpu-2', metric: 'host' },
   { id: 'cp-2', metric: 'host' },
   { id: 'cp-3', metric: 'host' },
+  { id: 'gpu-workstation', metric: 'host' },
   { id: 'edge-vps', metric: 'host' },
   { id: 'asustor', metric: 'nas', host: 'asustor' },
 ];
