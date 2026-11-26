@@ -476,7 +476,8 @@ export const LINK_DEFINITIONS = [
   // Machine links name the port that carries them, so each shows its own
   // carrier and speed. The ASUSTOR's port has no metric in Prometheus.
   ...[
-    ['second-router', 'switch-s1'],
+    // The router's LAN port is the live signal for its link to the switch.
+    ['second-router', 'switch-s1', { port: { instance: 'omr', device: 'eth0' } }],
     ['switch-s1', 'access-point'],
     ['switch-s1', 'switch-s2', { via: 'MoCA coax' }],
     ['switch-s1', 'switch-s3', { via: 'MoCA coax' }],

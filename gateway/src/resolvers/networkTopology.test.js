@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildTopology } from './networkTopology.js';
+import { MONITORING_NODES, MONITORING_FLOWS } from '../config/monitoring.js';
 import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
@@ -533,4 +534,36 @@ test('traffic: a WireGuard link reports its peer\'s rate; links with no source o
   for (const l of links.filter((x) => x.type === 'TAILSCALE' || x.type === 'GARAGE_REPLICATION')) {
     assert.equal(l.throughputBps, null, `${l.source} -> ${l.target} ${l.type}`);
   }
+});
+
+test('second network: the router-to-switch link is measured at the router LAN port', () => {
+  const link = (ports) =>
+    buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, ports, OVERLAY_OK).links.find(
+      (l) => pair(l) === 'second-router <-> switch-s1',
+    );
+
+  const up = link({ ...SECOND_PORTS, 'omr|eth0': { carrier: true, speedBps: 2.5e9, trafficBps: 17000 } });
+  assert.equal(up.status, 'HEALTHY');
+  assert.equal(up.bandwidthBps, 2.5e9);
+  assert.equal(up.throughputBps, 17000);
+
+  // Cable out at the router: the link is down whatever the access point says.
+  const down = link({ ...SECOND_PORTS, 'omr|eth0': { carrier: false, speedBps: null, trafficBps: 0 } });
+  assert.equal(down.status, 'OFFLINE');
+  assert.equal(down.throughputBps, null);
+
+  // The router's figures arrive through the NAS; without them the link is
+  // simply unmeasured, not down.
+  const unknown = link(SECOND_PORTS);
+  assert.equal(unknown.status, 'HEALTHY');
+  assert.equal(unknown.throughputBps, null);
+});
+
+test('monitoring: the NAS collector is described as the one that scrapes the routers', () => {
+  const nas = MONITORING_NODES.find((n) => n.id === 'alloy-nas');
+  assert.match(nas.role, /routers/);
+  const flow = (from, to, kind) =>
+    MONITORING_FLOWS.find((f) => f.from === from && f.to === to && f.signal === kind);
+  assert.match(flow('devices', 'alloy-nas', 'METRICS').note, /routers/);
+  assert.doesNotMatch(flow('devices', 'alloy', 'METRICS').note, /routers/);
 });
