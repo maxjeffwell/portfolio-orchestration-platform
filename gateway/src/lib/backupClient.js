@@ -8,9 +8,12 @@ const PROMETHEUS_URL =
 const QUERIES = {
   // Velero's weekly cluster backup written straight to B2.
   veleroAgeS: 'time() - max(velero_backup_last_successful_timestamp{schedule="weekly-offsite"})',
-  // Weekly rclone copy of database dumps from Garage to B2.
+  // Daily rclone copy from Garage to B2: database dumps, Neon storage and the
+  // laptop's repositories. A run started by hand counts as well as a
+  // scheduled one (a job only gets a completion time when it succeeds).
   garageSyncAgeS:
-    'time() - max(kube_cronjob_status_last_successful_time{cronjob="garage-offsite-sync"})',
+    'time() - max(kube_cronjob_status_last_successful_time{cronjob="garage-offsite-sync"}' +
+    ' or kube_job_status_completion_time{job_name=~"garage-offsite.*"})',
   // Hourly mirror of the HA Postgres backups; only the current leader runs
   // it, so the freshest of the three servers is the one that counts.
   postgresAgeS: 'time() - max(pg_ha_offsite_last_success_timestamp_seconds)',

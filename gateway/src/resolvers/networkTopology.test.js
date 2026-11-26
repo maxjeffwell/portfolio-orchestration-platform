@@ -49,7 +49,7 @@ const OVERLAY_OK = {
   headscale: { primaryUp: true, publicUp: true, standbySynced: true },
   offsite: {
     veleroAgeS: 5 * 86400,
-    garageSyncAgeS: 5 * 86400,
+    garageSyncAgeS: 3600,
     postgresAgeS: 900,
     hostAgeS: { 'debian-marmoset': 3600, neonmarmoset: 3600, elitedesk: 3600, m720q: 3600, marmoset: 3600, vmi3610371: 3600 },
     nasAgeS: { asustor: 3600, synology: 3600 },
@@ -608,4 +608,12 @@ test('off-site backup: each machine with its own Backblaze job is a service and 
   // No figure for a machine is unknown, not overdue.
   const unknown = build({ ...OVERLAY_OK.offsite, nasAgeS: {} });
   assert.equal(status(unknown, 'ASUSTOR NAS Daily'), 'DEGRADED');
+});
+
+test('off-site backup: the Garage sync is daily, so three days without one is overdue', () => {
+  const node = (offsite) =>
+    byId(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { offsite }), 'offsite-backup');
+  const status = (n) => n.services.find((s) => s.name === 'Garage Sync Daily').status;
+  assert.equal(status(node(OVERLAY_OK.offsite)), 'HEALTHY');
+  assert.equal(status(node({ ...OVERLAY_OK.offsite, garageSyncAgeS: 3 * 86400 })), 'OFFLINE');
 });

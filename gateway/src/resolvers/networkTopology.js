@@ -240,7 +240,9 @@ const DAY = 86400;
 // success is within its schedule plus slack.
 const OFFSITE_JOBS = [
   { key: 'veleroAgeS', name: 'Velero Weekly', maxAgeS: 8 * DAY },
-  { key: 'garageSyncAgeS', name: 'DB Dumps Weekly', maxAgeS: 8 * DAY },
+  // Daily since 2026-11-26 (was weekly): database dumps, Neon storage and the
+  // laptop's repositories, copied from Garage.
+  { key: 'garageSyncAgeS', name: 'Garage Sync Daily', maxAgeS: 2 * DAY },
   { key: 'postgresAgeS', name: 'Postgres Hourly', maxAgeS: 3 * HOUR },
 ];
 
