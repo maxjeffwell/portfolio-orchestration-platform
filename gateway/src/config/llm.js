@@ -128,7 +128,7 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen2.5 1.5B chat',
     location: OVMS_LLM,
-    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. The server is deployed as a KServe InferenceService: KServe downloads the model from the cluster’s object store, attaches the GPU and keeps the pod running. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers. It runs as two copies, one on each GPU laptop, and requests are spread across them, so chat keeps working when one laptop is down. After fifteen minutes without a request a copy unloads its model to free memory, and the next request reloads it in about a second. Both GPUs are shared with other work (Immich’s vision models, Channels DVR, Jellyfin and Tdarr transcoding), so a long transcode slows answers.',
+    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. The server is deployed as a KServe InferenceService: KServe downloads the model from the cluster’s object store, attaches the GPU and keeps the pod running. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers. It runs as two copies, one on each GPU laptop, and requests are spread across them, so chat keeps working when one laptop is down. After fifteen minutes without a request a copy unloads its model to free memory, and the next request reloads it in about a second. Both GPUs are shared with other work (Channels DVR, Jellyfin and Tdarr transcoding), so a long transcode slows answers.',
     signal: { workloads: ['qwen-llm-predictor', 'qwen-llm-2-predictor'], pooled: true, model: 'qwen2.5-1.5b-instruct' },
   },
   {
@@ -169,8 +169,8 @@ export const LLM_NODES = [
     id: 'immich-ml',
     stage: 'LOCAL',
     displayName: 'Immich vision models',
-    location: 'OpenVINO · GPU Worker 1',
-    role: 'Not language models: Immich’s own image models, loaded on demand and unloaded after ten idle minutes. They use the OpenVINO runtime inside Immich’s service rather than the model server, and share the same integrated GPU as the local chat model.',
+    location: 'OpenVINO · Control Plane 1',
+    role: 'Not language models: Immich’s own image models, loaded on demand and unloaded after ten idle minutes. They use the OpenVINO runtime inside Immich’s service rather than the model server. They run on a desktop’s older integrated GPU, shared with one copy of the embedding server and Immich’s video transcoding, which leaves the laptop GPUs to the language models. Indexing a photo takes about twice as long there as on a laptop; a search phrase takes about the same.',
     signal: { workloads: ['immich-ml'] },
   },
 
