@@ -54,11 +54,13 @@ async function fetchWorkloads() {
   return out;
 }
 
-// job -> { up, total } for scrape jobs known to Mimir.
-async function fetchJobs() {
+// job -> { up, total } per scrape job. Mimir has the off-cluster jobs; jobs that
+// only the in-cluster Prometheus scrapes (its ScrapeConfigs, such as the SNMP
+// exporter) are filled in from Prometheus. Where both know a job, Mimir wins.
+async function fetchJobsFrom(baseUrl) {
   const [up, total] = await Promise.all([
-    query(MIMIR_URL, 'sum by (job) (up)'),
-    query(MIMIR_URL, 'count by (job) (up)'),
+    query(baseUrl, 'sum by (job) (up)'),
+    query(baseUrl, 'count by (job) (up)'),
   ]);
   const out = {};
   total.forEach((r) => {
@@ -68,6 +70,14 @@ async function fetchJobs() {
     if (out[r.metric.job]) out[r.metric.job].up = parseFloat(r.value[1]);
   });
   return out;
+}
+
+async function fetchJobs() {
+  const [mimir, prometheus] = await Promise.all([
+    fetchJobsFrom(MIMIR_URL),
+    fetchJobsFrom(PROMETHEUS_URL),
+  ]);
+  return { ...prometheus, ...mimir };
 }
 
 export async function fetchMonitoringSignals() {
