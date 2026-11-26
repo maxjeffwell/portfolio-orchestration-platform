@@ -60,7 +60,7 @@ test('hosted models and unmeasured callers carry no health at all', () => {
 });
 
 test('a model server with no ready replica takes its models offline', () => {
-  const down = { ...OK, workloads: { ...OK.workloads, 'ovms-embeddings': { ready: 0, wanted: 1 } } };
+  const down = { ...OK, workloads: { ...OK.workloads, 'embeddings-predictor': { ready: 0, wanted: 1 } } };
   assert.equal(node(down, 'qwen-embed').health, 'OFFLINE');
   assert.equal(node(down, 'interval-model').health, 'OFFLINE');
   assert.equal(node(down, 'qwen-chat').health, 'HEALTHY');
