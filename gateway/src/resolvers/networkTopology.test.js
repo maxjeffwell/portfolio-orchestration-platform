@@ -51,7 +51,7 @@ const OVERLAY_OK = {
     veleroAgeS: 5 * 86400,
     garageSyncAgeS: 5 * 86400,
     postgresAgeS: 900,
-    hostAgeS: { 'debian-marmoset': 3600, neonmarmoset: 3600, elitedesk: 3600, vmi3610371: 3600 },
+    hostAgeS: { 'debian-marmoset': 3600, neonmarmoset: 3600, elitedesk: 3600, m720q: 3600, vmi3610371: 3600 },
     nasAgeS: { asustor: 3600 },
   },
   wireguardHandshakes: { '10.0.0.9': 40, '10.0.0.4': 60, '10.0.0.5': 90, '10.0.0.6': 120 },
@@ -583,6 +583,7 @@ test('off-site backup: each machine with its own Backblaze job is a service and 
     'GPU Worker 1 Daily',
     'GPU Worker 2 Daily',
     'Control Plane 2 Daily',
+    'Control Plane 3 Daily',
     'Edge VPS Daily',
     'ASUSTOR NAS Daily',
   ]) {
