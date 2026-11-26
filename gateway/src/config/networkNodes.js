@@ -211,19 +211,24 @@ export const NODE_DEFINITIONS = [
     services: [{ name: 'MoCA Uplink', port: null }],
   },
   // ── Second network ──────────────────────────────────────────────────────
-  // Only the access point has a signal of its own: an ICMP probe to its
-  // tailnet address, which it can only answer through its switch, the second
-  // router and that router's uplink. The router and that switch are therefore
-  // inferred from it. `up.optional`: a missing probe result is unknown, not
-  // down (probes come from Prometheus, the rest of `up` from Mimir).
+  // The router runs a node exporter that the NAS's collector scrapes (cluster
+  // pods cannot reach this network), so it has a signal of its own, plus CPU
+  // and memory. `up.optional`: that series arrives through another host, so
+  // when it is missing the router is unknown, not down.
+  //
+  // The access point's signal is an ICMP probe to its tailnet address, which
+  // it can only answer through its switch, the second router and that
+  // router's uplink. The switch at the router is inferred from it. Here too a
+  // missing probe result is unknown, not down (probes come from Prometheus,
+  // the rest of `up` from Mimir).
   {
     id: 'second-router',
     hostname: 'OpenMPTCProuter',
     displayName: 'Second Network Router',
     type: 'ROUTER',
     zone: 'HOME_NETWORK',
-    metricsInstance: null,
-    inferFrom: ['access-point'],
+    metricsInstance: 'omr',
+    up: { job: 'router-node', instance: 'omr', optional: true },
     tailnet: false,
     // How this router reaches the internet is deliberately not described
     // or drawn (owner's decision, 2026-11-21): the map stops at the router.

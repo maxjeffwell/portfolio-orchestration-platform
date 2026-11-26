@@ -437,23 +437,48 @@ test('second network: a switch is judged by the ports cabled to it, not by wheth
   assert.equal(health({ ...SECOND_PORTS, 'marmoset|enx8cae4cb97d51': down }, 'switch-s3'), 'OFFLINE');
 });
 
-test('second network: the router and its switch follow the access point, the one device there with a probe', () => {
-  const topology = (probe) => {
+test('second network: the access point and its switch follow the probe, the router follows its own exporter', () => {
+  const topology = (probe, router = true) => {
     const up = allUp();
     if (probe === undefined) delete up['icmp-infra|100.64.0.13'];
     else up['icmp-infra|100.64.0.13'] = probe;
+    // null = the series is missing (undefined would fall back to the default).
+    if (router === null) delete up['router-node|omr'];
+    else up['router-node|omr'] = router;
     return buildTopology(EMPTY_METRICS, up, STORAGE_OK, SECOND_PORTS, OVERLAY_OK);
   };
 
-  for (const id of ['access-point', 'second-router', 'switch-s1']) {
+  for (const id of ['access-point', 'switch-s1']) {
     assert.equal(byId(topology(true), id).health, 'HEALTHY', id);
     assert.equal(byId(topology(false), id).health, 'OFFLINE', id);
     // The probe result is missing: unknown, not down.
     assert.equal(byId(topology(undefined), id).health, 'DEGRADED', id);
   }
+
+  // The router is scraped directly, so it no longer follows the access point.
+  assert.equal(byId(topology(false), 'second-router').health, 'HEALTHY');
+  assert.equal(byId(topology(true, false), 'second-router').health, 'OFFLINE');
+  // Its scrape arrives through another host's collector: a missing series is
+  // unknown, not down.
+  assert.equal(byId(topology(true, null), 'second-router').health, 'DEGRADED');
+
   // The homelab is unaffected by the second network being down.
-  assert.equal(byId(topology(false), 'primary-router').health, 'HEALTHY');
-  assert.equal(byId(topology(false), 'cp-1').health, 'HEALTHY');
+  assert.equal(byId(topology(false, false), 'primary-router').health, 'HEALTHY');
+  assert.equal(byId(topology(false, false), 'cp-1').health, 'HEALTHY');
+});
+
+test('second network: the router reports its own CPU and memory', () => {
+  const metrics = {
+    ...EMPTY_METRICS,
+    cpu: { omr: 0.023 },
+    memUsed: { omr: 700 * 1048576 },
+    memTotal: { omr: 7731 * 1048576 },
+  };
+  const node = byId(buildTopology(metrics, allUp(), STORAGE_OK, SECOND_PORTS, OVERLAY_OK), 'second-router');
+  assert.equal(node.metrics.cpuPercent, 2.3);
+  assert.equal(node.metrics.memoryTotalMb, 7731);
+  // It has no filesystem figures; that is absent, not zero.
+  assert.equal(node.metrics.storageTotalGb, null);
 });
 
 test('traffic: a storage link reports its node\'s measured I/O, and nothing when it was not measured', () => {
