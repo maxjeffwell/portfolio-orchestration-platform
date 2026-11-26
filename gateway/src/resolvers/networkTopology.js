@@ -26,6 +26,7 @@ import {
   MAYASTOR_NODE,
   LVM_NODE,
   OFFSITE_NODE,
+  OFFSITE_HOSTS,
 } from '../config/networkNodes.js';
 
 const TOPOLOGY_INTERVAL_MS = parseInt(
@@ -245,12 +246,30 @@ const OFFSITE_JOBS = [
 
 // B2 itself is not probed. The node is HEALTHY when every job is fresh and
 // DEGRADED when any is overdue or unknown: stale backups, not an outage.
+// A daily job is overdue once it has missed a run and a bit.
+const HOST_BACKUP_MAX_AGE_S = 2 * DAY;
+
 function buildOffsiteNode(offsite) {
-  const services = OFFSITE_JOBS.map((job) => {
-    const age = offsite?.[job.key];
-    let status = 'DEGRADED';
-    if (age != null) status = age <= job.maxAgeS ? 'HEALTHY' : 'OFFLINE';
-    return { name: job.name, status, port: null };
+  const jobStatus = (age, maxAgeS) => {
+    if (age == null) return 'DEGRADED';
+    return age <= maxAgeS ? 'HEALTHY' : 'OFFLINE';
+  };
+  const services = OFFSITE_JOBS.map((job) => ({
+    name: job.name,
+    status: jobStatus(offsite?.[job.key], job.maxAgeS),
+    port: null,
+  }));
+
+  // One more per machine that sends its own backup, named as the page names
+  // the machine (hostnames stay internal).
+  OFFSITE_HOSTS.forEach(({ id, metric, host }) => {
+    const def = NODE_DEFINITIONS.find((n) => n.id === id);
+    const ages = metric === 'nas' ? offsite?.nasAgeS : offsite?.hostAgeS;
+    services.push({
+      name: `${def.displayName} Daily`,
+      status: jobStatus(ages?.[host ?? def.hostname], HOST_BACKUP_MAX_AGE_S),
+      port: null,
+    });
   });
 
   return {

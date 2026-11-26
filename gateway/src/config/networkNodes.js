@@ -361,6 +361,19 @@ export const OFFSITE_NODE = {
   zone: 'CLOUD',
 };
 
+// Machines that send their own daily backup to B2, besides the cluster's jobs.
+// `metric` says which freshness figure covers it (lib/backupClient.js): `host`
+// for a restic backup of the machine, `nas` for the NAS's nightly sync, which
+// also carries the host backup of Control Plane 1. `host` is the label the
+// figure is published under when it differs from the node's hostname.
+export const OFFSITE_HOSTS = [
+  { id: 'gpu-1', metric: 'host' },
+  { id: 'gpu-2', metric: 'host' },
+  { id: 'cp-2', metric: 'host' },
+  { id: 'edge-vps', metric: 'host' },
+  { id: 'asustor', metric: 'nas', host: 'asustor' },
+];
+
 const K8S_NODES = NODE_DEFINITIONS.filter((n) => n.type === 'K8S_NODE').map((n) => n.id);
 const CONTROL_PLANE = ['cp-1', 'cp-2', 'cp-3'];
 // Nodes running the Mayastor CSI node plugin: they mount volumes over NVMe-oF.
@@ -490,7 +503,12 @@ export const LINK_DEFINITIONS = [
 
   // Off-site backups leave from the three servers: Velero and the Garage dump
   // sync run in the cluster, and the Postgres mirror runs on the HA leader.
-  ...CONTROL_PLANE.map((cp) => ({ source: cp, target: OFFSITE_NODE.id, type: 'OFFSITE_BACKUP' })),
+  // The machines in OFFSITE_HOSTS also send a backup of their own every day.
+  ...[...new Set([...CONTROL_PLANE, ...OFFSITE_HOSTS.map((h) => h.id)])].map((source) => ({
+    source,
+    target: OFFSITE_NODE.id,
+    type: 'OFFSITE_BACKUP',
+  })),
 
   // One remaining iSCSI volume lives on the Synology.
   { source: 'cp-1', target: 'synology', type: 'ISCSI' },

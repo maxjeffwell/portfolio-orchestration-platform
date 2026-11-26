@@ -47,7 +47,13 @@ const LVM_OK = {
 const OVERLAY_OK = {
   lvm: LVM_OK,
   headscale: { primaryUp: true, publicUp: true, standbySynced: true },
-  offsite: { veleroAgeS: 5 * 86400, garageSyncAgeS: 5 * 86400, postgresAgeS: 900 },
+  offsite: {
+    veleroAgeS: 5 * 86400,
+    garageSyncAgeS: 5 * 86400,
+    postgresAgeS: 900,
+    hostAgeS: { 'debian-marmoset': 3600, neonmarmoset: 3600, elitedesk: 3600, vmi3610371: 3600 },
+    nasAgeS: { asustor: 3600 },
+  },
   wireguardHandshakes: { '10.0.0.9': 40, '10.0.0.4': 60, '10.0.0.5': 90, '10.0.0.6': 120 },
 };
 
@@ -566,4 +572,38 @@ test('monitoring: the NAS collector is described as the one that scrapes the rou
     MONITORING_FLOWS.find((f) => f.from === from && f.to === to && f.signal === kind);
   assert.match(flow('devices', 'alloy-nas', 'METRICS').note, /routers/);
   assert.doesNotMatch(flow('devices', 'alloy', 'METRICS').note, /routers/);
+});
+
+test('off-site backup: each machine with its own Backblaze job is a service and a link', () => {
+  const build = (offsite) => buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { offsite });
+  const status = (t, name) => byId(t, 'offsite-backup').services.find((s) => s.name === name)?.status;
+  const ok = build(OVERLAY_OK.offsite);
+
+  for (const name of [
+    'GPU Worker 1 Daily',
+    'GPU Worker 2 Daily',
+    'Control Plane 2 Daily',
+    'Edge VPS Daily',
+    'ASUSTOR NAS Daily',
+  ]) {
+    assert.equal(status(ok, name), 'HEALTHY', name);
+  }
+  // Internal hostnames never reach the page.
+  assert.ok(!JSON.stringify(byId(ok, 'offsite-backup')).includes('vmi3610371'));
+
+  const sources = ok.links.filter((l) => l.type === 'OFFSITE_BACKUP').map((l) => l.source).sort();
+  assert.deepEqual(sources, ['asustor', 'cp-1', 'cp-2', 'cp-3', 'edge-vps', 'gpu-1', 'gpu-2']);
+
+  // A daily job that has not succeeded for three days is overdue.
+  const stale = build({
+    ...OVERLAY_OK.offsite,
+    hostAgeS: { ...OVERLAY_OK.offsite.hostAgeS, neonmarmoset: 3 * 86400 },
+  });
+  assert.equal(status(stale, 'GPU Worker 2 Daily'), 'OFFLINE');
+  assert.equal(byId(stale, 'offsite-backup').health, 'DEGRADED');
+  assert.equal(status(stale, 'GPU Worker 1 Daily'), 'HEALTHY');
+
+  // No figure for a machine is unknown, not overdue.
+  const unknown = build({ ...OVERLAY_OK.offsite, nasAgeS: {} });
+  assert.equal(status(unknown, 'ASUSTOR NAS Daily'), 'DEGRADED');
 });

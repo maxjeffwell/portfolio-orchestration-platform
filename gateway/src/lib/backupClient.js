@@ -32,9 +32,52 @@ async function queryScalar(promql) {
   }
 }
 
-// Each value is a number of seconds, or null when Prometheus has no answer.
+// Machines that back themselves up to B2 stamp the time of each success into
+// a small metric file. Hosts are scraped by the in-cluster Prometheus; the
+// NAS's figure arrives through its own collector, in Mimir.
+const MIMIR_URL =
+  process.env.MIMIR_URL ||
+  'http://mimir-monolithic.monitoring.svc.cluster.local:8080/prometheus';
+
+const PER_HOST = {
+  hostAgeS: [
+    PROMETHEUS_URL,
+    'time() - max by (host) (host_offsite_backup_last_success_timestamp_seconds)',
+  ],
+  nasAgeS: [
+    MIMIR_URL,
+    'time() - max by (host) (nas_offsite_backup_last_success_timestamp_seconds)',
+  ],
+};
+
+// { host: seconds }, empty when the source has no answer.
+async function queryByHost(baseUrl, promql) {
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/query?query=${encodeURIComponent(promql)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    return Object.fromEntries(
+      (data.data?.result ?? []).map((r) => [r.metric.host, parseFloat(r.value[1])]),
+    );
+  } catch (err) {
+    console.error('[backupClient] per-host query failed:', err.message);
+    return {};
+  }
+}
+
+// Each job value is a number of seconds, or null when Prometheus has no
+// answer; hostAgeS and nasAgeS are maps of host to seconds.
 export async function fetchOffsiteBackupStatus() {
   const names = Object.keys(QUERIES);
-  const values = await Promise.all(names.map((name) => queryScalar(QUERIES[name])));
-  return Object.fromEntries(names.map((name, i) => [name, values[i]]));
+  const perHost = Object.keys(PER_HOST);
+  const [values, maps] = await Promise.all([
+    Promise.all(names.map((name) => queryScalar(QUERIES[name]))),
+    Promise.all(perHost.map((name) => queryByHost(...PER_HOST[name]))),
+  ]);
+  return {
+    ...Object.fromEntries(names.map((name, i) => [name, values[i]])),
+    ...Object.fromEntries(perHost.map((name, i) => [name, maps[i]])),
+  };
 }
