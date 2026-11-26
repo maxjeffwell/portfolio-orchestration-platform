@@ -581,7 +581,8 @@ test('monitoring: the SNMP exporter has its own box, fed by the devices and scra
   const flow = (from, to) => MONITORING_FLOWS.find((f) => f.from === from && f.to === to && f.signal === 'METRICS');
   assert.ok(flow('devices', 'snmp-exporter'));
   assert.ok(flow('snmp-exporter', 'prometheus'));
-  assert.doesNotMatch(flow('devices', 'alloy-nas').note, /SNMP/);
+  // Alloy on the NAS runs its own SNMP polling (both NAS units and the main router).
+  assert.match(flow('devices', 'alloy-nas').note, /SNMP/);
 });
 
 test('off-site backup: each machine with its own Backblaze job is a service and a link', () => {
