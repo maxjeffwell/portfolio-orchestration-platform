@@ -62,3 +62,24 @@ export async function fetchWireguardHandshakes() {
   }
   return ages;
 }
+
+// Bits per second exchanged with each WireGuard peer, keyed by the peer's
+// mesh address like fetchWireguardHandshakes. Both ends of a tunnel report it,
+// so the larger figure is used, not the sum.
+export async function fetchWireguardTraffic() {
+  const result = await query(
+    MIMIR_URL,
+    'max by (allowed_ips) (rate(wireguard_received_bytes_total[2m])' +
+      ' + rate(wireguard_sent_bytes_total[2m])) * 8',
+  );
+  const traffic = {};
+  for (const r of result ?? []) {
+    const bps = parseFloat(r.value?.[1]);
+    if (!Number.isFinite(bps)) continue;
+    for (const cidr of (r.metric?.allowed_ips ?? '').split(',')) {
+      const [addr, bits] = cidr.trim().split('/');
+      if (bits === '32' && (traffic[addr] == null || bps > traffic[addr])) traffic[addr] = bps;
+    }
+  }
+  return traffic;
+}

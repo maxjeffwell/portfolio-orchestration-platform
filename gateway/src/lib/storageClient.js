@@ -128,6 +128,65 @@ export async function fetchHostPortStatus() {
   return map;
 }
 
+// Bits per second through the machines' own network ports, both directions,
+// keyed "hostname|device" like fetchHostPortStatus.
+export async function fetchHostPortTraffic() {
+  const results = await queryVector(
+    '((rate(node_network_receive_bytes_total{device=~"en.*|eth.*"}[2m])' +
+      ' + rate(node_network_transmit_bytes_total{device=~"en.*|eth.*"}[2m])) * 8)' +
+      ' * on (instance) group_left (nodename) node_uname_info',
+    'port traffic',
+  );
+  const map = {};
+  for (const r of results) {
+    const { nodename, device } = r.metric ?? {};
+    const bps = parseFloat(r.value?.[1]);
+    if (nodename && device && Number.isFinite(bps)) map[`${nodename}|${device}`] = bps;
+  }
+  return map;
+}
+
+// Disk I/O each node is doing against its storage volumes right now, read plus
+// write, in bits per second: { nvmeof: { hostname: bps }, lvm: { hostname: bps } }.
+// Returns null when Prometheus answered neither query.
+//
+// NVMe-oF: a Mayastor volume appears on the consuming node as an NVMe
+// controller whose model is "Mayastor NVMe controller". Its I/O is counted on
+// the controller's path device (nvme<subsystem>c<controller>n<ns>), which
+// names the controller directly; the head device's number is the subsystem's
+// and does not always match.
+// Local volumes: the device-mapper devices whose logical volume is a PVC.
+const NVMEOF_TRAFFIC =
+  'label_replace(' +
+  'rate(node_disk_read_bytes_total{device=~"nvme[0-9]+c[0-9]+n[0-9]+"}[2m])' +
+  ' + rate(node_disk_written_bytes_total{device=~"nvme[0-9]+c[0-9]+n[0-9]+"}[2m]),' +
+  ' "ctrl", "nvme$1", "device", "nvme[0-9]+c([0-9]+)n[0-9]+")' +
+  ' * on (instance, ctrl) group_left ()' +
+  ' label_replace(node_nvme_info{model="Mayastor NVMe controller"}, "ctrl", "$1", "device", "(.+)")';
+const LVM_TRAFFIC =
+  '(rate(node_disk_read_bytes_total{device=~"dm-[0-9]+"}[2m])' +
+  ' + rate(node_disk_written_bytes_total{device=~"dm-[0-9]+"}[2m]))' +
+  ' * on (instance, device) group_left () node_disk_device_mapper_info{lv_name=~"pvc-.*"}';
+const perNodeBits = (expr) =>
+  `sum by (nodename) ((${expr}) * on (instance) group_left (nodename) node_uname_info) * 8`;
+
+export async function fetchStorageTraffic() {
+  const [nvmeof, lvm] = await Promise.all([
+    queryVector(perNodeBits(NVMEOF_TRAFFIC), 'nvme-of traffic'),
+    queryVector(perNodeBits(LVM_TRAFFIC), 'local volume traffic'),
+  ]);
+  if (nvmeof.length === 0 && lvm.length === 0) return null;
+  const byNode = (results) => {
+    const map = {};
+    for (const r of results) {
+      const bps = parseFloat(r.value?.[1]);
+      if (r.metric?.nodename && Number.isFinite(bps)) map[r.metric.nodename] = bps;
+    }
+    return map;
+  };
+  return { nvmeof: byNode(nvmeof), lvm: byNode(lvm) };
+}
+
 // Results of the ICMP probes of devices that have no exporter, keyed like
 // scrape liveness: "job|instance" -> true/false.
 export async function fetchProbeStatus() {

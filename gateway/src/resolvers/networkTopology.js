@@ -2,6 +2,7 @@ import {
   fetchNodeMetrics,
   fetchUpStatus,
   fetchPortStatus,
+  fetchPortTraffic,
   formatUptime,
 } from '../lib/mimirClient.js';
 import {
@@ -9,10 +10,16 @@ import {
   fetchLvmStatus,
   fetchUplinkSpeeds,
   fetchHostPortStatus,
+  fetchHostPortTraffic,
+  fetchStorageTraffic,
   fetchProbeStatus,
 } from '../lib/storageClient.js';
 import { fetchOffsiteBackupStatus } from '../lib/backupClient.js';
-import { fetchHeadscaleStatus, fetchWireguardHandshakes } from '../lib/overlayClient.js';
+import {
+  fetchHeadscaleStatus,
+  fetchWireguardHandshakes,
+  fetchWireguardTraffic,
+} from '../lib/overlayClient.js';
 import {
   NODE_DEFINITIONS,
   LINK_DEFINITIONS,
@@ -263,6 +270,26 @@ function buildOffsiteNode(offsite) {
 // flows; allow some slack before calling the tunnel down.
 const WG_HANDSHAKE_MAX_AGE_S = 300;
 
+// Traffic on a link right now, in bits per second, or null when nothing
+// measures it. Null is "not measured", never "idle": an idle link reports 0.
+//   - a link that names its port: bytes through that port, both directions
+//   - NVMe-oF / local volume: the node's disk I/O to those volumes, read + write
+//   - WireGuard: bytes exchanged with that peer
+// Tailscale, Garage, NFS, iSCSI, Loki and unnamed Ethernet links have no
+// per-link counter and stay null.
+const STORAGE_TRAFFIC_KEY = { NVME_OF: 'nvmeof', LOCAL_VOLUME: 'lvm' };
+
+function measuredTraffic(link, port, hostnameById, overlay) {
+  const known = (value) => (Number.isFinite(value) ? value : null);
+  if (link.port) return known(port?.trafficBps);
+  const storageKey = STORAGE_TRAFFIC_KEY[link.type];
+  if (storageKey) {
+    return known(overlay?.storageTraffic?.[storageKey]?.[hostnameById[link.source]]);
+  }
+  if (link.wgPeer) return known(overlay?.wireguardTraffic?.[link.wgPeer]);
+  return null;
+}
+
 export function buildTopology(metrics, up, storage = null, ports = {}, overlay = {}) {
   const mimirAnswered = Object.keys(up ?? {}).length > 0;
   const healthById = {};
@@ -338,6 +365,7 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
       target: link.target,
       type: link.type,
       status: linkUp ? ends : 'OFFLINE',
+      throughputBps: linkUp ? measuredTraffic(link, port, hostnameById, overlay) : null,
       bandwidthBps:
         (port?.carrier ? port.speedBps : null) ??
         link.speedBps ??
@@ -358,6 +386,16 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   return { nodes, links, lastUpdated: new Date().toISOString() };
 }
 
+// Adds each port's measured rate to its status entry. A port with a rate but
+// no status entry is left out: without carrier it cannot be judged up.
+function withTraffic(ports, traffic) {
+  const out = {};
+  for (const [key, entry] of Object.entries(ports)) {
+    out[key] = key in traffic ? { ...entry, trafficBps: traffic[key] } : entry;
+  }
+  return out;
+}
+
 async function fetchNetworkTopology() {
   const [
     metrics,
@@ -371,6 +409,10 @@ async function fetchNetworkTopology() {
     lvm,
     hostPorts,
     probes,
+    routerPortTraffic,
+    hostPortTraffic,
+    storageTraffic,
+    wireguardTraffic,
   ] = await Promise.all([
     fetchNodeMetrics().catch(() => null),
     fetchUpStatus().catch(() => ({})),
@@ -383,14 +425,23 @@ async function fetchNetworkTopology() {
     fetchLvmStatus().catch(() => null),
     fetchHostPortStatus().catch(() => ({})),
     fetchProbeStatus().catch(() => ({})),
+    fetchPortTraffic().catch(() => ({})),
+    fetchHostPortTraffic().catch(() => ({})),
+    fetchStorageTraffic().catch(() => null),
+    fetchWireguardTraffic().catch(() => ({})),
   ]);
   // Probe results join the liveness map only when Mimir answered: an empty
   // map is how "Mimir could not be queried" is recognised downstream.
   const up = Object.keys(mimirUp).length > 0 ? { ...mimirUp, ...probes } : mimirUp;
-  const ports = { ...routerPorts, ...hostPorts };
+  const ports = withTraffic(
+    { ...routerPorts, ...hostPorts },
+    { ...routerPortTraffic, ...hostPortTraffic },
+  );
   return buildTopology(metrics, up, storage, ports, {
     headscale,
     wireguardHandshakes,
+    storageTraffic,
+    wireguardTraffic,
     offsite,
     uplinkSpeeds,
     lvm,

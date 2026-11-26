@@ -477,6 +477,8 @@ export const typeDefs = /* GraphQL */ `
     type: LinkType!
     status: HealthStatus!
     bandwidthBps: Float
+    "Traffic on the link right now in bits per second. Null means nothing measures this link, not that it is idle."
+    throughputBps: Float
     latencyMs: Float
     metadata: LinkMetadata
   }

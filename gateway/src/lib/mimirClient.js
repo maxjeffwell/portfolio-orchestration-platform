@@ -95,6 +95,22 @@ export async function fetchPortStatus() {
   return map;
 }
 
+// Bits per second through the routers' network ports, both directions,
+// keyed "instance|device" like fetchPortStatus.
+export async function fetchPortTraffic() {
+  const results = await queryMimir(
+    '(rate(node_network_receive_bytes_total{job="router-node"}[2m])' +
+      ' + rate(node_network_transmit_bytes_total{job="router-node"}[2m])) * 8'
+  );
+  const map = {};
+  for (const r of results) {
+    const { instance, device } = r.metric ?? {};
+    const bps = parseFloat(r.value?.[1]);
+    if (instance && device && Number.isFinite(bps)) map[`${instance}|${device}`] = bps;
+  }
+  return map;
+}
+
 export function formatUptime(seconds) {
   if (!seconds) return null;
   const days = Math.floor(seconds / 86400);

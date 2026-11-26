@@ -455,3 +455,57 @@ test('second network: the router and its switch follow the access point, the one
   assert.equal(byId(topology(false), 'primary-router').health, 'HEALTHY');
   assert.equal(byId(topology(false), 'cp-1').health, 'HEALTHY');
 });
+
+test('traffic: a storage link reports its node\'s measured I/O, and nothing when it was not measured', () => {
+  const overlay = {
+    ...OVERLAY_OK,
+    storageTraffic: {
+      nvmeof: { m920s: 11.6e6, elitedesk: 140e3 },
+      lvm: { m920s: 3.1e6 },
+    },
+  };
+  const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, SECOND_PORTS, overlay);
+  const find = (source, type) => links.find((l) => l.source === source && l.type === type);
+
+  assert.equal(find('cp-1', 'NVME_OF').throughputBps, 11.6e6);
+  assert.equal(find('cp-2', 'NVME_OF').throughputBps, 140e3);
+  assert.equal(find('cp-1', 'LOCAL_VOLUME').throughputBps, 3.1e6);
+  // m720q was not in the answer: unknown, which is not the same as idle.
+  assert.equal(find('cp-3', 'NVME_OF').throughputBps, null);
+  assert.equal(find('cp-3', 'LOCAL_VOLUME').throughputBps, null);
+});
+
+test('traffic: no storage answer at all leaves every storage link unmeasured', () => {
+  const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, SECOND_PORTS, OVERLAY_OK);
+  for (const l of links.filter((x) => x.type === 'NVME_OF' || x.type === 'LOCAL_VOLUME')) {
+    assert.equal(l.throughputBps, null, `${l.source} ${l.type}`);
+  }
+});
+
+test('traffic: a link that names its port reports that port\'s rate, and none once the link is down', () => {
+  const link = (ports) =>
+    second(buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, ports, OVERLAY_OK).links).find(
+      (l) => pair(l) === 'cp-1 <-> switch-s2',
+    );
+
+  const busy = { ...SECOND_PORTS, 'm920s|eno1': { carrier: true, speedBps: 1e9, trafficBps: 42e6 } };
+  assert.equal(link(busy).throughputBps, 42e6);
+  // A port with no rate in the answer is unmeasured.
+  assert.equal(link(SECOND_PORTS).throughputBps, null);
+
+  const unplugged = { ...SECOND_PORTS, 'm920s|eno1': { carrier: false, speedBps: null, trafficBps: 42e6 } };
+  assert.equal(link(unplugged).status, 'OFFLINE');
+  assert.equal(link(unplugged).throughputBps, null);
+});
+
+test('traffic: a WireGuard link reports its peer\'s rate; links with no source of numbers stay unmeasured', () => {
+  const overlay = { ...OVERLAY_OK, wireguardTraffic: { '10.0.0.9': 250e3 } };
+  const { links } = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, SECOND_PORTS, overlay);
+  const wg = (target) => links.find((l) => l.type === 'WIREGUARD' && l.target === target);
+
+  assert.equal(wg('gpu-1').throughputBps, 250e3);
+  assert.equal(wg('asustor').throughputBps, null);
+  for (const l of links.filter((x) => x.type === 'TAILSCALE' || x.type === 'GARAGE_REPLICATION')) {
+    assert.equal(l.throughputBps, null, `${l.source} -> ${l.target} ${l.type}`);
+  }
+});
