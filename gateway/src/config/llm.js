@@ -10,7 +10,8 @@
 // 2026-11-26: the two model servers are KServe InferenceServices now
 // (qwen-llm and embeddings in the ovms namespace). KServe names the Deployment
 // it generates <name>-predictor, which is what the health signal reads.
-// Each has a second copy on the other GPU laptop (qwen-llm-2, embeddings-2); a
+// Each has a second copy on the other GPU laptop (qwen-llm-2, embeddings-2), and
+// embeddings a third on a desktop's older GPU (embeddings-3); a
 // box is healthy when both copies run, degraded with one, offline with none
 // (signal.pooled).
 //   pooled   the workloads are interchangeable copies behind one address
@@ -27,7 +28,7 @@ export const LLM_STAGES = [
 ];
 
 const OVMS_LLM = 'KServe + OpenVINO · GPU Workers 1 + 2';
-const OVMS_EMBED = 'KServe + OpenVINO · GPU Workers 1 + 2';
+const OVMS_EMBED = 'KServe + OpenVINO · 3 copies';
 
 export const LLM_NODES = [
   // --- who asks
@@ -135,8 +136,8 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen3 Embedding 0.6B',
     location: OVMS_EMBED,
-    role: 'Turns text into vectors so that things with similar meaning land close together. It runs on a second OpenVINO Model Server, also a KServe InferenceService, which holds both embedding models and the reranker in one process. The three are unloaded together after fifteen idle minutes and reloaded together, in about four seconds, on the next request. This server also runs as two copies, one per GPU laptop, returning identical vectors; nothing hosted stands in for it, so the second copy is what keeps search working when a laptop is down.',
-    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'qwen3-embedding-0.6b' },
+    role: 'Turns text into vectors so that things with similar meaning land close together. It runs on a second OpenVINO Model Server, also a KServe InferenceService, which holds both embedding models and the reranker in one process. The three are unloaded together after fifteen idle minutes and reloaded together, in about four seconds, on the next request. This server runs as three copies returning identical vectors: one on each GPU laptop and one on a desktop’s older integrated GPU, which needed Intel’s legacy driver added to the server image. Nothing hosted stands in for embeddings, so the extra copies are what keep search working when a machine is down.',
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor', 'embeddings-3-predictor'], pooled: true, model: 'qwen3-embedding-0.6b' },
   },
   {
     id: 'e5',
@@ -144,7 +145,7 @@ export const LLM_NODES = [
     displayName: 'E5 Large',
     location: OVMS_EMBED,
     role: 'An older embedding model, still serving the callers that were built on it. Its vectors are not comparable with Qwen3 ones.',
-    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'e5-large' },
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor', 'embeddings-3-predictor'], pooled: true, model: 'e5-large' },
   },
   {
     id: 'reranker',
@@ -152,7 +153,7 @@ export const LLM_NODES = [
     displayName: 'Qwen3 Reranker 0.6B',
     location: OVMS_EMBED,
     role: 'Given a question and a list of candidates, puts the candidates in order of relevance.',
-    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'qwen3-reranker-0.6b' },
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor', 'embeddings-3-predictor'], pooled: true, model: 'qwen3-reranker-0.6b' },
   },
   {
     id: 'interval-model',
@@ -162,7 +163,7 @@ export const LLM_NODES = [
     // Figures from the app's ml/saved-model/metadata.json (model 5.0.0-v2-growth)
     // and from OVMS itself, which reports interval_ai version 2, input [-1, 24].
     role: 'Not a language model: IntervalAI’s own neural network, a plain feed-forward net with four hidden layers (128, 64, 32 and 16 units) and about 14,700 weights. It takes 24 numbers describing a card, such as how strong the memory is, how hard the card has been, the success rate and whether the answer just given was right, and returns the number of days until the next review. Trained in TensorFlow on 41,725 examples in October 2026, converted to OpenVINO, and served as interval_ai version 2 on the same model server as the embedding models.',
-    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'interval_ai' },
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor', 'embeddings-3-predictor'], pooled: true, model: 'interval_ai' },
   },
   {
     id: 'immich-ml',
