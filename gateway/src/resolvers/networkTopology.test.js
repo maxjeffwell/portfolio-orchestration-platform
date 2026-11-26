@@ -574,6 +574,16 @@ test('monitoring: the NAS collector is described as the one that scrapes the rou
   assert.doesNotMatch(flow('devices', 'alloy', 'METRICS').note, /routers/);
 });
 
+test('monitoring: the SNMP exporter has its own box, fed by the devices and scraped by Prometheus', () => {
+  const snmp = MONITORING_NODES.find((n) => n.id === 'snmp-exporter');
+  assert.equal(snmp.stage, 'COLLECT');
+  assert.deepEqual(snmp.signal, { workloads: ['snmp-exporter'], up: 'snmp-synology' });
+  const flow = (from, to) => MONITORING_FLOWS.find((f) => f.from === from && f.to === to && f.signal === 'METRICS');
+  assert.ok(flow('devices', 'snmp-exporter'));
+  assert.ok(flow('snmp-exporter', 'prometheus'));
+  assert.doesNotMatch(flow('devices', 'alloy-nas').note, /SNMP/);
+});
+
 test('off-site backup: each machine with its own Backblaze job is a service and a link', () => {
   const build = (offsite) => buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { offsite });
   const status = (t, name) => byId(t, 'offsite-backup').services.find((s) => s.name === name)?.status;

@@ -104,6 +104,14 @@ export const MONITORING_NODES = [
     role: 'Collects from the NAS itself and its containers, scrapes the routers and takes in their syslog, so the home network is observed even when the cluster is not.',
     signal: { up: 'cadvisor-asustor' },
   },
+  {
+    id: 'snmp-exporter',
+    stage: 'COLLECT',
+    displayName: 'SNMP exporter',
+    location: 'One pod in the cluster',
+    role: 'A translator for gear that only speaks SNMP. Prometheus asks it once a minute, it asks the Synology NAS over SNMP and hands back the answer as metrics: how full each storage volume is.',
+    signal: { workloads: ['snmp-exporter'], up: 'snmp-synology' },
+  },
 
   // --- stores
   {
@@ -219,7 +227,9 @@ export const MONITORING_FLOWS = [
   flow('devices', 'alloy', 'METRICS', 'Alloy scrapes Garage and the WireGuard exporters.'),
   flow('caretta', 'alloy', 'METRICS', 'Alloy scrapes the connection map Caretta builds.'),
   flow('beyla', 'alloy', 'METRICS', 'Request rates and durations measured in the kernel.'),
-  flow('devices', 'alloy-nas', 'METRICS', 'The NAS collects from itself, its containers, the routers, the UPS and SNMP devices.'),
+  flow('devices', 'alloy-nas', 'METRICS', 'The NAS collects from itself, its containers, the routers and the UPS.'),
+  flow('devices', 'snmp-exporter', 'METRICS', 'The exporter polls the Synology NAS over SNMP.'),
+  flow('snmp-exporter', 'prometheus', 'METRICS', 'Prometheus scrapes the exporter, which answers with what the NAS just reported.'),
   flow('alloy', 'mimir', 'METRICS', 'Remote-written to Mimir for long-term keeping.'),
   flow('alloy', 'prometheus', 'METRICS', 'A copy of host metrics is also remote-written to Prometheus.'),
   flow('alloy-nas', 'mimir', 'METRICS', 'Remote-written to Mimir across the tailnet.'),
