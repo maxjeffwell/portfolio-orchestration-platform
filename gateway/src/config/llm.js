@@ -119,7 +119,7 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen2.5 1.5B chat',
     location: OVMS_LLM,
-    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers.',
+    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers. That GPU is shared: Immich’s vision models, Channels DVR and a Tdarr transcoding node use it too, so a long transcode slows answers.',
     signal: { workloads: ['ovms-llm'], model: 'qwen2.5-1.5b-instruct' },
   },
   {
@@ -127,7 +127,7 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen3 Embedding 0.6B',
     location: OVMS_EMBED,
-    role: 'Turns text into vectors so that things with similar meaning land close together.',
+    role: 'Turns text into vectors so that things with similar meaning land close together. The model server it runs on shares its integrated GPU with Jellyfin and Tdarr video transcoding.',
     signal: { workloads: ['ovms-embeddings'], model: 'qwen3-embedding-0.6b' },
   },
   {
