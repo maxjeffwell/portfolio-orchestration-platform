@@ -59,11 +59,22 @@ test('hosted models and unmeasured callers carry no health at all', () => {
   }
 });
 
-test('a model server with no ready replica takes its models offline', () => {
-  const down = { ...OK, workloads: { ...OK.workloads, 'embeddings-predictor': { ready: 0, wanted: 1 } } };
-  assert.equal(node(down, 'qwen-embed').health, 'OFFLINE');
-  assert.equal(node(down, 'interval-model').health, 'OFFLINE');
-  assert.equal(node(down, 'qwen-chat').health, 'HEALTHY');
+test('one of two model server copies down degrades its models; both down takes them offline', () => {
+  const off = { ready: 0, wanted: 1 };
+  const one = { ...OK, workloads: { ...OK.workloads, 'embeddings-predictor': off } };
+  assert.equal(node(one, 'qwen-embed').health, 'DEGRADED');
+  assert.equal(node(one, 'interval-model').health, 'DEGRADED');
+  assert.equal(node(one, 'qwen-chat').health, 'HEALTHY');
+
+  const both = { ...OK, workloads: { ...OK.workloads, 'embeddings-predictor': off, 'embeddings-2-predictor': off } };
+  assert.equal(node(both, 'qwen-embed').health, 'OFFLINE');
+  assert.equal(node(both, 'interval-model').health, 'OFFLINE');
+  assert.equal(node(both, 'qwen-chat').health, 'HEALTHY');
+});
+
+test('a copy with no data counts as not running', () => {
+  const { 'qwen-llm-2-predictor': _gone, ...rest } = OK.workloads;
+  assert.equal(node({ ...OK, workloads: rest }, 'qwen-chat').health, 'DEGRADED');
 });
 
 test('one of two pods not ready is degraded; a partly ready service too', () => {

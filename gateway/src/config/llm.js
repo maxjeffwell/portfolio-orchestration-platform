@@ -10,6 +10,10 @@
 // 2026-11-26: the two model servers are KServe InferenceServices now
 // (qwen-llm and embeddings in the ovms namespace). KServe names the Deployment
 // it generates <name>-predictor, which is what the health signal reads.
+// Each has a second copy on the other GPU laptop (qwen-llm-2, embeddings-2); a
+// box is healthy when both copies run, degraded with one, offline with none
+// (signal.pooled).
+//   pooled   the workloads are interchangeable copies behind one address
 //
 //   stage    column on the page, left to right
 //   signal   which live figures to attach (see resolvers/llmTopology.js)
@@ -22,8 +26,8 @@ export const LLM_STAGES = [
   { id: 'KEEP', label: 'Memory and records' },
 ];
 
-const OVMS_LLM = 'KServe + OpenVINO · GPU Worker 1';
-const OVMS_EMBED = 'KServe + OpenVINO · GPU Worker 2';
+const OVMS_LLM = 'KServe + OpenVINO · GPU Workers 1 + 2';
+const OVMS_EMBED = 'KServe + OpenVINO · GPU Workers 1 + 2';
 
 export const LLM_NODES = [
   // --- who asks
@@ -123,16 +127,16 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen2.5 1.5B chat',
     location: OVMS_LLM,
-    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. The server is deployed as a KServe InferenceService: KServe downloads the model from the cluster’s object store, attaches the GPU and keeps the pod running. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers. After fifteen minutes without a request the model is unloaded to free memory, and the next request reloads it in about a second. That GPU is shared: Immich’s vision models, Channels DVR and a Tdarr transcoding node use it too, so a long transcode slows answers.',
-    signal: { workloads: ['qwen-llm-predictor'], model: 'qwen2.5-1.5b-instruct' },
+    role: 'Qwen2.5 1.5B Instruct, served by OpenVINO Model Server (OVMS) on an Intel integrated GPU. The server is deployed as a KServe InferenceService: KServe downloads the model from the cluster’s object store, attaches the GPU and keeps the pod running. First choice for Pop!_Portfolio, IntervalAI, bookmark tags, tenants and outside callers. It runs as two copies, one on each GPU laptop, and requests are spread across them, so chat keeps working when one laptop is down. After fifteen minutes without a request a copy unloads its model to free memory, and the next request reloads it in about a second. Both GPUs are shared with other work (Immich’s vision models, Channels DVR, Jellyfin and Tdarr transcoding), so a long transcode slows answers.',
+    signal: { workloads: ['qwen-llm-predictor', 'qwen-llm-2-predictor'], pooled: true, model: 'qwen2.5-1.5b-instruct' },
   },
   {
     id: 'qwen-embed',
     stage: 'LOCAL',
     displayName: 'Qwen3 Embedding 0.6B',
     location: OVMS_EMBED,
-    role: 'Turns text into vectors so that things with similar meaning land close together. It runs on a second OpenVINO Model Server, also a KServe InferenceService, which holds both embedding models and the reranker in one process. The three are unloaded together after fifteen idle minutes and reloaded together, in about four seconds, on the next request. That server shares its integrated GPU with Jellyfin and Tdarr video transcoding.',
-    signal: { workloads: ['embeddings-predictor'], model: 'qwen3-embedding-0.6b' },
+    role: 'Turns text into vectors so that things with similar meaning land close together. It runs on a second OpenVINO Model Server, also a KServe InferenceService, which holds both embedding models and the reranker in one process. The three are unloaded together after fifteen idle minutes and reloaded together, in about four seconds, on the next request. This server also runs as two copies, one per GPU laptop, returning identical vectors; nothing hosted stands in for it, so the second copy is what keeps search working when a laptop is down.',
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'qwen3-embedding-0.6b' },
   },
   {
     id: 'e5',
@@ -140,7 +144,7 @@ export const LLM_NODES = [
     displayName: 'E5 Large',
     location: OVMS_EMBED,
     role: 'An older embedding model, still serving the callers that were built on it. Its vectors are not comparable with Qwen3 ones.',
-    signal: { workloads: ['embeddings-predictor'], model: 'e5-large' },
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'e5-large' },
   },
   {
     id: 'reranker',
@@ -148,7 +152,7 @@ export const LLM_NODES = [
     displayName: 'Qwen3 Reranker 0.6B',
     location: OVMS_EMBED,
     role: 'Given a question and a list of candidates, puts the candidates in order of relevance.',
-    signal: { workloads: ['embeddings-predictor'], model: 'qwen3-reranker-0.6b' },
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'qwen3-reranker-0.6b' },
   },
   {
     id: 'interval-model',
@@ -158,7 +162,7 @@ export const LLM_NODES = [
     // Figures from the app's ml/saved-model/metadata.json (model 5.0.0-v2-growth)
     // and from OVMS itself, which reports interval_ai version 2, input [-1, 24].
     role: 'Not a language model: IntervalAI’s own neural network, a plain feed-forward net with four hidden layers (128, 64, 32 and 16 units) and about 14,700 weights. It takes 24 numbers describing a card, such as how strong the memory is, how hard the card has been, the success rate and whether the answer just given was right, and returns the number of days until the next review. Trained in TensorFlow on 41,725 examples in October 2026, converted to OpenVINO, and served as interval_ai version 2 on the same model server as the embedding models.',
-    signal: { workloads: ['embeddings-predictor'], model: 'interval_ai' },
+    signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor'], pooled: true, model: 'interval_ai' },
   },
   {
     id: 'immich-ml',

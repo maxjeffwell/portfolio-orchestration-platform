@@ -11,6 +11,21 @@ function grade(ready, wanted) {
 }
 
 // Unknown is DEGRADED, never HEALTHY: no data is not good news.
+// Interchangeable copies of one service behind one address: the box is OFFLINE
+// only when no copy is running, DEGRADED when some are. A copy with no data
+// counts as not running.
+function pooledHealth(names, workloads) {
+  let ready = 0;
+  let wanted = 0;
+  for (const name of names) {
+    const w = workloads?.[name];
+    const known = w && w.ready != null && w.wanted != null;
+    ready += known ? w.ready : 0;
+    wanted += known ? w.wanted : 1;
+  }
+  return { health: grade(ready, wanted), counts: `${ready}/${wanted} running` };
+}
+
 function workloadHealth(names, workloads) {
   let health = null;
   let ready = 0;
@@ -47,7 +62,9 @@ function nodeStatus(signal, s) {
   let health = null;
   const parts = [];
   if (signal.workloads) {
-    const w = workloadHealth(signal.workloads, s.workloads);
+    const w = signal.pooled
+      ? pooledHealth(signal.workloads, s.workloads)
+      : workloadHealth(signal.workloads, s.workloads);
     health = w.health;
     // A model's box shows its own traffic; the server's replica count is the
     // same for every model on it and would only repeat.
