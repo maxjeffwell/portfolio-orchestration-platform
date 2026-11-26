@@ -136,7 +136,7 @@ export const LLM_NODES = [
     stage: 'LOCAL',
     displayName: 'Qwen3 Embedding 0.6B',
     location: OVMS_EMBED,
-    role: 'Turns text into vectors so that things with similar meaning land close together. It runs on a second OpenVINO Model Server, also a KServe InferenceService, which holds both embedding models and the reranker in one process. The three are unloaded together after fifteen idle minutes and reloaded together, in about four seconds, on the next request. This server runs as three copies returning identical vectors: one on each GPU laptop and one on a desktop’s older integrated GPU, which needed Intel’s legacy driver added to the server image. Nothing hosted stands in for embeddings, so the extra copies are what keep search working when a machine is down.',
+    role: 'Turns text into vectors so that things with similar meaning land close together. It runs on a second OpenVINO Model Server, also a KServe InferenceService, which holds both embedding models and the reranker in one process. The three are unloaded together after fifteen idle minutes and reloaded together, in about four seconds, on the next request. This server runs as three copies returning identical vectors: one on a GPU laptop and two on desktops’ older integrated GPUs, which needed Intel’s legacy driver added to the server image. The second laptop gave its copy up to a desktop after running short of memory alongside video transcoding. Nothing hosted stands in for embeddings, so the extra copies are what keep search working when a machine is down.',
     signal: { workloads: ['embeddings-predictor', 'embeddings-2-predictor', 'embeddings-3-predictor'], pooled: true, model: 'qwen3-embedding-0.6b' },
   },
   {
