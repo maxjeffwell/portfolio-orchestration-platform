@@ -97,6 +97,9 @@ export async function fetchMonitoringSignals() {
       q('sum(prometheus_rule_group_rules)'),
       q('count(ALERTS{alertstate="firing", alertname!="Watchdog"}) or vector(0)'),
       q('time() - max(kube_cronjob_status_last_successful_time{cronjob="healthchecks-heartbeat"})'),
+      // Pushover (second alert channel, 2026-11-27): Alertmanager's own counters.
+      q('sum(increase(alertmanager_notifications_total{integration="pushover"}[7d]))'),
+      q('sum(increase(alertmanager_notifications_failed_total{integration="pushover"}[24h]))'),
     ]),
   ]);
   const [
@@ -111,6 +114,8 @@ export async function fetchMonitoringSignals() {
     rules,
     firing,
     heartbeatAgeS,
+    pushoverSent7d,
+    pushoverFailed24h,
   ] = figures;
   return {
     workloads,
@@ -126,5 +131,7 @@ export async function fetchMonitoringSignals() {
     rules,
     firing,
     heartbeatAgeS,
+    pushoverSent7d,
+    pushoverFailed24h,
   };
 }

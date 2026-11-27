@@ -71,6 +71,11 @@ function figure(kind, s) {
       );
     case 'alertmanager':
       return s.firing != null ? `${s.firing} alerts firing` : null;
+    case 'pushover':
+      return join(
+        s.pushoverSent7d != null && `${Math.round(s.pushoverSent7d)} sent in 7 days`,
+        s.pushoverFailed24h >= 0.5 && `${Math.round(s.pushoverFailed24h)} failed today`,
+      );
     default:
       return null;
   }
@@ -101,6 +106,10 @@ function nodeStatus(signal, s) {
     if (age != null) parts.push(`last ping ${Math.max(0, Math.round(age / 60))} min ago`);
   }
   if (signal.stat === 'rules') health = s.rules == null ? 'DEGRADED' : 'HEALTHY';
+  // No counter at all means Alertmanager is not reporting the Pushover integration.
+  if (signal.stat === 'pushover') {
+    health = s.pushoverFailed24h == null || s.pushoverFailed24h >= 0.5 ? 'DEGRADED' : 'HEALTHY';
+  }
   parts.push(figure(signal.stat, s));
 
   return { health, stat: join(...parts), inferred: Boolean(signal.inferred) };

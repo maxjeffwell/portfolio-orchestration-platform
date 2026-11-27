@@ -23,6 +23,8 @@ const OK = {
   rules: 306,
   firing: 1,
   heartbeatAgeS: 120,
+  pushoverSent7d: 3,
+  pushoverFailed24h: 0,
 };
 
 const node = (signals, id) => buildMonitoringTopology(signals).nodes.find((n) => n.id === id);
@@ -72,4 +74,13 @@ test('health: missing replicas degrade, none is offline, a stale heartbeat is of
   // Loki has no metrics of its own: its health is inferred from its host.
   assert.equal(node(OK, 'loki').inferred, true);
   assert.equal(node(OK, 'loki').health, 'HEALTHY');
+});
+
+test('pushover: healthy with no failures, degraded on a failure or when Alertmanager reports nothing', () => {
+  assert.equal(node(OK, 'pushover').health, 'HEALTHY');
+  assert.equal(node(OK, 'pushover').stat, '3 sent in 7 days');
+  const failed = node({ ...OK, pushoverFailed24h: 2 }, 'pushover');
+  assert.equal(failed.health, 'DEGRADED');
+  assert.equal(failed.stat, '3 sent in 7 days · 2 failed today');
+  assert.equal(node({ ...OK, pushoverSent7d: null, pushoverFailed24h: null }, 'pushover').health, 'DEGRADED');
 });

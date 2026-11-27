@@ -206,6 +206,14 @@ export const MONITORING_NODES = [
     signal: { workloads: ['gotify', 'alertmanager-gotify-bridge'] },
   },
   {
+    id: 'pushover',
+    stage: 'NOTIFY',
+    displayName: 'Pushover',
+    location: 'Hosted push service, outside the home',
+    role: 'A second path to the phone for critical alerts only. It does not depend on anything in the cluster beyond Alertmanager, and it repeats every five minutes until someone acknowledges it.',
+    signal: { stat: 'pushover' },
+  },
+  {
     id: 'heartbeat',
     stage: 'NOTIFY',
     displayName: "Dead man's switch",
@@ -274,5 +282,6 @@ export const MONITORING_FLOWS = [
   // alerting
   flow('rules', 'alertmanager', 'ALERTS', 'A firing rule becomes an alert.'),
   flow('alertmanager', 'gotify', 'ALERTS', 'Critical and warning alerts are pushed to a phone.'),
+  flow('alertmanager', 'pushover', 'ALERTS', 'Critical alerts are also sent here, at emergency priority.'),
   flow('alertmanager', 'heartbeat', 'ALERTS', 'An always-firing test alert proves the path works; a job reports that to the outside service.'),
 ];
