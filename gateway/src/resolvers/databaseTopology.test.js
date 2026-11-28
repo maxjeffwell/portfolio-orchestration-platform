@@ -15,6 +15,7 @@ const pod = (name, namespace, labels, node, ready = true) => ({
 const cnpgPods = (ready = true) => [
   pod('cnpg-bookmarked-2', 'default', { 'cnpg.io/cluster': 'cnpg-bookmarked', 'cnpg.io/instanceRole': 'replica' }, 'm920s'),
   pod('cnpg-bookmarked-4', 'default', { 'cnpg.io/cluster': 'cnpg-bookmarked', 'cnpg.io/instanceRole': 'primary' }, 'elitedesk', ready),
+  pod('cnpg-bookmarked-1', 'default', { 'cnpg.io/cluster': 'cnpg-bookmarked', 'cnpg.io/instanceRole': 'replica' }, 'm720q'),
 ];
 
 const db = (topology, id) => topology.databases.find((d) => d.id === id);
@@ -59,6 +60,7 @@ test('instances carry role and machine, published by display name only', () => {
   assert.deepEqual(
     bookmarked.instances.map((i) => [i.role, i.machineId, i.machineName]),
     [
+      ['REPLICA', 'cp-3', 'Control Plane 3'],
       ['REPLICA', 'cp-1', 'Control Plane 1'],
       ['PRIMARY', 'cp-2', 'Control Plane 2'],
     ],
@@ -84,15 +86,25 @@ test('completed job pods and pods of other clusters are not counted as instances
     { ...cnpgPods()[0], name: 'cnpg-bookmarked-initdb', phase: 'Succeeded' },
     pod('cnpg-codetalk-2', 'default', { 'cnpg.io/cluster': 'cnpg-codetalk', 'cnpg.io/instanceRole': 'primary' }, 'm920s'),
   ];
-  assert.equal(db(buildDatabaseTopology(pods, {}), 'pg-bookmarked').instances.length, 2);
+  assert.equal(db(buildDatabaseTopology(pods, {}), 'pg-bookmarked').instances.length, 3);
 });
 
 test('Patroni instances and the leader come from metrics', () => {
   const signals = {
     patroniRunning: { m920s: 1, elitedesk: 1, m720q: 0 },
     patroniPrimary: { m920s: 1, elitedesk: 0, m720q: 0 },
+    patroniSyncStandby: { m920s: 0, elitedesk: 1, m720q: 0 },
   };
   const pgha = db(buildDatabaseTopology([], signals), 'pg-ha');
+  // Leader, synchronous standby, asynchronous replica.
+  assert.deepEqual(
+    pgha.instances.map((i) => [i.machineName, i.role]),
+    [
+      ['Control Plane 2', 'STANDBY'],
+      ['Control Plane 3', 'REPLICA'],
+      ['Control Plane 1', 'PRIMARY'],
+    ],
+  );
 
   assert.equal(pgha.health, 'DEGRADED');
   assert.equal(pgha.instances.find((i) => i.role === 'PRIMARY').machineName, 'Control Plane 1');
@@ -144,4 +156,21 @@ test('a hosted database has no instances here and is not reported as down', () =
   assert.equal(firestore.health, 'HEALTHY');
   // A cluster database with nothing running is still offline.
   assert.equal(db(buildDatabaseTopology([], {}), 'prometheus').health, 'OFFLINE');
+});
+
+test('every database with a B2 backup also lists the daily copy to Cloudflare R2', () => {
+  for (const d of DATABASES) {
+    const targets = d.backups.map((b) => b.target);
+    const r2 = d.backups.filter((b) => b.name === 'Daily copy of the B2 backups');
+    if (targets.includes('BACKBLAZE_B2')) {
+      assert.equal(r2.length, 1, d.id);
+      assert.deepEqual(r2[0].source, { type: 'cron', cronjob: 'b2-r2-mirror' });
+    } else {
+      assert.equal(r2.length, 0, d.id);
+    }
+  }
+  const pgha = DATABASES.find((d) => d.id === 'pg-ha').backups;
+  const dump = pgha.find((b) => b.name === 'Nightly logical dump');
+  assert.equal(dump.target, 'CLOUDFLARE_R2');
+  assert.deepEqual(dump.source, { type: 'pgha', kind: 'dumpR2' });
 });

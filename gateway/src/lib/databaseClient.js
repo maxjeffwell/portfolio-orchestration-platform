@@ -49,8 +49,10 @@ export async function fetchDatabaseSignals() {
     veleroAge,
     patroniPrimary,
     patroniRunning,
+    patroniSyncStandby,
     pgha,
     pghaOffsite,
+    pghaDumpR2,
   ] = await Promise.all([
     // Two different backups of the same cluster, two different metrics:
     // the Barman plugin reports the base backup it sent to B2, while the
@@ -68,9 +70,11 @@ export async function fetchDatabaseSignals() {
     queryMap('time() - max by (schedule) (velero_backup_last_successful_timestamp)', 'schedule'),
     queryMap('max by (name) (patroni_primary)', 'name'),
     queryMap('max by (name) (patroni_postgres_running)', 'name'),
+    queryMap('max by (name) (patroni_sync_standby)', 'name'),
     // Only the current leader runs these, so the freshest server counts.
     queryMap('time() - max(pg_ha_backup_last_success_timestamp_seconds)'),
     queryMap('time() - max(pg_ha_offsite_last_success_timestamp_seconds)'),
+    queryMap('time() - max(pg_ha_dump_r2_last_success_timestamp_seconds)'),
   ]);
   return {
     cnpgBarmanAge,
@@ -79,6 +83,11 @@ export async function fetchDatabaseSignals() {
     veleroAge,
     patroniPrimary,
     patroniRunning,
-    pghaAge: { backup: pgha.value ?? null, offsite: pghaOffsite.value ?? null },
+    patroniSyncStandby,
+    pghaAge: {
+      backup: pgha.value ?? null,
+      offsite: pghaOffsite.value ?? null,
+      dumpR2: pghaDumpR2.value ?? null,
+    },
   };
 }

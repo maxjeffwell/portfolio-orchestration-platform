@@ -26,6 +26,7 @@ import {
   MAYASTOR_NODE,
   LVM_NODE,
   OFFSITE_NODE,
+  R2_NODE,
   OFFSITE_HOSTS,
 } from '../config/networkNodes.js';
 
@@ -251,11 +252,40 @@ const OFFSITE_JOBS = [
 // A daily job is overdue once it has missed a run and a bit.
 const HOST_BACKUP_MAX_AGE_S = 2 * DAY;
 
+// Jobs that write to Cloudflare R2, the second off-site copy. Both run daily.
+const R2_JOBS = [
+  { key: 'r2MirrorAgeS', name: 'B2 Mirror Daily', maxAgeS: 2 * DAY },
+  { key: 'r2DumpAgeS', name: 'Postgres Dump Nightly', maxAgeS: 2 * DAY },
+];
+
+const jobStatus = (age, maxAgeS) => {
+  if (age == null) return 'DEGRADED';
+  return age <= maxAgeS ? 'HEALTHY' : 'OFFLINE';
+};
+
+const offsiteNodeShape = (def, services) => ({
+  id: def.id,
+  hostname: def.displayName,
+  displayName: def.displayName,
+  type: def.type,
+  zone: def.zone,
+  wireguardIp: null,
+  health: services.every((svc) => svc.status === 'HEALTHY') ? 'HEALTHY' : 'DEGRADED',
+  services,
+  metrics: null,
+});
+
+// R2 is not probed either: same rule as B2, judged by its two jobs.
+function buildR2Node(offsite) {
+  const services = R2_JOBS.map((job) => ({
+    name: job.name,
+    status: jobStatus(offsite?.[job.key], job.maxAgeS),
+    port: null,
+  }));
+  return offsiteNodeShape(R2_NODE, services);
+}
+
 function buildOffsiteNode(offsite) {
-  const jobStatus = (age, maxAgeS) => {
-    if (age == null) return 'DEGRADED';
-    return age <= maxAgeS ? 'HEALTHY' : 'OFFLINE';
-  };
   const services = OFFSITE_JOBS.map((job) => ({
     name: job.name,
     status: jobStatus(offsite?.[job.key], job.maxAgeS),
@@ -274,17 +304,7 @@ function buildOffsiteNode(offsite) {
     });
   });
 
-  return {
-    id: OFFSITE_NODE.id,
-    hostname: OFFSITE_NODE.displayName,
-    displayName: OFFSITE_NODE.displayName,
-    type: OFFSITE_NODE.type,
-    zone: OFFSITE_NODE.zone,
-    wireguardIp: null,
-    health: services.every((svc) => svc.status === 'HEALTHY') ? 'HEALTHY' : 'DEGRADED',
-    services,
-    metrics: null,
-  };
+  return offsiteNodeShape(OFFSITE_NODE, services);
 }
 
 // A WireGuard peer re-handshakes at least every ~2 minutes while traffic
@@ -358,6 +378,10 @@ export function buildTopology(metrics, up, storage = null, ports = {}, overlay =
   const offsite = buildOffsiteNode(overlay?.offsite ?? null);
   healthById[offsite.id] = offsite.health;
   nodes.push(offsite);
+
+  const r2 = buildR2Node(overlay?.offsite ?? null);
+  healthById[r2.id] = r2.health;
+  nodes.push(r2);
 
   const hostnameById = Object.fromEntries(NODE_DEFINITIONS.map((n) => [n.id, n.hostname]));
   const uplinks = overlay?.uplinkSpeeds ?? {};

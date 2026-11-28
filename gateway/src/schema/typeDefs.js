@@ -286,6 +286,7 @@ export const typeDefs = /* GraphQL */ `
   enum BackupTarget {
     GARAGE
     BACKBLAZE_B2
+    CLOUDFLARE_R2
     VOLUME_SNAPSHOT
   }
 

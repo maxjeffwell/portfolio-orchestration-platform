@@ -18,7 +18,8 @@
 //               velero     last success of a Velero schedule (Velero copies the
 //                          volume's files; `daily-backup` covers every
 //                          namespace, `weekly-offsite` a fixed list)
-//               pgha       the HA Postgres backup / off-site mirror timers
+//               pgha       the HA Postgres backup / off-site mirror / R2 dump timers
+//             `target` is GARAGE, BACKBLAZE_B2, CLOUDFLARE_R2 or VOLUME_SNAPSHOT
 
 const HOUR = 3600;
 const DAY = 86400;
@@ -45,6 +46,18 @@ const DUMPS_OFFSITE = {
   source: { type: 'cron', cronjob: 'garage-offsite-sync' },
   maxAgeS: 8 * DAY,
 };
+// Second off-site copy (2026-11-27): a daily job mirrors every B2 bucket to
+// Cloudflare R2, a different provider. withR2Mirror() below adds this row to
+// every database that has a B2 backup, so the two lists cannot drift apart.
+const R2_MIRROR = {
+  name: 'Daily copy of the B2 backups',
+  target: 'CLOUDFLARE_R2',
+  source: { type: 'cron', cronjob: 'b2-r2-mirror' },
+  maxAgeS: 26 * HOUR,
+};
+const withR2Mirror = (db) =>
+  db.backups.some((b) => b.target === 'BACKBLAZE_B2') ? { ...db, backups: [...db.backups, R2_MIRROR] } : db;
+
 const dailyDump = (cronjob, name = 'Daily dump (restore-tested weekly)') => ({
   name,
   target: 'GARAGE',
@@ -57,7 +70,8 @@ const cnpg = ({ id, displayName, namespace, cluster, scraped = true, offsite = t
   displayName,
   engine: 'POSTGRES',
   manager: 'CloudNativePG',
-  expectedInstances: 2,
+  // 3 since 2026-11-28: one per storage server, quorum synchronous replication.
+  expectedInstances: 3,
   pods: { namespace, labels: { 'cnpg.io/cluster': cluster }, roleLabel: 'cnpg.io/instanceRole' },
   storage: 'MAYASTOR',
   backups: [
@@ -102,7 +116,7 @@ const mongo = ({ id, displayName, cluster, cronjob }) => ({
   ],
 });
 
-export const DATABASES = [
+const CATALOG = [
   cnpg({ id: 'pg-bookmarked', displayName: 'Bookmarked', namespace: 'default', cluster: 'cnpg-bookmarked' }),
   cnpg({
     id: 'pg-codetalk',
@@ -127,6 +141,13 @@ export const DATABASES = [
         target: 'BACKBLAZE_B2',
         source: { type: 'pgha', kind: 'offsite' },
         maxAgeS: 3 * HOUR,
+      },
+      // pg_dump of every database, written straight to R2 by the leader.
+      {
+        name: 'Nightly logical dump',
+        target: 'CLOUDFLARE_R2',
+        source: { type: 'pgha', kind: 'dumpR2' },
+        maxAgeS: 26 * HOUR,
       },
     ],
   },
@@ -253,6 +274,8 @@ export const DATABASES = [
     backups: [],
   },
 ];
+
+export const DATABASES = CATALOG.map(withR2Mirror);
 
 // Which application talks to which data store, read from each workload's
 // connection settings (host and database name only).

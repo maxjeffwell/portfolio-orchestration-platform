@@ -8,6 +8,7 @@ import {
   MAYASTOR_NODE,
   LVM_NODE,
   OFFSITE_NODE,
+  R2_NODE,
 } from '../config/networkNodes.js';
 
 const EMPTY_METRICS = {
@@ -51,6 +52,8 @@ const OVERLAY_OK = {
     veleroAgeS: 5 * 86400,
     garageSyncAgeS: 3600,
     postgresAgeS: 900,
+    r2MirrorAgeS: 6 * 3600,
+    r2DumpAgeS: 14 * 3600,
     hostAgeS: { 'debian-marmoset': 3600, neonmarmoset: 3600, elitedesk: 3600, m720q: 3600, marmoset: 3600, vmi3610371: 3600 },
     nasAgeS: { asustor: 3600, synology: 3600 },
   },
@@ -65,6 +68,7 @@ test('every link references a defined node', () => {
     MAYASTOR_NODE.id,
     LVM_NODE.id,
     OFFSITE_NODE.id,
+    R2_NODE.id,
   ]);
   for (const link of LINK_DEFINITIONS) {
     assert.ok(ids.has(link.source), `unknown source ${link.source}`);
@@ -75,7 +79,7 @@ test('every link references a defined node', () => {
 test('all targets up: every node and link is healthy', () => {
   // SECOND_PORTS: the second network's remote switches are judged by ports.
   const topology = buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, SECOND_PORTS, OVERLAY_OK);
-  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 3);
+  assert.equal(topology.nodes.length, NODE_DEFINITIONS.length + 4);
   assert.ok(topology.nodes.every((n) => n.health === 'HEALTHY'));
   assert.ok(topology.links.every((l) => l.status === 'HEALTHY'));
 });
@@ -604,7 +608,10 @@ test('off-site backup: each machine with its own Backblaze job is a service and 
   // Internal hostnames never reach the page.
   assert.ok(!JSON.stringify(byId(ok, 'offsite-backup')).includes('vmi3610371'));
 
-  const sources = ok.links.filter((l) => l.type === 'OFFSITE_BACKUP').map((l) => l.source).sort();
+  const sources = ok.links
+    .filter((l) => l.type === 'OFFSITE_BACKUP' && l.target === 'offsite-backup')
+    .map((l) => l.source)
+    .sort();
   assert.deepEqual(sources, ['asustor', 'cp-1', 'cp-2', 'cp-3', 'edge-vps', 'gpu-1', 'gpu-2', 'gpu-workstation', 'synology']);
 
   // A daily job that has not succeeded for three days is overdue.
@@ -627,4 +634,27 @@ test('off-site backup: the Garage sync is daily, so three days without one is ov
   const status = (n) => n.services.find((s) => s.name === 'Garage Sync Daily').status;
   assert.equal(status(node(OVERLAY_OK.offsite)), 'HEALTHY');
   assert.equal(status(node({ ...OVERLAY_OK.offsite, garageSyncAgeS: 3 * 86400 })), 'OFFLINE');
+});
+
+test('off-site backup: Cloudflare R2 is a second node, judged by its two daily jobs', () => {
+  const build = (offsite) => buildTopology(EMPTY_METRICS, allUp(), STORAGE_OK, {}, { offsite });
+  const r2 = (t) => byId(t, 'offsite-r2');
+  const status = (t, name) => r2(t).services.find((s) => s.name === name)?.status;
+
+  const ok = build(OVERLAY_OK.offsite);
+  assert.equal(r2(ok).displayName, 'Cloudflare R2');
+  assert.equal(r2(ok).zone, 'CLOUD');
+  assert.equal(r2(ok).health, 'HEALTHY');
+  assert.deepEqual(r2(ok).services.map((s) => s.name), ['B2 Mirror Daily', 'Postgres Dump Nightly']);
+  // Both jobs run on the servers.
+  const sources = ok.links.filter((l) => l.target === 'offsite-r2').map((l) => l.source).sort();
+  assert.deepEqual(sources, ['cp-1', 'cp-2', 'cp-3']);
+
+  // A mirror that has not succeeded for three days is overdue; no figure is unknown.
+  const stale = build({ ...OVERLAY_OK.offsite, r2MirrorAgeS: 3 * 86400 });
+  assert.equal(status(stale, 'B2 Mirror Daily'), 'OFFLINE');
+  assert.equal(r2(stale).health, 'DEGRADED');
+  assert.equal(byId(stale, 'offsite-backup').health, 'HEALTHY');
+  const unknown = build({ ...OVERLAY_OK.offsite, r2DumpAgeS: null });
+  assert.equal(status(unknown, 'Postgres Dump Nightly'), 'DEGRADED');
 });
