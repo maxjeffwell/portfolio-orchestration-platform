@@ -44,12 +44,20 @@ function podInstances(db, pods) {
     }));
 }
 
+// Patroni: the leader, the synchronous standby (every commit waits for it),
+// and asynchronous replicas.
+function patroniRole(hostname, signals) {
+  if (signals.patroniPrimary?.[hostname] === 1) return 'PRIMARY';
+  if (signals.patroniSyncStandby?.[hostname] === 1) return 'STANDBY';
+  return 'REPLICA';
+}
+
 function patroniInstances(db, signals) {
   return Object.keys(signals.patroniRunning ?? {})
     .sort()
     .map((hostname, i) => ({
       name: `${db.id}-${i + 1}`,
-      role: signals.patroniPrimary?.[hostname] === 1 ? 'PRIMARY' : 'REPLICA',
+      role: patroniRole(hostname, signals),
       machineId: machine(hostname).id,
       machineName: machine(hostname).displayName,
       ready: signals.patroniRunning[hostname] === 1,
@@ -93,7 +101,7 @@ function databaseHealth(db, instances) {
   if (db.external) return 'HEALTHY';
   const ready = instances.filter((i) => i.ready);
   if (ready.length === 0) return 'OFFLINE';
-  const hasRoles = instances.some((i) => i.role === 'PRIMARY' || i.role === 'REPLICA');
+  const hasRoles = instances.some((i) => ['PRIMARY', 'STANDBY', 'REPLICA'].includes(i.role));
   if (hasRoles && !ready.some((i) => i.role === 'PRIMARY')) return 'OFFLINE';
   return ready.length >= db.expectedInstances ? 'HEALTHY' : 'DEGRADED';
 }

@@ -93,8 +93,18 @@ test('Patroni instances and the leader come from metrics', () => {
   const signals = {
     patroniRunning: { m920s: 1, elitedesk: 1, m720q: 0 },
     patroniPrimary: { m920s: 1, elitedesk: 0, m720q: 0 },
+    patroniSyncStandby: { m920s: 0, elitedesk: 1, m720q: 0 },
   };
   const pgha = db(buildDatabaseTopology([], signals), 'pg-ha');
+  // Leader, synchronous standby, asynchronous replica.
+  assert.deepEqual(
+    pgha.instances.map((i) => [i.machineName, i.role]),
+    [
+      ['Control Plane 2', 'STANDBY'],
+      ['Control Plane 3', 'REPLICA'],
+      ['Control Plane 1', 'PRIMARY'],
+    ],
+  );
 
   assert.equal(pgha.health, 'DEGRADED');
   assert.equal(pgha.instances.find((i) => i.role === 'PRIMARY').machineName, 'Control Plane 1');

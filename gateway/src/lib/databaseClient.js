@@ -49,6 +49,7 @@ export async function fetchDatabaseSignals() {
     veleroAge,
     patroniPrimary,
     patroniRunning,
+    patroniSyncStandby,
     pgha,
     pghaOffsite,
     pghaDumpR2,
@@ -69,6 +70,7 @@ export async function fetchDatabaseSignals() {
     queryMap('time() - max by (schedule) (velero_backup_last_successful_timestamp)', 'schedule'),
     queryMap('max by (name) (patroni_primary)', 'name'),
     queryMap('max by (name) (patroni_postgres_running)', 'name'),
+    queryMap('max by (name) (patroni_sync_standby)', 'name'),
     // Only the current leader runs these, so the freshest server counts.
     queryMap('time() - max(pg_ha_backup_last_success_timestamp_seconds)'),
     queryMap('time() - max(pg_ha_offsite_last_success_timestamp_seconds)'),
@@ -81,6 +83,7 @@ export async function fetchDatabaseSignals() {
     veleroAge,
     patroniPrimary,
     patroniRunning,
+    patroniSyncStandby,
     pghaAge: {
       backup: pgha.value ?? null,
       offsite: pghaOffsite.value ?? null,
