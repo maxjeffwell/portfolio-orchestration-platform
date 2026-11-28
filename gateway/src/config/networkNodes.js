@@ -361,6 +361,17 @@ export const OFFSITE_NODE = {
   zone: 'CLOUD',
 };
 
+// Cloudflare R2 holds a second off-site copy, with a different provider
+// (2026-11-27): a daily job mirrors every B2 bucket to it, and the HA Postgres
+// leader uploads its nightly logical dump there directly. Like B2, its health
+// is the freshness of those two jobs.
+export const R2_NODE = {
+  id: 'offsite-r2',
+  displayName: 'Cloudflare R2',
+  type: 'OFFSITE_BACKUP',
+  zone: 'CLOUD',
+};
+
 // Machines that send their own daily backup to B2, besides the cluster's jobs.
 // `metric` says which freshness figure covers it (lib/backupClient.js): `host`
 // for a restic backup of the machine, `nas` for the NAS's nightly sync, which
@@ -512,6 +523,10 @@ export const LINK_DEFINITIONS = [
     target: OFFSITE_NODE.id,
     type: 'OFFSITE_BACKUP',
   })),
+
+  // Both jobs that write to R2 run on the servers: the B2 mirror is a cluster
+  // CronJob pinned to them, the dump runs on whichever is the HA leader.
+  ...CONTROL_PLANE.map((source) => ({ source, target: R2_NODE.id, type: 'OFFSITE_BACKUP' })),
 
   // One remaining iSCSI volume lives on the Synology.
   { source: 'cp-1', target: 'synology', type: 'ISCSI' },

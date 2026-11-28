@@ -1,5 +1,5 @@
 // Off-site backup freshness from the in-cluster Prometheus: seconds since each
-// job that copies data to Backblaze B2 last succeeded.
+// job that copies data to Backblaze B2 or Cloudflare R2 last succeeded.
 
 const PROMETHEUS_URL =
   process.env.PROMETHEUS_URL ||
@@ -17,6 +17,13 @@ const QUERIES = {
   // Hourly mirror of the HA Postgres backups; only the current leader runs
   // it, so the freshest of the three servers is the one that counts.
   postgresAgeS: 'time() - max(pg_ha_offsite_last_success_timestamp_seconds)',
+  // Cloudflare R2, the second off-site copy (2026-11-27). A daily job in the
+  // cluster mirrors every B2 bucket to R2; a run started by hand counts too.
+  r2MirrorAgeS:
+    'time() - max(kube_cronjob_status_last_successful_time{cronjob="b2-r2-mirror"}' +
+    ' or kube_job_status_completion_time{job_name=~"b2-r2-mirror.*"})',
+  // The HA Postgres leader uploads its nightly logical dump straight to R2.
+  r2DumpAgeS: 'time() - max(pg_ha_dump_r2_last_success_timestamp_seconds)',
 };
 
 async function queryScalar(promql) {
